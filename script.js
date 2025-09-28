@@ -1,233 +1,293 @@
-document.addEventListener('DOMContentLoaded', () => {
-  // --- CONFIGURATION ---
-  // IMPORTANT: Replace this with your actual Google Apps Script Web App URL
-  const a = 'https://script.google.com/macros/s/AKfycbzEuVrIhsTRZqgJ-VALG69kYvHlcA41VCnzee6Dr2bvpZW6K-FKCvQrvdz13cC3LYES/exec';
-
-  // --- DOM ELEMENTS ---
-  const bookingForm = document.getElementById('bookingForm');
-  const dateInput = document.getElementById('date');
-  const calendarView = document.getElementById('calendarView');
-  const currentWeekDisplay = document.getElementById('currentWeek');
-  const prevWeekBtn = document.getElementById('prevWeek');
-  const nextWeekBtn = a.nextWeek;
-  const confirmationModal = document.getElementById('confirmationModal');
-  const confirmationMessage = document.getElementById('confirmationMessage');
-  const closeModalBtn = document.getElementById('closeModal');
-  const loadingSpinner = document.getElementById('loading');
-
-  // --- STATE ---
-  let currentDate = new Date();
-  let bookings = [];
-
-  // --- FUNCTIONS ---
-
-  /**
-   * Shows or hides the loading spinner.
-   * @param {boolean} isLoading - True to show the spinner, false to hide it.
-   */
-  const showLoading = (isLoading) => {
-      loadingSpinner.classList.toggle('hidden', !isLoading);
-  };
-
-  /**
-   * Fetches booking data from the Google Apps Script API.
-   */
-  const fetchBookings = async () => {
-      showLoading(true);
-      try {
-          const response = await fetch(a);
-          if (!response.ok) {
-              throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          const data = await response.json();
-          bookings = data.map(b => ({
-              ...b,
-              // Ensure dates are parsed correctly
-              start: new Date(b.start),
-              end: new Date(b.end)
-          }));
-          renderCalendar();
-      } catch (error) {
-          console.error("Failed to fetch bookings:", error);
-          alert("Error: Could not fetch booking data. Please try again later.");
-      } finally {
-          showLoading(false);
-      }
-  };
-
-  /**
-   * Renders the calendar for the current week.
-   */
-  const renderCalendar = () => {
-      calendarView.innerHTML = ''; // Clear previous view
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Normalize today's date
-
-      const startOfWeek = new Date(currentDate);
-      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Start from Sunday
-
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(endOfWeek.getDate() + 6);
-
-      // Update the week display
-      currentWeekDisplay.textContent = `${startOfWeek.toLocaleDateString()} - ${endOfWeek.toLocaleDateString()}`;
-
-      for (let i = 0; i < 7; i++) {
-          const day = new Date(startOfWeek);
-          day.setDate(day.getDate() + i);
-          day.setHours(0, 0, 0, 0);
-
-          const dayContainer = document.createElement('div');
-          dayContainer.className = `p-3 rounded-lg border ${day < today ? 'bg-gray-200' : 'bg-white'}`;
-
-          const dayHeader = document.createElement('h4');
-          dayHeader.className = 'font-bold text-center mb-2';
-          dayHeader.textContent = day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          dayContainer.appendChild(dayHeader);
-
-          const slotsContainer = document.createElement('div');
-          slotsContainer.className = 'space-y-2';
-
-          const dayBookings = bookings
-              .filter(b => b.start.toDateString() === day.toDateString())
-              .sort((a, b) => a.start - b.start);
-
-          if (dayBookings.length > 0) {
-              dayBookings.forEach(booking => {
-                  const slot = document.createElement('div');
-                  slot.className = 'p-2 rounded-md bg-red-200 text-red-800 text-sm';
-                  const startTime = booking.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                  const endTime = booking.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                  slot.innerHTML = `<strong>${booking.room}</strong><br>${startTime} - ${endTime}<br><em>${booking.name}</em>`;
-                  slotsContainer.appendChild(slot);
-              });
-          } else {
-               const noBookingSlot = document.createElement('div');
-               noBookingSlot.className = 'p-2 text-center text-gray-500 text-sm';
-               noBookingSlot.textContent = 'No bookings';
-               slotsContainer.appendChild(noBookingSlot);
-          }
-
-          dayContainer.appendChild(slotsContainer);
-          calendarView.appendChild(dayContainer);
-      }
+/* --------------------
+  CONFIG - replace the placeholders below with your values
+-------------------- */
+const CONFIG = {
+    SPREADSHEET_ID: '13SROZHNchpiGKpgSc6bpxbuf2Fhw0AMIAcQyC48BKkM',   // e.g. "1aBcD...xyz"
+    SHEET_NAME: 'Bookings',                             // tab name (case sensitive)
+    GOOGLE_API_KEY: 'AIzaSyBWeYEPI6xBe-J4U2j7UE3hedOqcUXcU0I',       // used for READ (Sheets API)
+    APPS_SCRIPT_WEB_APP_URL: 'https://script.google.com/macros/library/d/1kt0NH4oVzpiXQJVIzqQIb9swbWG5Hfi5OtuYrCoVSFsMupTwABOZg3Gq/5' // URL for JSONP writes
   };
   
-  /**
-   * Handles the form submission to create a new booking.
-   * @param {Event} e - The form submission event.
-   */
-  const handleBookingSubmit = async (e) => {
-      e.preventDefault();
-      showLoading(true);
-
-      const formData = new FormData(bookingForm);
-      const name = formData.get('name');
-      const email = formData.get('email');
-      const room = formData.get('room');
-      const date = formData.get('date');
-      const startTime = formData.get('startTime');
-      const endTime = formData.get('endTime');
-
-      // --- Client-side Validation ---
-      if (!name || !email || !date || !startTime || !endTime || !room) {
-          alert("Please fill in all fields.");
-          showLoading(false);
-          return;
-      }
-
-      const startDateTime = new Date(`${date}T${startTime}`);
-      const endDateTime = new Date(`${date}T${endTime}`);
-
-      if (startDateTime >= endDateTime) {
-          alert("End time must be after start time.");
-          showLoading(false);
-          return;
-      }
-      
-      if (startDateTime < new Date()) {
-          alert("Cannot book a time in the past.");
-          showLoading(false);
-          return;
-      }
-
-      // --- Check for Overlapping Bookings ---
-      const isOverlapping = bookings.some(booking => {
-          const existingStart = booking.start;
-          const existingEnd = booking.end;
-          // Check if the new booking is for the same room and overlaps with an existing one
-          return room === booking.room &&
-                 startDateTime < existingEnd &&
-                 endDateTime > existingStart;
-      });
-
-      if (isOverlapping) {
-          alert("This time slot is already booked or overlaps with an existing booking. Please choose another time.");
-          showLoading(false);
-          return;
-      }
-      
-      const bookingData = {
-          name,
-          email,
-          room,
-          start: startDateTime.toISOString(),
-          end: endDateTime.toISOString(),
-          status: 'Booked'
+  /* --------------------
+    UI / time settings
+  -------------------- */
+  const SLOT_MINUTES = 30;
+  const DAY_START_HOUR = 8;
+  const DAY_END_HOUR = 20;  // exclusive
+  
+  /* DOM elements */
+  const bookDateEl = document.getElementById('bookDate');
+  const prevDayBtn = document.getElementById('prevDay');
+  const nextDayBtn = document.getElementById('nextDay');
+  const startTimeEl = document.getElementById('startTime');
+  const endTimeEl = document.getElementById('endTime');
+  const nameEl = document.getElementById('name');
+  const emailEl = document.getElementById('email');
+  const submitBtn = document.getElementById('submitBtn');
+  const formMessage = document.getElementById('formMessage');
+  const calendarGrid = document.getElementById('calendarGrid');
+  const displayDate = document.getElementById('displayDate');
+  
+  let currentDate = new Date();
+  currentDate.setHours(0,0,0,0);
+  
+  /* ---------- Helpers ---------- */
+  function toYYYYMMDD(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function parseTimeToMinutes(hhmm) {
+    if(!hhmm) return null;
+    const [h,m] = hhmm.split(':').map(Number);
+    return h*60 + m;
+  }
+  function minutesToHHMM(min) {
+    const h = Math.floor(min/60);
+    const m = min%60;
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
+  function todayISO() { return toYYYYMMDD(new Date()); }
+  
+  /* overlap check: [a,b) overlaps [c,d) iff a < d && c < b */
+  function overlaps(aStart, aEnd, bStart, bEnd) {
+    return aStart < bEnd && bStart < aEnd;
+  }
+  
+  /* ---------- Read bookings via Sheets API (v4) ---------- */
+  /* We'll fetch full data range A2:G (Date,Start,End,Name,Room,Email,Status)
+     and then filter for requested date on client side. */
+  async function fetchAllBookings() {
+    if (!CONFIG.SPREADSHEET_ID || !CONFIG.GOOGLE_API_KEY) {
+      throw new Error('Missing SPREADSHEET_ID or GOOGLE_API_KEY in CONFIG.');
+    }
+    const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!A2:G`);
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${range}?majorDimension=ROWS&key=${CONFIG.GOOGLE_API_KEY}`;
+    const r = await fetch(url);
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error('Sheets API error: ' + r.status + ' ' + txt);
+    }
+    const payload = await r.json();
+    const rows = payload.values || [];
+    return rows.map(row => {
+      return {
+        date: row[0] ? String(row[0]).trim() : '',
+        start: row[1] ? String(row[1]).trim() : '',
+        end: row[2] ? String(row[2]).trim() : '',
+        name: row[3] || '',
+        room: row[4] || '',
+        email: row[5] || '',
+        status: row[6] || ''
       };
-      
-      try {
-          const response = await fetch(a, {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'text/plain;charset=utf-8', // Required for Apps Script POST
-              },
-              body: JSON.stringify(bookingData)
-          });
-
-          const result = await response.json();
-
-          if (result.success) {
-              bookingForm.reset();
-              await fetchBookings(); // Refresh the calendar
-              confirmationMessage.textContent = `Your booking for ${room} on ${startDateTime.toLocaleDateString()} from ${startTime} to ${endTime} is confirmed.`;
-              confirmationModal.classList.remove('hidden');
-          } else {
-              throw new Error(result.message || "An unknown error occurred.");
-          }
-      } catch (error) {
-          console.error("Failed to submit booking:", error);
-          alert(`Error: ${error.message}`);
-      } finally {
-          showLoading(false);
+    });
+  }
+  
+  async function fetchBookingsForDate(isoDate) {
+    const all = await fetchAllBookings();
+    return all
+      .filter(r => r.date === isoDate)
+      .map(r => {
+        return {
+          ...r,
+          startMin: parseTimeToMinutes(r.start),
+          endMin: parseTimeToMinutes(r.end)
+        };
+      })
+      .filter(b => b.startMin != null && b.endMin != null);
+  }
+  
+  /* ---------- Render calendar ---------- */
+  function renderCalendar(dateObj, bookings) {
+    calendarGrid.innerHTML = '';
+    displayDate.textContent = (new Date(dateObj)).toDateString();
+    // generate slots
+    const slots = [];
+    for (let m = DAY_START_HOUR*60; m < DAY_END_HOUR*60; m += SLOT_MINUTES) {
+      const slotStart = m;
+      const slotEnd = m + SLOT_MINUTES;
+      const slotLabel = minutesToHHMM(slotStart) + ' – ' + minutesToHHMM(slotEnd);
+      // check if any booking covers this slot (partial or full)
+      const bookedBy = bookings.find(b => overlaps(slotStart, slotEnd, b.startMin, b.endMin));
+      slots.push({slotStart, slotEnd, slotLabel, bookedBy});
+    }
+  
+    // grid layout: small cards
+    for (const s of slots) {
+      const el = document.createElement('div');
+      el.className = 'slot p-2 rounded flex items-center justify-between shadow-sm';
+      el.classList.add('cursor-default');
+  
+      if (s.bookedBy) {
+        el.classList.add('bg-red-400', 'text-white');
+        // tooltip
+        el.innerHTML = `<div class="tooltip w-full flex items-center justify-between">
+          <div>${s.slotLabel}</div>
+          <div class="font-semibold">${s.bookedBy.name || 'Booked'}</div>
+          <span class="tooltiptext">By: ${escapeHtml(s.bookedBy.name)} • ${escapeHtml(s.bookedBy.email)}<br>${escapeHtml(s.bookedBy.start)} → ${escapeHtml(s.bookedBy.end)}</span>
+        </div>`;
+      } else {
+        el.classList.add('bg-green-200');
+        el.innerHTML = `<div class="w-full flex items-center justify-between">
+          <div>${s.slotLabel}</div>
+          <div class="text-xs text-gray-700">Available</div>
+        </div>`;
       }
-  };
-
-  /**
-   * Sets the minimum date for the date input to today.
-   */
-  const setMinDate = () => {
-      const today = new Date().toISOString().split('T')[0];
-      dateInput.setAttribute('min', today);
-      dateInput.value = today;
-  };
-
-
-  // --- EVENT LISTENERS ---
-  bookingForm.addEventListener('submit', handleBookingSubmit);
-  prevWeekBtn.addEventListener('click', () => {
-      currentDate.setDate(currentDate.getDate() - 7);
-      renderCalendar();
+      calendarGrid.appendChild(el);
+    }
+  }
+  
+  /* small html escaper for tooltips */
+  function escapeHtml(s = '') {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  
+  /* ---------- JSONP writer (write via Apps Script JSONP GET) ---------- */
+  /* We'll create a script tag with query params and a callback parameter.
+     Apps Script returns JavaScript that calls the callback with JSON.
+  */
+  function jsonpPostBooking(payload) {
+    return new Promise((resolve, reject) => {
+      if (!CONFIG.APPS_SCRIPT_WEB_APP_URL) {
+        reject(new Error('APPS_SCRIPT_WEB_APP_URL not configured.'));
+        return;
+      }
+      const callbackName = '__booking_cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+      window[callbackName] = function(response) {
+        try {
+          resolve(response);
+        } finally {
+          // cleanup
+          delete window[callbackName];
+          const s = document.getElementById(callbackName);
+          if (s) s.remove();
+        }
+      };
+  
+      const params = new URLSearchParams({
+        action: 'book',
+        date: payload.date,
+        start: payload.start,
+        end: payload.end,
+        name: payload.name,
+        email: payload.email,
+        room: payload.room || 'Room Booking',
+        status: payload.status || 'Confirmed',
+        callback: callbackName
+      });
+  
+      const script = document.createElement('script');
+      script.src = CONFIG.APPS_SCRIPT_WEB_APP_URL + '?' + params.toString();
+      script.id = callbackName;
+      script.onerror = function(err) {
+        delete window[callbackName];
+        script.remove();
+        reject(new Error('JSONP load error'));
+      };
+      document.body.appendChild(script);
+      // Note: response will arrive by window[callbackName]
+    });
+  }
+  
+  /* ---------- UI events + validation + booking flow ---------- */
+  async function refreshAndRender() {
+    const iso = toYYYYMMDD(currentDate);
+    bookDateEl.value = iso;
+    try {
+      const bookings = await fetchBookingsForDate(iso);
+      renderCalendar(iso, bookings);
+    } catch (err) {
+      calendarGrid.innerHTML = `<div class="p-4 text-red-600">Error loading bookings: ${err.message}</div>`;
+      console.error(err);
+    }
+  }
+  
+  function setFormMessage(txt, isError = false) {
+    formMessage.textContent = txt;
+    formMessage.className = isError ? 'mt-3 text-sm text-red-600' : 'mt-3 text-sm text-green-600';
+  }
+  
+  submitBtn.addEventListener('click', async () => {
+    setFormMessage('');
+    const date = bookDateEl.value;
+    const start = startTimeEl.value;
+    const end = endTimeEl.value;
+    const name = nameEl.value.trim();
+    const email = emailEl.value.trim();
+  
+    // client validations
+    if (!date || !start || !end || !name || !email) {
+      setFormMessage('Please fill date, start, end, name and email.', true);
+      return;
+    }
+    if (start >= end) {
+      setFormMessage('Start time must be before end time.', true);
+      return;
+    }
+    if (date < todayISO()) {
+      setFormMessage('Cannot book past dates.', true);
+      return;
+    }
+  
+    // fetch current bookings for date and check overlap again
+    let bookings = [];
+    try {
+      bookings = await fetchBookingsForDate(date);
+    } catch (err) {
+      setFormMessage('Failed to check availability: ' + err.message, true);
+      return;
+    }
+    const sMin = parseTimeToMinutes(start);
+    const eMin = parseTimeToMinutes(end);
+    const conflict = bookings.find(b => overlaps(sMin, eMin, b.startMin, b.endMin));
+    if (conflict) {
+      setFormMessage(`Time overlaps with existing booking by ${conflict.name} (${conflict.start}–${conflict.end}).`, true);
+      return;
+    }
+  
+    // send via JSONP write
+    submitBtn.disabled = true;
+    setFormMessage('Booking...');
+  
+    try {
+      const payload = { date, start, end, name, email, room: 'Room Booking', status: 'Confirmed' };
+      const res = await jsonpPostBooking(payload);
+      if (res && res.success) {
+        setFormMessage('Booking confirmed! 🎉');
+        // clear form
+        startTimeEl.value = ''; endTimeEl.value = ''; nameEl.value = ''; emailEl.value = '';
+        // re-render
+        await refreshAndRender();
+      } else {
+        setFormMessage('Booking failed: ' + (res && res.error ? res.error : 'unknown'), true);
+      }
+    } catch (err) {
+      setFormMessage('Error sending booking: ' + err.message, true);
+      console.error(err);
+    } finally {
+      submitBtn.disabled = false;
+    }
   });
-  nextWeekBtn.addEventListener('click', () => {
-      currentDate.setDate(currentDate.getDate() + 7);
-      renderCalendar();
+  
+  /* date nav */
+  prevDayBtn.addEventListener('click', () => {
+    currentDate.setDate(currentDate.getDate() - 1);
+    refreshAndRender();
   });
-  closeModalBtn.addEventListener('click', () => {
-      confirmationModal.classList.add('hidden');
+  nextDayBtn.addEventListener('click', () => {
+    currentDate.setDate(currentDate.getDate() + 1);
+    refreshAndRender();
   });
-
-  // --- INITIALIZATION ---
-  setMinDate();
-  fetchBookings(); // Fetch initial data and render the calendar
-});
+  bookDateEl.addEventListener('change', (e) => {
+    currentDate = new Date(e.target.value + 'T00:00:00');
+    refreshAndRender();
+  });
+  
+  /* Init */
+  (function init() {
+    // set default date to today
+    bookDateEl.value = toYYYYMMDD(currentDate);
+    refreshAndRender();
+  })();
+  
