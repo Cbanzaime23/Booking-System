@@ -1,27 +1,125 @@
-/* Extra tiny styles — Tailwind handles most layout */
-.slot {
-  transition: transform .06s;
+/* Use a modern font for the app */
+body {
+  font-family: 'Inter', sans-serif;
 }
-.slot:hover { transform: translateY(-2px); }
 
-/* tooltip (for booked slot details) */
-.tooltip {
-  position: relative;
-  display: inline-block;
+/* Modal styles */
+dialog {
+  border: none;
 }
-.tooltip .tooltiptext {
-  visibility: hidden;
-  width: max-content;
-  background-color: rgba(31,41,55,0.95);
-  color: #fff;
-  text-align: left;
-  padding: 6px 8px;
-  border-radius: 6px;
-  position: absolute;
-  z-index: 10;
-  top: -6px;
-  left: 110%;
-  white-space: nowrap;
-  font-size: 12px;
+dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
 }
-.tooltip:hover .tooltiptext { visibility: visible; }
+
+/* Time slot styles */
+.time-slot {
+  transition: background-color 0.2s ease-in-out;
+}
+.time-slot.available:hover {
+  background-color: #dbeafe; /* Tailwind's blue-100 */
+  cursor: pointer;
+}
+.time-slot.booked {
+  background-color: #fee2e2; /* Tailwind's red-100 */
+  color: #991b1b; /* Tailwind's red-800 */
+  cursor: not-allowed;
+  border-top: 1px solid #fecaca; /* red-200 */
+}
+.time-slot.booked span {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Simple loader for fetching data */
+.loader-spinner {
+  border: 4px solid #f3f3f3; /* Light grey */
+  border-top: 4px solid #4f46e5; /* Indigo */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Toast notifications */
+.toast {
+  padding: 1rem 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeIn 0.3s forwards;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.toast-success {
+  background-color: #16a34a; /* green-600 */
+  color: white;
+}
+.toast-error {
+  background-color: #dc2626; /* red-600 */
+  color: white;
+}
+@keyframes fadeIn {
+  to {
+      opacity: 1;
+      transform: translateY(0);
+  }
+}
+
+/* Add these new rules to your style.css file */
+
+/* State for partially-filled slots */
+.time-slot.partial {
+  background-color: #fef9c3; /* Tailwind's yellow-100 */
+  color: #a16207; /* Tailwind's yellow-700 */
+  font-weight: 500;
+}
+.time-slot.partial:hover {
+  background-color: #fef08a; /* yellow-200 */
+  cursor: pointer;
+}
+.time-slot.partial span {
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+
+/* State for completely full slots */
+.time-slot.full {
+  background-color: #fee2e2; /* Tailwind's red-100 */
+  color: #991b1b; /* Tailwind's red-800 */
+  font-weight: 600;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+/* Add these styles for the cancellation list */
+
+#cancel-booking-list label {
+  display: block;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0; /* slate-200 */
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+#cancel-booking-list label:hover {
+  background-color: #f1f5f9; /* slate-100 */
+}
+
+#cancel-booking-list input[type="radio"]:checked + span {
+  font-weight: 600;
+  color: #4f46e5; /* indigo-600 */
+}
+
+#cancel-booking-list label.selected {
+  background-color: #e0e7ff; /* indigo-100 */
+  border-color: #a5b4fc; /* indigo-300 */
+}
