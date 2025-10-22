@@ -123,3 +123,51 @@ dialog::backdrop {
   background-color: #e0e7ff; /* indigo-100 */
   border-color: #a5b4fc; /* indigo-300 */
 }
+
+/* Add these styles for two-line display in slots */
+
+.time-slot {
+  /* Change to a flex column to stack items vertically */
+  flex-direction: column;
+  line-height: 1.2; /* Adjust line height for tighter spacing */
+}
+
+/* Style for the time label text */
+.time-label {
+  font-size: 0.75rem; /* 12px */
+  color: #64748b; /* slate-500 */
+}
+
+/* Style for the main status text */
+.status-label {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 500;
+}
+
+/* Specific color adjustments for different slot states */
+.time-slot.full .time-label {
+  color: #ef4444; /* red-500 */
+  text-decoration: line-through;
+}
+
+.time-slot.partial .time-label {
+  color: #ca8a04; /* yellow-600 */
+}
+
+.time-slot.available .time-label {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 500;
+  color: #4f46e5; /* indigo-600 */
+}
+
+/* Add this to your style.css file */
+
+#loading-modal {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+#loading-modal::backdrop {
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+}
