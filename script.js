@@ -1,13 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     const DateTime = luxon.DateTime;
-    const MAX_TOTAL_PARTICIPANTS = 30;
-    const MAX_CONCURRENT_GROUPS = 5;
-    const MAX_PARTICIPANTS_PER_BOOKING = 25;
 
     // --- STATE & MODAL REFERENCES ---
     const state = {
         currentDate: DateTime.local().setZone(APP_CONFIG.TIMEZONE),
-        bookings: [],
+        allBookings: [], // Holds all bookings for all rooms
+        selectedRoom: Object.keys(APP_CONFIG.ROOM_CONFIG)[0], // Default to first room
         isLoading: false,
         selectedSlot: null,
         pendingBookingData: null,
@@ -15,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const calendarView = document.querySelector('#calendar-view .grid');
     const loader = document.getElementById('loader');
+    const roomSelector = document.getElementById('room-selector');
     
     // Modals and Forms
     const choiceModal = document.getElementById('choice-modal');
@@ -35,11 +34,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CORE APP FUNCTIONS ---
 
     function init() {
+        initializeRoomSelector();
         setupEventListeners();
-        render();
+        render(); // This will now render the default room
+    }
+
+    /**
+     * Populates the room selector dropdown from config.
+     */
+    function initializeRoomSelector() {
+        const roomNames = Object.keys(APP_CONFIG.ROOM_CONFIG);
+        roomNames.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            roomSelector.appendChild(option);
+        });
+        state.selectedRoom = roomNames[0];
     }
 
     function setupEventListeners() {
+        roomSelector.addEventListener('change', (e) => {
+            state.selectedRoom = e.target.value;
+            render(); // Re-render the calendar for the new room
+        });
+        
         calendarControls.prevWeekBtn.addEventListener('click', () => changeWeek(-1));
         calendarControls.nextWeekBtn.addEventListener('click', () => changeWeek(1));
         calendarView.addEventListener('click', handleSlotClick);
@@ -53,8 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('summary-yes-btn').addEventListener('click', proceedWithBooking);
         document.getElementById('summary-no-btn').addEventListener('click', () => confirmSummaryModal.close());
         document.getElementById('success-done-btn').addEventListener('click', () => successModal.close());
-
-        // Generic close buttons
         document.querySelectorAll('.cancel-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 bookingModal.close();
@@ -63,12 +80,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /**
+     * Main render function.
+     */
     async function render() {
         setLoading(true, 'page');
         renderCalendarShell();
         try {
-            await fetchBookings();
-            renderBookingsWithCapacity();
+            await fetchAllBookings();
+            renderBookingsForSelectedRoom();
         } catch (error) {
             console.error("Failed to render:", error);
             showToast("Error: Could not load bookings.", "error");
@@ -121,25 +141,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return slot;
     }
 
-    function renderBookingsWithCapacity() {
+    /**
+     * Renders booking statuses based on the selected room's rules.
+     */
+    function renderBookingsForSelectedRoom() {
+        const roomRules = APP_CONFIG.ROOM_CONFIG[state.selectedRoom];
+        const roomBookings = state.allBookings.filter(b => b.room === state.selectedRoom);
+
         document.querySelectorAll('.time-slot').forEach(slotEl => {
             if (slotEl.classList.contains('past')) return;
             const slotStart = DateTime.fromISO(slotEl.dataset.startIso);
             const slotEnd = slotStart.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
+
             let totalParticipants = 0, totalGroups = 0;
-            const overlappingBookings = state.bookings.filter(b => {
+            const overlappingBookings = roomBookings.filter(b => {
                 const bStart = DateTime.fromISO(b.start_iso);
                 const bEnd = DateTime.fromISO(b.end_iso);
                 return bStart < slotEnd && bEnd > slotStart;
             });
+
             overlappingBookings.forEach(b => {
                 totalParticipants += parseInt(b.participants, 10);
                 totalGroups++;
             });
+
             slotEl.dataset.totalParticipants = totalParticipants;
             slotEl.dataset.totalGroups = totalGroups;
-            
-            // UPDATED: Use first_name and last_name
             const primaryBooking = overlappingBookings.find(b => DateTime.fromISO(b.start_iso).equals(slotStart));
             if (primaryBooking) {
                 slotEl.dataset.bookingId = primaryBooking.id;
@@ -148,15 +175,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete slotEl.dataset.bookingId;
                 delete slotEl.dataset.bookingName;
             }
-            
+
             slotEl.className = 'time-slot p-2 text-center text-sm border-t border-slate-100 h-14 flex flex-col items-center justify-center';
             const timeLabelHTML = `<div class="time-label">${slotStart.toFormat('h:mm a')}</div>`;
             let statusLabelHTML = '';
-            if (totalParticipants >= MAX_TOTAL_PARTICIPANTS || totalGroups >= MAX_CONCURRENT_GROUPS) {
+
+            if (totalParticipants >= roomRules.MAX_TOTAL_PARTICIPANTS || totalGroups >= roomRules.MAX_CONCURRENT_GROUPS) {
                 slotEl.classList.add('full');
                 statusLabelHTML = `<div class="status-label">Full</div>`;
             } else if (totalParticipants > 0) {
-                const remainingPax = MAX_TOTAL_PARTICIPANTS - totalParticipants;
+                const remainingPax = roomRules.MAX_TOTAL_PARTICIPANTS - totalParticipants;
                 slotEl.classList.add('partial');
                 statusLabelHTML = `<div class="status-label">${remainingPax} spots left</div>`;
             } else {
@@ -171,16 +199,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleSlotClick(e) {
         const slot = e.target.closest('.time-slot');
         if (!slot || slot.classList.contains('past')) return;
+        
+        const roomRules = APP_CONFIG.ROOM_CONFIG[state.selectedRoom];
+        
         state.selectedSlot = {
             startTime: DateTime.fromISO(slot.dataset.startIso),
             totalParticipants: parseInt(slot.dataset.totalParticipants || '0', 10),
             totalGroups: parseInt(slot.dataset.totalGroups || '0', 10),
+            rules: roomRules
         };
+        
         if (slot.classList.contains('partial') || slot.classList.contains('full')) {
             const bookButton = document.getElementById('choice-book-btn');
-            const remainingGroups = MAX_CONCURRENT_GROUPS - state.selectedSlot.totalGroups;
-            const remainingPax = MAX_TOTAL_PARTICIPANTS - state.selectedSlot.totalParticipants;
-            bookButton.style.display = (remainingGroups <= 0 || remainingPax < 2) ? 'none' : 'inline-block';
+            const remainingGroups = roomRules.MAX_CONCURRENT_GROUPS - state.selectedSlot.totalGroups;
+            const remainingPax = roomRules.MAX_TOTAL_PARTICIPANTS - state.selectedSlot.totalParticipants;
+            
+            bookButton.style.display = (remainingGroups <= 0 || remainingPax < roomRules.MIN_BOOKING_SIZE) ? 'none' : 'inline-block';
             choiceModal.showModal();
         } else if (slot.classList.contains('available')) {
             openBookingModalForSelectedSlot();
@@ -189,15 +223,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openBookingModalForSelectedSlot() {
         choiceModal.close();
-        bookingForm.reset(); // Clear the form
-        const { startTime, totalParticipants } = state.selectedSlot;
-        const remainingCapacity = MAX_TOTAL_PARTICIPANTS - totalParticipants;
-        const maxAllowed = Math.min(MAX_PARTICIPANTS_PER_BOOKING, remainingCapacity);
+        bookingForm.reset();
+        const { startTime, totalParticipants, rules } = state.selectedSlot;
+        
+        const remainingCapacity = rules.MAX_TOTAL_PARTICIPANTS - totalParticipants;
+        const maxAllowed = Math.min(rules.MAX_BOOKING_SIZE, remainingCapacity);
+        const minAllowed = rules.MIN_BOOKING_SIZE;
+
         const participantsInput = bookingForm.querySelector('#participants');
         participantsInput.max = maxAllowed;
-        participantsInput.value = 2; // Reset to default
-        document.getElementById('participants-helper-text').textContent = `Max ${maxAllowed} participants for this slot.`;
-        document.getElementById('modal-title').textContent = `Book Slot for ${startTime.toFormat('LLL d, h:mm a')}`;
+        participantsInput.min = minAllowed;
+        participantsInput.value = minAllowed;
+        
+        document.getElementById('participants-helper-text').textContent = `Group size: ${minAllowed} - ${maxAllowed} participants`;
+        document.getElementById('modal-title').textContent = `Book ${state.selectedRoom}`;
         bookingForm.querySelector('#start-iso').value = startTime.toISO();
         bookingForm.querySelector('#end-time').value = startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES }).toFormat('HH:mm');
         bookingModal.showModal();
@@ -208,8 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const { startTime } = state.selectedSlot;
         const slotEnd = startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
         
-        // UPDATED: Use first_name and last_name
-        const overlappingBookings = state.bookings.filter(b => {
+        const overlappingBookings = state.allBookings.filter(b => {
+            if (b.room !== state.selectedRoom) return false;
             const bStart = DateTime.fromISO(b.start_iso);
             const bEnd = DateTime.fromISO(b.end_iso);
             return bStart < slotEnd && bEnd > startTime;
@@ -248,8 +287,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleBookingFormSubmit(e) {
         e.preventDefault();
+        const roomRules = state.selectedSlot.rules;
         
-        // 1. Get all form data
         const formData = new FormData(bookingForm);
         const firstName = formData.get('first_name').trim();
         const lastName = formData.get('last_name').trim();
@@ -258,27 +297,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const leaderLastName = formData.get('leader_last_name').trim();
         const event = formData.get('event').trim();
         const participants = parseInt(formData.get('participants'), 10);
-        const maxAllowed = parseInt(bookingForm.querySelector('#participants').max, 10);
         const endTimeStr = formData.get('end-time');
         const notes = formData.get('notes').trim();
         
-        // 2. Validation
         if (!firstName || !lastName || !email || !leaderFirstName || !leaderLastName || !event) {
             return showToast("Please fill in all required fields.", "error");
         }
         if (!/^\S+@\S+\.\S+$/.test(email)) {
             return showToast("Please enter a valid email address.", "error");
         }
-        if (!participants || participants < 2 || participants > maxAllowed) {
-            return showToast(`Invalid participant number. Must be between 2 and ${maxAllowed}.`, "error");
+        if (!participants || participants < roomRules.MIN_BOOKING_SIZE || participants > roomRules.MAX_BOOKING_SIZE) {
+            return showToast(`Invalid participant number. Must be between ${roomRules.MIN_BOOKING_SIZE} and ${roomRules.MAX_BOOKING_SIZE}.`, "error");
         }
+        const maxAllowed = parseInt(bookingForm.querySelector('#participants').max, 10);
+         if (participants > maxAllowed) {
+             return showToast(`This slot only has ${maxAllowed} spots left.`, "error");
+         }
+
         const startTime = DateTime.fromISO(bookingForm.querySelector('#start-iso').value);
         const [endHour, endMinute] = endTimeStr.split(':').map(Number);
         const endTime = startTime.set({ hour: endHour, minute: endMinute });
         if (endTime <= startTime) return showToast("End time must be after the start time.", "error");
 
-        // 3. Store data for submission
         state.pendingBookingData = {
+            room: state.selectedRoom,
             first_name: firstName,
             last_name: lastName,
             email: email,
@@ -291,7 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
             end_iso: endTime.toISO()
         };
 
-        // 4. Populate and show summary modal
         document.getElementById('summary-name').textContent = `${firstName} ${lastName}`;
         document.getElementById('summary-event').textContent = event;
         document.getElementById('summary-leader').textContent = `${leaderFirstName} ${leaderLastName}`;
@@ -305,8 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function proceedWithBooking() {
         confirmSummaryModal.close();
-        loadingModal.showModal(); // Show the loading modal
-        
+        loadingModal.showModal();
         if (state.pendingBookingData) {
             submitRequest('create', state.pendingBookingData);
             state.pendingBookingData = null;
@@ -316,15 +356,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleCancelFormSubmit(e) {
         e.preventDefault();
         const selectedRadio = document.querySelector('input[name="booking-to-cancel"]:checked');
-        if (!selectedRadio) {
-            return showToast("Please select a booking to cancel.", "error");
-        }
+        if (!selectedRadio) { return showToast("Please select a booking to cancel.", "error"); }
         const bookingId = selectedRadio.value;
         const email = document.getElementById('cancel-email').value;
-        if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-            return showToast("Please enter a valid email to confirm.", "error");
-        }
-        loadingModal.showModal(); // Show loading modal for cancellation
+        if (!email || !/^\S+@\S+\.\S+$/.test(email)) { return showToast("Please enter a valid email to confirm.", "error"); }
+        loadingModal.showModal();
         submitRequest('cancel', { bookingId, email });
     }
 
@@ -332,14 +368,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const callbackName = `jsonp_callback_${Date.now()}`;
         const script = document.createElement('script');
         let timeoutId = null;
-        
         const cleanup = () => {
             clearTimeout(timeoutId);
             if (script.parentNode) document.body.removeChild(script);
             delete window[callbackName];
-            loadingModal.close(); // Always close the loading modal
+            loadingModal.close();
         };
-        
         timeoutId = setTimeout(() => { 
             cleanup(); 
             showToast("Request timed out.", "error"); 
@@ -362,12 +396,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast((data.message || "An unknown error occurred.").replace(/^Error: /i, ''), "error");
             }
         };
-        
         script.onerror = () => { 
             cleanup(); 
             showToast("Failed to send request.", "error"); 
         };
-        
         const encodedPayload = encodeURIComponent(JSON.stringify(payload));
         script.src = `${APP_CONFIG.APPS_SCRIPT_URL}?action=${action}&callback=${callbackName}&payload=${encodedPayload}`;
         document.body.appendChild(script);
@@ -375,15 +407,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- DATA & UTILITIES ---
 
-    async function fetchBookings() {
-        const range = `${'Bookings'}!A:O`; // Updated for 15 columns
+    async function fetchAllBookings() {
+        const range = `${'Bookings'}!A:O`; // 15 columns
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${APP_CONFIG.SPREADSHEET_ID}/values/${range}?key=${APP_CONFIG.API_KEY}`;
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch from Google Sheets API.');
         const data = await response.json();
         const rows = data.values || [];
         const headers = rows[0];
-        state.bookings = rows.slice(1).map(row => {
+        
+        state.allBookings = rows.slice(1).map(row => {
             const booking = {};
             if (headers) {
                 headers.forEach((header, index) => { booking[header] = row[index]; });
@@ -394,7 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function changeWeek(direction) {
         state.currentDate = state.currentDate.plus({ weeks: direction });
-        render();
+        setLoading(true, 'page');
+        renderCalendarShell();
+        renderBookingsForSelectedRoom();
+        setLoading(false, 'page');
     }
 
     function setLoading(isLoading, scope = 'page') {

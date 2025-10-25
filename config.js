@@ -16,7 +16,7 @@ window.APP_CONFIG = {
     /**
      * The URL of your deployed Google Apps Script Web App for writing bookings.
      */
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyQXO7zk8ozMNJCGNKw-Un51qoPz9KjHnLWfnKRdlX1qbMkITQRHz12LIu6ls168hTX/exec',
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxGvcb6sxM84PCuBCajmnvfkA77O18jr7Za3P1vDs_FoM2cI39540SR6YlYA0G9Kgni/exec',
   
     // --- Optional Configurations ---
   
@@ -48,4 +48,39 @@ window.APP_CONFIG = {
       5: { start: '09:00', end: '17:00' }, // Friday
       6: { start: '10:00', end: '14:00' }, // Saturday
     },
+      /**
+     * NEW: Configuration for all available rooms.
+     * This drives the UI and all validation logic.
+     * Based on your image:
+     * - Main Hall: 30 total, 5 groups, max 25 per group. (Min 2)
+     * - Mezzanine A: 20 total, 2 groups, max 10 per group. (Min 2)
+     * - Mezzanine B: 15 total, 1 group, max 1 per group. (Min 1)
+     * - Mezzanine C: 15 total, 1 group, max 1 per group. (Min 1)
+     */
+    ROOM_CONFIG: {
+      "Main Hall": {
+        MAX_TOTAL_PARTICIPANTS: 30,
+        MAX_CONCURRENT_GROUPS: 5,
+        MIN_BOOKING_SIZE: 2,
+        MAX_BOOKING_SIZE: 25
+      },
+      "Mezzanine A": {
+        MAX_TOTAL_PARTICIPANTS: 20,
+        MAX_CONCURRENT_GROUPS: 2,
+        MIN_BOOKING_SIZE: 2,
+        MAX_BOOKING_SIZE: 10
+      },
+      "Mezzanine B": {
+        MAX_TOTAL_PARTICIPANTS: 15,
+        MAX_CONCURRENT_GROUPS: 1,
+        MIN_BOOKING_SIZE: 2,
+        MAX_BOOKING_SIZE: 15
+      },
+      "Mezzanine C": {
+        MAX_TOTAL_PARTICIPANTS: 15,
+        MAX_CONCURRENT_GROUPS: 1,
+        MIN_BOOKING_SIZE: 2,
+        MAX_BOOKING_SIZE: 15
+      }
+  }
   };
