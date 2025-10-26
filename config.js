@@ -16,7 +16,7 @@ window.APP_CONFIG = {
     /**
      * The URL of your deployed Google Apps Script Web App for writing bookings.
      */
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxGvcb6sxM84PCuBCajmnvfkA77O18jr7Za3P1vDs_FoM2cI39540SR6YlYA0G9Kgni/exec',
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby9lzzxcyT86nD9X6BI0sK43ea3DYxrFvEU8AYJHS5O_LWRVVpIPjaBXCQtBQaDeISN/exec',
   
     // --- Optional Configurations ---
   
@@ -40,13 +40,13 @@ window.APP_CONFIG = {
     BUSINESS_HOURS: {
       // Weekday indices: 0=Sunday, 1=Monday, ..., 6=Saturday
       // Use 'start: null' to mark a day as closed.
-      0: { start: null, end: null }, // Sunday
-      1: { start: '09:00', end: '17:00' }, // Monday
-      2: { start: '09:00', end: '17:00' }, // Tuesday
-      3: { start: '09:00', end: '17:00' }, // Wednesday
-      4: { start: '09:00', end: '17:00' }, // Thursday
-      5: { start: '09:00', end: '17:00' }, // Friday
-      6: { start: '10:00', end: '14:00' }, // Saturday
+      0: { start: '10:00', end: '22:00' }, // Sunday
+      1: { start: '10:00', end: '22:00' }, // Monday
+      2: { start: '10:00', end: '22:00' }, // Tuesday
+      3: { start: '10:00', end: '22:00' }, // Wednesday
+      4: { start: '10:00', end: '22:00' }, // Thursday
+      5: { start: '10:00', end: '22:00' }, // Friday
+      6: { start: '10:00', end: '22:00' }, // Saturday
     },
       /**
      * NEW: Configuration for all available rooms.
@@ -59,8 +59,8 @@ window.APP_CONFIG = {
      */
     ROOM_CONFIG: {
       "Main Hall": {
-        MAX_TOTAL_PARTICIPANTS: 30,
-        MAX_CONCURRENT_GROUPS: 5,
+        MAX_TOTAL_PARTICIPANTS: 55,
+        MAX_CONCURRENT_GROUPS: 6,
         MIN_BOOKING_SIZE: 2,
         MAX_BOOKING_SIZE: 25
       },
