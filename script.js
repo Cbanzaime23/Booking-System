@@ -4,12 +4,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- STATE & MODAL REFERENCES ---
     const state = {
         currentDate: DateTime.local().setZone(APP_CONFIG.TIMEZONE),
-        allBookings: [], // Holds all bookings for all rooms
-        selectedRoom: Object.keys(APP_CONFIG.ROOM_CONFIG)[0], // Default to first room
+        allBookings: [],
+        selectedRoom: Object.keys(APP_CONFIG.ROOM_CONFIG)[0],
         isLoading: false,
         selectedSlot: null,
         pendingBookingData: null,
     };
+
+    // Define the overall maximum capacity for each room (used for admin max bookings)
+    const ROOM_CAPACITIES = {
+        "Main Hall": 55,
+        "Jonah": 20,
+        "Joseph": 15,
+        "Moses": 15,
+        // Add other rooms here as needed
+    };
+
+    const EVENT_OPTIONS = {
+        USER: [
+            { name: "Discipleship Meeting", setsMaxCapacity: false },
+            { name: "Ministry Event - Meeting", setsMaxCapacity: false }
+        ],
+        ADMIN_ADDITIONS: [
+            { name: "Ministry Event - B1G Fridays", setsMaxCapacity: true },
+            { name: "Ministry Event - Elevate", setsMaxCapacity: true },
+            { name: "Ministry Event - Exalt Rehearsal", setsMaxCapacity: true },
+            { name: "Ministry Event - Intercede Prayer Ministry", setsMaxCapacity: true },
+            { name: "Ministry Event - Women 2 Women", setsMaxCapacity: true },
+            { name: "Ministry Event - MOVEMENT", setsMaxCapacity: true }
+        ]
+    };
+    
 
     const calendarView = document.querySelector('#calendar-view .grid');
     const loader = document.getElementById('loader');
@@ -33,15 +58,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CORE APP FUNCTIONS ---
 
+    /**
+     * Renders the event dropdown options based on admin status.
+     * @param {boolean} isAdmin - True if the admin toggle is checked.
+     */
+    function renderEventDropdown(isAdmin) {
+        const eventSelector = bookingForm.querySelector('#event'); // Assuming the ID of the dropdown is 'event'
+        if (!eventSelector) return;
+
+        // Start with a clean slate
+        eventSelector.innerHTML = ''; 
+
+        // Add the default placeholder option
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select an event type...';
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        eventSelector.appendChild(placeholder);
+        
+        // 1. Add User (Base) options
+        const allOptions = [...EVENT_OPTIONS.USER];
+
+        // 2. Add Admin options if applicable
+        if (isAdmin) {
+            allOptions.push(...EVENT_OPTIONS.ADMIN_ADDITIONS);
+        }
+        
+        // 3. Populate the dropdown
+        allOptions.forEach(eventObj => { // Loop through event objects
+            const option = document.createElement('option');
+            option.value = eventObj.name; // Use eventObj.name for the value
+            option.textContent = eventObj.name; // Use eventObj.name for display text
+            // Store the setsMaxCapacity property as a data attribute on the option
+            option.dataset.setsMaxCapacity = eventObj.setsMaxCapacity; 
+            eventSelector.appendChild(option);
+        });
+    }
+
     function init() {
         initializeRoomSelector();
         setupEventListeners();
-        render(); // This will now render the default room
+        render();
     }
 
-    /**
-     * Populates the room selector dropdown from config.
-     */
     function initializeRoomSelector() {
         const roomNames = Object.keys(APP_CONFIG.ROOM_CONFIG);
         roomNames.forEach(name => {
@@ -56,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupEventListeners() {
         roomSelector.addEventListener('change', (e) => {
             state.selectedRoom = e.target.value;
-            render(); // Re-render the calendar for the new room
+            render();
         });
         
         calendarControls.prevWeekBtn.addEventListener('click', () => changeWeek(-1));
@@ -78,11 +138,66 @@ document.addEventListener('DOMContentLoaded', () => {
                 cancelModal.close();
             });
         });
+
+        // NEW: Listener for Admin Toggle
+        document.getElementById('admin-toggle').addEventListener('change', (e) => {
+            const isAdmin = e.target.checked;
+
+            // --- CRITICAL ADDITION: RENDER DROPDOWN BASED ON NEW ADMIN STATUS ---
+            renderEventDropdown(isAdmin);
+
+            document.getElementById('user-fields').classList.toggle('hidden', isAdmin);
+            document.getElementById('admin-fields').classList.toggle('hidden', !isAdmin);
+
+            const participantsInput = bookingForm.querySelector('#participants');
+
+            // --- CRITICAL CHANGE: BYPASSING PARTICIPANT LIMIT ---
+            if (isAdmin) {
+                // Admin can bypass the MAX_PARTICIPANTS_PER_BOOKING limit
+                participantsInput.removeAttribute('max');
+            } else if (state.selectedSlot) {
+                // User must adhere to the rule, so re-apply the max limit
+                const maxPerBooking = state.selectedSlot.rules.MAX_PARTICIPANTS_PER_BOOKING;
+                participantsInput.max = maxPerBooking;
+            }
+            // --- END CRITICAL CHANGE ---
+
+            // Also update participant helper text
+            if (state.selectedSlot) {
+                updateParticipantRules(state.selectedSlot.rules, isAdmin);
+            }
+        });
+
+        // --- NEW LISTENER FOR EVENT DROPDOWN ---
+        bookingForm.querySelector('#event').addEventListener('change', (e) => {
+            const selectedOption = e.target.selectedOptions[0];
+            const setsMaxCapacity = selectedOption.dataset.setsMaxCapacity === 'true'; // Convert string to boolean
+            
+            if (setsMaxCapacity && state.selectedSlot) {
+                const participantsInput = bookingForm.querySelector('#participants');
+                
+                // --- CRITICAL CHANGE: Use overall room capacity ---
+                const selectedRoomName = state.selectedRoom; // e.g., "Main Hall"
+                const maxRoomCapacity = ROOM_CAPACITIES[selectedRoomName] || 0; // Get 55, 20, etc.
+                
+                // 1. Ensure the admin bypass is active if this feature is used (optional check)
+                const isAdmin = document.getElementById('admin-toggle').checked;
+                if (!isAdmin) {
+                    // Safety: If they choose a max capacity event without admin status, warn them
+                    // and allow them to proceed only up to the booking limit.
+                    // However, based on your previous requirement, max capacity events are often admin-only.
+                    // Assuming the admin flag is checked if they can see these options.
+                }
+
+                // 2. Set participants to the room's OVERALL MAX CAPACITY
+                participantsInput.value = maxRoomCapacity;
+                
+                // 3. Re-apply the overall room capacity as the max attribute (if not already removed by admin logic)
+                participantsInput.max = maxRoomCapacity; 
+            }
+        });
     }
 
-    /**
-     * Main render function.
-     */
     async function render() {
         setLoading(true, 'page');
         renderCalendarShell();
@@ -141,30 +256,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return slot;
     }
 
-    /**
-     * Renders booking statuses based on the selected room's rules.
-     */
     function renderBookingsForSelectedRoom() {
         const roomRules = APP_CONFIG.ROOM_CONFIG[state.selectedRoom];
         const roomBookings = state.allBookings.filter(b => b.room === state.selectedRoom);
-
         document.querySelectorAll('.time-slot').forEach(slotEl => {
             if (slotEl.classList.contains('past')) return;
             const slotStart = DateTime.fromISO(slotEl.dataset.startIso);
             const slotEnd = slotStart.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
-
             let totalParticipants = 0, totalGroups = 0;
             const overlappingBookings = roomBookings.filter(b => {
                 const bStart = DateTime.fromISO(b.start_iso);
                 const bEnd = DateTime.fromISO(b.end_iso);
                 return bStart < slotEnd && bEnd > slotStart;
             });
-
             overlappingBookings.forEach(b => {
                 totalParticipants += parseInt(b.participants, 10);
                 totalGroups++;
             });
-
             slotEl.dataset.totalParticipants = totalParticipants;
             slotEl.dataset.totalGroups = totalGroups;
             const primaryBooking = overlappingBookings.find(b => DateTime.fromISO(b.start_iso).equals(slotStart));
@@ -175,11 +283,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete slotEl.dataset.bookingId;
                 delete slotEl.dataset.bookingName;
             }
-
             slotEl.className = 'time-slot p-2 text-center text-sm border-t border-slate-100 h-14 flex flex-col items-center justify-center';
             const timeLabelHTML = `<div class="time-label">${slotStart.toFormat('h:mm a')}</div>`;
             let statusLabelHTML = '';
-
             if (totalParticipants >= roomRules.MAX_TOTAL_PARTICIPANTS || totalGroups >= roomRules.MAX_CONCURRENT_GROUPS) {
                 slotEl.classList.add('full');
                 statusLabelHTML = `<div class="status-label">Full</div>`;
@@ -199,21 +305,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleSlotClick(e) {
         const slot = e.target.closest('.time-slot');
         if (!slot || slot.classList.contains('past')) return;
-        
         const roomRules = APP_CONFIG.ROOM_CONFIG[state.selectedRoom];
-        
         state.selectedSlot = {
             startTime: DateTime.fromISO(slot.dataset.startIso),
             totalParticipants: parseInt(slot.dataset.totalParticipants || '0', 10),
             totalGroups: parseInt(slot.dataset.totalGroups || '0', 10),
             rules: roomRules
         };
-        
         if (slot.classList.contains('partial') || slot.classList.contains('full')) {
             const bookButton = document.getElementById('choice-book-btn');
             const remainingGroups = roomRules.MAX_CONCURRENT_GROUPS - state.selectedSlot.totalGroups;
             const remainingPax = roomRules.MAX_TOTAL_PARTICIPANTS - state.selectedSlot.totalParticipants;
-            
             bookButton.style.display = (remainingGroups <= 0 || remainingPax < roomRules.MIN_BOOKING_SIZE) ? 'none' : 'inline-block';
             choiceModal.showModal();
         } else if (slot.classList.contains('available')) {
@@ -224,36 +326,73 @@ document.addEventListener('DOMContentLoaded', () => {
     function openBookingModalForSelectedSlot() {
         choiceModal.close();
         bookingForm.reset();
-        const { startTime, totalParticipants, rules } = state.selectedSlot;
-        
-        const remainingCapacity = rules.MAX_TOTAL_PARTICIPANTS - totalParticipants;
-        const maxAllowed = Math.min(rules.MAX_BOOKING_SIZE, remainingCapacity);
-        const minAllowed = rules.MIN_BOOKING_SIZE;
+        // document.getElementById('admin-toggle').checked = false;
 
-        const participantsInput = bookingForm.querySelector('#participants');
-        participantsInput.max = maxAllowed;
-        participantsInput.min = minAllowed;
-        participantsInput.value = minAllowed;
+        // Ensure Admin Toggle is reset to User (unchecked)
+        const isAdmin = document.getElementById('admin-toggle').checked = false;
+
+        document.getElementById('user-fields').classList.remove('hidden');
+        document.getElementById('admin-fields').classList.add('hidden');
+        const { startTime, rules } = state.selectedSlot;
+        // --- CRITICAL ADDITION: RENDER DROPDOWN FOR USER (false) ---
+        renderEventDropdown(isAdmin);
+
+
+        // --- REVISED CHANGE: Using a dedicated element for date info ---
         
-        document.getElementById('participants-helper-text').textContent = `Group size: ${minAllowed} - ${maxAllowed} participants`;
+        // 1. Format the date/time string
+        // Example: "Mon, Nov 10, 9:00 AM" (using current time of Nov 8, 2025)
+        const formattedDate = startTime.toFormat('ccc, MMM d, h:mm a');
+        
+        // 2. Set the room name title (if you kept the original ID, use that here)
+        // Assuming you use the new ID 'modal-room-title'
+        const roomTitleElement = document.getElementById('modal-room-title');
+        if (roomTitleElement) {
+             roomTitleElement.textContent = `Book ${state.selectedRoom}`;
+        }
+        
+        // 3. Populate the dedicated date/time element (This targets the highlighted area)
+        const dateInfoElement = document.getElementById('modal-date-info');
+        if (dateInfoElement) {
+             dateInfoElement.textContent = formattedDate;
+        }
+        
+        // --- END OF REVISED CHANGE ---
+
+        updateParticipantRules(rules, false);
         document.getElementById('modal-title').textContent = `Book ${state.selectedRoom}`;
         bookingForm.querySelector('#start-iso').value = startTime.toISO();
         bookingForm.querySelector('#end-time').value = startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES }).toFormat('HH:mm');
         bookingModal.showModal();
     }
 
+    function updateParticipantRules(rules, isAdmin) {
+        const { totalParticipants } = state.selectedSlot;
+        const remainingCapacity = rules.MAX_TOTAL_PARTICIPANTS - totalParticipants;
+        const maxAllowed = Math.min(rules.MAX_BOOKING_SIZE, remainingCapacity);
+        const minAllowed = rules.MIN_BOOKING_SIZE;
+        const participantsInput = bookingForm.querySelector('#participants');
+        participantsInput.max = maxAllowed;
+        participantsInput.min = minAllowed;
+        if (parseInt(participantsInput.value, 10) < minAllowed) {
+            participantsInput.value = minAllowed;
+        }
+        let helperText = `Group size: ${minAllowed} - ${maxAllowed} participants.`;
+        const maxDate = DateTime.local().plus(isAdmin ? { months: 6 } : { days: 7 });
+        helperText += ` Can book up to ${maxDate.toFormat('LLL d')}.`;
+        document.getElementById('participants-helper-text').textContent = helperText;
+    }
+
     function openCancelModalForSelectedSlot() {
         choiceModal.close();
         const { startTime } = state.selectedSlot;
         const slotEnd = startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
-        
         const overlappingBookings = state.allBookings.filter(b => {
             if (b.room !== state.selectedRoom) return false;
             const bStart = DateTime.fromISO(b.start_iso);
             const bEnd = DateTime.fromISO(b.end_iso);
             return bStart < slotEnd && bEnd > startTime;
         });
-
         const listContainer = document.getElementById('cancel-booking-list');
         listContainer.innerHTML = '';
         if (overlappingBookings.length === 0) {
@@ -287,8 +426,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleBookingFormSubmit(e) {
         e.preventDefault();
+        const isAdmin = document.getElementById('admin-toggle').checked;
         const roomRules = state.selectedSlot.rules;
-        
         const formData = new FormData(bookingForm);
         const firstName = formData.get('first_name').trim();
         const lastName = formData.get('last_name').trim();
@@ -299,48 +438,107 @@ document.addEventListener('DOMContentLoaded', () => {
         const participants = parseInt(formData.get('participants'), 10);
         const endTimeStr = formData.get('end-time');
         const notes = formData.get('notes').trim();
+        const adminPin = formData.get('admin-pin').trim();
+        const recurrence = formData.get('recurrence');
         
-        if (!firstName || !lastName || !email || !leaderFirstName || !leaderLastName || !event) {
+        let requiredFields = ['first_name', 'last_name', 'email', 'event'];
+        if (isAdmin) {
+            if (!adminPin) return showToast("Admin PIN is required.", "error");
+        } else {
+            if (!leaderFirstName || !leaderLastName) {
+                return showToast("Please fill in all required fields (including Dgroup Leader).", "error");
+            }
+            requiredFields.push('leader_first_name', 'leader_last_name');
+        }
+        if (!firstName || !lastName || !email || !event) {
             return showToast("Please fill in all required fields.", "error");
         }
-        if (!/^\S+@\S+\.\S+$/.test(email)) {
-            return showToast("Please enter a valid email address.", "error");
+        if (!/^\S+@\S+\.\S+$/.test(email)) return showToast("Please enter a valid email address.", "error");
+        // if (!participants || participants < roomRules.MIN_BOOKING_SIZE || participants > roomRules.MAX_BOOKING_SIZE) {
+        //     return showToast(`Invalid participant number. Must be between ${roomRules.MIN_BOOKING_SIZE} and ${roomRules.MAX_BOOKING_SIZE}.`, "error");
+        // }
+    // --- CRITICAL FIX: Admin Bypass for Participant Max Size ---
+
+        // 1. Check Minimum size (Applies to everyone)
+        if (participants < roomRules.MIN_PARTICIPANTS) {
+            return showToast(`Invalid participant number. Must be at least ${roomRules.MIN_PARTICIPANTS}.`, "error");
         }
-        if (!participants || participants < roomRules.MIN_BOOKING_SIZE || participants > roomRules.MAX_BOOKING_SIZE) {
-            return showToast(`Invalid participant number. Must be between ${roomRules.MIN_BOOKING_SIZE} and ${roomRules.MAX_BOOKING_SIZE}.`, "error");
+
+        // 2. Check Maximum size (Applies ONLY to regular users)
+        if (!isAdmin && participants > roomRules.MAX_BOOKING_SIZE) {
+            return showToast(`Invalid participant number. Must be between ${roomRules.MIN_PARTICIPANTS} and ${roomRules.MAX_BOOKING_SIZE}.`, "error");
         }
+        
+        // 3. For Admins, we must ensure they don't exceed the overall room capacity (55 for Main Hall)
+        // We can use the overall MAX_TOTAL_PARTICIPANTS here for a strict client-side check.
+        // We need ROOM_CAPACITIES available in script.js for this.
+        const maxRoomCapacity = ROOM_CAPACITIES[state.selectedRoom] || roomRules.MAX_TOTAL_PARTICIPANTS;
+
+        if (participants > maxRoomCapacity) {
+            return showToast(`Invalid participant number. Admin booking cannot exceed room's total capacity (${maxRoomCapacity}).`, "error");
+        }
+        
+        // --- END CRITICAL FIX ---
+
         const maxAllowed = parseInt(bookingForm.querySelector('#participants').max, 10);
          if (participants > maxAllowed) {
              return showToast(`This slot only has ${maxAllowed} spots left.`, "error");
          }
-
         const startTime = DateTime.fromISO(bookingForm.querySelector('#start-iso').value);
         const [endHour, endMinute] = endTimeStr.split(':').map(Number);
         const endTime = startTime.set({ hour: endHour, minute: endMinute });
         if (endTime <= startTime) return showToast("End time must be after the start time.", "error");
 
+        // --- START OF REQUIRED CHANGE ---
+        
+        // Calculate Duration
+        const durationMinutes = endTime.diff(startTime, 'minutes').minutes;
+        const durationHours = durationMinutes / 60;
+        
+        let durationText = '';
+        if (durationMinutes >= 60) {
+            // Display as X hours
+            durationText = `${durationHours} hour${durationHours !== 1 ? 's' : ''}`;
+        } else {
+            // Display as X minutes
+            durationText = `${durationMinutes} minute${durationMinutes !== 1 ? 's' : ''}`;
+        }
+
+        
+        const maxDate = DateTime.local().plus(isAdmin ? { months: 6 } : { days: 7 });
+        if (startTime > maxDate) {
+            return showToast(isAdmin ? "Admins can only book up to 6 months in advance." : "Users can only book up to 7 days in advance.", "error");
+        }
+        if (startTime < DateTime.local()) {
+            return showToast("Cannot create a booking in the past.", "error");
+        }
+        
         state.pendingBookingData = {
             room: state.selectedRoom,
             first_name: firstName,
             last_name: lastName,
             email: email,
-            leader_first_name: leaderFirstName,
-            leader_last_name: leaderLastName,
+            leader_first_name: isAdmin ? '' : leaderFirstName,
+            leader_last_name: isAdmin ? '' : leaderLastName,
             event: event,
             participants: participants,
             notes: notes,
             start_iso: startTime.toISO(),
-            end_iso: endTime.toISO()
+            end_iso: endTime.toISO(),
+            adminPin: adminPin,
+            recurrence: isAdmin ? recurrence : 'none' // Only send recurrence if admin
         };
 
+        document.getElementById('summary-room').textContent = state.selectedRoom;
         document.getElementById('summary-name').textContent = `${firstName} ${lastName}`;
         document.getElementById('summary-event').textContent = event;
-        document.getElementById('summary-leader').textContent = `${leaderFirstName} ${leaderLastName}`;
+        document.getElementById('summary-leader').textContent = isAdmin ? 'N/A (Admin)' : `${leaderFirstName} ${leaderLastName}`;
         document.getElementById('summary-date').textContent = startTime.toFormat('DDD');
-        document.getElementById('summary-time').textContent = `${startTime.toFormat('h:mm a')} - ${endTime.toFormat('h:mm a')}`;
+
+
+        document.getElementById('summary-time').textContent = `${startTime.toFormat('h:mm a')} - ${endTime.toFormat('h:mm a')} (${durationText})`;
         document.getElementById('summary-participants').textContent = `${participants} participants`;
         document.getElementById('summary-email').textContent = email;
-
         confirmSummaryModal.showModal();
     }
 
@@ -353,15 +551,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * UPDATED: Relaxes email validation if admin pin is present.
+     */
     function handleCancelFormSubmit(e) {
         e.preventDefault();
         const selectedRadio = document.querySelector('input[name="booking-to-cancel"]:checked');
         if (!selectedRadio) { return showToast("Please select a booking to cancel.", "error"); }
+        
         const bookingId = selectedRadio.value;
         const email = document.getElementById('cancel-email').value;
-        if (!email || !/^\S+@\S+\.\S+$/.test(email)) { return showToast("Please enter a valid email to confirm.", "error"); }
+        const adminPin = document.getElementById('admin-pin').value;
+        
+        // If no admin pin is provided, email is strictly required and must be valid.
+        if (!adminPin && (!email || !/^\S+@\S+\.\S+$/.test(email))) { 
+            return showToast("Please enter a valid email to confirm.", "error"); 
+        }
+        
+        // If admin pin IS provided, email is optional (but we send it anyway).
+        // The server will prioritize the PIN.
+        
+        // We require *something* in the email field to help admins log who cancelled it.
+        if (!email) {
+             return showToast("Email field is required (use your admin email).", "error");
+        }
+
         loadingModal.showModal();
-        submitRequest('cancel', { bookingId, email });
+        submitRequest('cancel', { bookingId, email: email, adminPin: adminPin });
     }
 
     function submitRequest(action, payload) {
@@ -377,14 +593,25 @@ document.addEventListener('DOMContentLoaded', () => {
         timeoutId = setTimeout(() => { 
             cleanup(); 
             showToast("Request timed out.", "error"); 
-        }, 15000);
+        }, 30000);
         
         window[callbackName] = (data) => {
             cleanup();
             if (data.success) {
                 if (action === 'create') {
                     const bookingCode = data.id.substring(0, 12).toUpperCase();
+                    const bookedRoom = data.bookedRoom;
+                    const requestedRoom = data.requestedRoom;
                     document.getElementById('success-booking-code').textContent = bookingCode;
+                    document.getElementById('success-room-name').textContent = bookedRoom;
+                    const redirectMsgEl = document.getElementById('success-redirect-message');
+                    if (data.message.includes('Recurrent')) {
+                        redirectMsgEl.textContent = data.message;
+                    } else if (bookedRoom !== requestedRoom) {
+                        redirectMsgEl.innerHTML = `To optimize room usage, your booking for <strong>${requestedRoom}</strong> has been moved to the <strong>${bookedRoom}</strong>.`;
+                    } else {
+                        redirectMsgEl.textContent = `Your booking for ${bookedRoom} is confirmed. Please save this code for your records.`;
+                    }
                     successModal.showModal();
                 } else {
                     showToast(data.message, "success");
@@ -396,10 +623,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast((data.message || "An unknown error occurred.").replace(/^Error: /i, ''), "error");
             }
         };
+        
         script.onerror = () => { 
             cleanup(); 
             showToast("Failed to send request.", "error"); 
         };
+        
         const encodedPayload = encodeURIComponent(JSON.stringify(payload));
         script.src = `${APP_CONFIG.APPS_SCRIPT_URL}?action=${action}&callback=${callbackName}&payload=${encodedPayload}`;
         document.body.appendChild(script);
@@ -408,7 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DATA & UTILITIES ---
 
     async function fetchAllBookings() {
-        const range = `${'Bookings'}!A:O`; // 15 columns
+        const range = `${'Bookings'}!A:O`;
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${APP_CONFIG.SPREADSHEET_ID}/values/${range}?key=${APP_CONFIG.API_KEY}`;
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch from Google Sheets API.');
@@ -437,7 +666,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (scope === 'page') {
             loader.classList.toggle('hidden', !isLoading);
         }
-        // Modal button loading state is now handled by the loadingModal
     }
 
     function showToast(message, type = "success") {

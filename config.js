@@ -16,7 +16,7 @@ window.APP_CONFIG = {
     /**
      * The URL of your deployed Google Apps Script Web App for writing bookings.
      */
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby9lzzxcyT86nD9X6BI0sK43ea3DYxrFvEU8AYJHS5O_LWRVVpIPjaBXCQtBQaDeISN/exec',
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyRvOuAPYqowcITECWQQYlWb2wod1YW_M25prTd8TJ1JnpTZGc1FbyKv7Ug7leEjQ4/exec',
   
     // --- Optional Configurations ---
   
@@ -64,19 +64,19 @@ window.APP_CONFIG = {
         MIN_BOOKING_SIZE: 2,
         MAX_BOOKING_SIZE: 25
       },
-      "Mezzanine A": {
+      "Jonah": {
         MAX_TOTAL_PARTICIPANTS: 20,
         MAX_CONCURRENT_GROUPS: 2,
         MIN_BOOKING_SIZE: 2,
         MAX_BOOKING_SIZE: 10
       },
-      "Mezzanine B": {
+      "Joseph": {
         MAX_TOTAL_PARTICIPANTS: 15,
         MAX_CONCURRENT_GROUPS: 1,
         MIN_BOOKING_SIZE: 2,
         MAX_BOOKING_SIZE: 15
       },
-      "Mezzanine C": {
+      "Moses": {
         MAX_TOTAL_PARTICIPANTS: 15,
         MAX_CONCURRENT_GROUPS: 1,
         MIN_BOOKING_SIZE: 2,

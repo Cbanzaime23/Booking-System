@@ -4,127 +4,194 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CCF Manila Booking System</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@600;700&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+
+    <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              fontFamily: {
+                'heading': ['"EB Garamond"', 'serif'],
+                'body': ['"Montserrat"', 'sans-serif'],
+              },
+              colors: {
+                'ccf-blue': {
+                  DEFAULT: '#004d60',
+                  'dark': '#003e4d',
+                },
+                'ccf-red': {
+                  DEFAULT: '#e00000',
+                  'dark': '#b80000',
+                },
+              }
+            }
+          }
+        }
+    </script>
+        
+    <link rel="stylesheet" href="style.css?v=1.4">
+    <style>
+        .calendar-sticky-header {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 156px; /* Adjust this value based on the total height of all sticky elements above it */
+            z-index: 40;
+            background-color: #fff; /* Ensure white background for visibility */
+        }
+
+        /* Added for the time column on the left (if you implement a fixed time column) */
+        .time-slot-column {
+            position: -webkit-sticky;
+            position: sticky;
+            left: 0;
+            z-index: 50;
+        }
+    </style>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800">
+<body class="bg-white font-body text-gray-800">
 
     <div id="app" class="container mx-auto p-4 max-w-7xl">
-        <header class="bg-white-600 text-black p-4 shadow-md flex flex-col md:flex-row items-center justify-center">
+        
+        <header class="bg-white text-black p-4 shadow-md flex flex-col md:flex-row items-center justify-center sticky top-0 z-50">
             <div class="mb-2 md:mb-0 md:mr-4"> <img src="./ccf-full-logo-black.png" alt="CCF Logo" class="h-12 w-auto">
             </div>
-            <h1 class="text-3xl font-bold text-center">CCF Manila Booking System</h1>
+            <h1 class="text-3xl font-bold text-center font-heading text-ccf-blue">CCF Manila Booking System</h1>
         </header>
 
         <main>
-            <section id="room-selector-section" class="mb-4">
-                <label for="room-selector" class="block text-sm font-medium text-slate-700 mb-1">Select a Room:</label>
-                <select id="room-selector" class="block w-full max-w-xs px-3 py-2 border border-slate-300 rounded-md shadow-sm bg-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </select>
+            <section id="room-selector-section" class="mb-4 relative sticky top-[80px] z-40 bg-white pt-4 pb-2 shadow-sm">
+                <label for="room-selector" class="block text-sm font-medium text-gray-700 mb-1">Select a Room:</label>
+                <select id="room-selector" class="block w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:outline-none focus:ring-ccf-red focus:border-ccf-red">
+                </select>
             </section>
             
-            <section id="calendar-controls" class="flex justify-between items-center mb-4 p-4 bg-white rounded-lg shadow-sm">
+            <section id="calendar-controls" class="flex justify-between items-center mb-4 p-4 bg-white rounded-lg shadow-sm border border-gray-200 sticky top-[150px] z-30">
+                <button id="prev-week" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">&larr; Prev</button>
+                <h2 id="current-week-title" class="text-2xl font-semibold text-center font-heading text-ccf-blue"></h2>
+                <button id="next-week" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">Next &rarr;</button>
             </section>
 
-            <!-- Calendar Controls -->
-            <section id="calendar-controls" class="flex justify-between items-center mb-4 p-4 bg-white rounded-lg shadow-sm">
-                <button id="prev-week" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 transition-colors">&larr; Prev</button>
-                <h2 id="current-week-title" class="text-xl font-semibold text-center"></h2>
-                <button id="next-week" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 transition-colors">Next &rarr;</button>
-            </section>
-
-            <!-- Calendar View -->
-            <section id="calendar-view" class="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div class="grid grid-cols-1 md:grid-cols-7 border-t border-l border-slate-200">
-                    <!-- Calendar will be rendered here by JavaScript -->
-                </div>
+            <section id="calendar-view" class="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+                <div class="grid grid-cols-1 md:grid-cols-7 border-t border-l border-gray-200">
+                    </div>
                 <div id="loader" class="hidden absolute inset-0 bg-white/70 flex justify-center items-center">
                     <div class="loader-spinner"></div>
                 </div>
+
             </section>
         </main>
     </div>
 
-    <!-- Booking Modal -->
     <dialog id="choice-modal" class="p-0 rounded-lg shadow-xl max-w-sm w-full">
         <div class="p-6 text-center">
-            <h3 class="text-2xl font-bold mb-4">What would you like to do?</h3>
-            <p class="mb-6 text-slate-600">This time slot is partially booked. You can book a new slot or cancel an existing one.</p>
+            <h3 class="text-2xl font-bold mb-4 font-heading text-ccf-blue">What would you like to do?</h3>
+            <p class="mb-6 text-gray-600">This time slot is partially booked. You can book a new slot or cancel an existing one.</p>
             <div class="flex justify-center gap-4">
-                <button id="choice-book-btn" class="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold">Book a New Slot</button>
-                <button id="choice-cancel-btn" class="px-6 py-3 bg-slate-200 rounded-md hover:bg-slate-300 font-semibold">Cancel a Booking</button>
+                <button id="choice-book-btn" class="px-6 py-3 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark font-semibold">Book a New Slot</button>
+                <button id="choice-cancel-btn" class="px-6 py-3 bg-gray-200 rounded-md hover:bg-gray-300 font-semibold">Cancel a Booking</button>
             </div>
         </div>
     </dialog>
     
     <dialog id="booking-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6">
-            <h3 class="text-2xl font-bold mb-4" id="modal-title">New Booking</h3>
+            <h3 class="text-2xl font-bold mb-4 font-heading text-ccf-blue" id="modal-title">New Booking</h3>
+            <h3 class="text-1xl font-bold mb-4 font-heading text-ccf-blue" id="modal-date-info" class="text-md text-gray-600 font-semibold"></h3>
             <form id="booking-form" novalidate>
                 <input type="hidden" id="start-iso">
                 
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label for="first_name" class="block text-sm font-medium text-slate-700">First Name</label>
-                        <input type="text" id="first_name" name="first_name" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm">
+                        <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+                        <input type="text" id="first_name" name="first_name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
                     </div>
                     <div>
-                        <label for="last_name" class="block text-sm font-medium text-slate-700">Last Name</label>
-                        <input type="text" id="last_name" name="last_name" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm">
+                        <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+                        <input type="text" id="last_name" name="last_name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
                     </div>
                 </div>
     
                 <div class="mb-4">
-                    <label for="email" class="block text-sm font-medium text-slate-700">Email Address</label>
-                    <input type="email" id="email" name="email" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm">
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                    <input type="email" id="email" name="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
                 </div>
-    
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label for="leader_first_name" class="block text-sm font-medium text-slate-700">Dgroup Leader First Name</label>
-                        <input type="text" id="leader_first_name" name="leader_first_name" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm">
-                    </div>
-                    <div>
-                        <label for="leader_last_name" class="block text-sm font-medium text-slate-700">Dgroup Leader Last Name</label>
-                        <input type="text" id="leader_last_name" name="leader_last_name" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm">
-                    </div>
-                </div>
-    
+
                 <div class="mb-4">
-                    <label for="event" class="block text-sm font-medium text-slate-700">Event</label>
-                    <select id="event" name="event" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm bg-white">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="admin-toggle" class="form-checkbox h-4 w-4 text-ccf-red border-gray-300 rounded focus:ring-ccf-red">
+                        <span class="ml-2 text-sm text-gray-700">I am an Admin</span>
+                    </label>
+                </div>
+    
+                <div id="user-fields" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="leader_first_name" class="block text-sm font-medium text-gray-700">Dgroup Leader First Name</label>
+                            <input type="text" id="leader_first_name" name="leader_first_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        </div>
+                        <div>
+                            <label for="leader_last_name" class="block text-sm font-medium text-gray-700">Dgroup Leader Last Name</label>
+                            <input type="text" id="leader_last_name" name="leader_last_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        </div>
+                    </div>
+                </div>
+    
+                <div id="admin-fields" class="hidden space-y-4 rounded-lg border border-red-200 bg-red-50 p-4 my-4">
+                    <div>
+                        <label for="admin-pin" class="block text-sm font-medium text-ccf-red-dark">Admin PIN</label>
+                        <input type="password" id="admin-pin" name="admin-pin" placeholder="Enter PIN for admin booking" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                    </div>
+                    <div>
+                        <label for="recurrence" class="block text-sm font-medium text-ccf-red-dark">Recurrence (Optional)</label>
+                        <select id="recurrence" name="recurrence" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:ring-ccf-red focus:border-ccf-red">
+                            <option value="none">One-time event</option>
+                            <option value="weekly">Weekly (for 12 weeks)</option>
+                            <option value="monthly">Monthly (for 6 months)</option>
+                            <option value="quarterly">Quarterly (for 4 quarters)</option>
+                            <option value="first_wednesday">First Wednesday of Month (for 6 months)</option>
+                            <option value="last_saturday">Last Saturday of Month (for 6 months)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="event" class="block text-sm font-medium text-gray-700">Event</label>
+                    <select id="event" name="event" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:ring-ccf-red focus:border-ccf-red">
                         <option value="">Select an event type...</option>
-                        <option value="Rehearsal/Practice">Ministry Rehearsal/Practice</option>
+                        <option value="Rehearsal/Practice">Rehearsal/Practice</option>
                         <option value="Ministry Event">Ministry Event</option>
-                        <option value="Dgroup">Discipleship Group Meeting</option>
+                        <option value="Dgroup">Dgroup</option>
                         <option value="Celebration">Celebration</option>
                     </select>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label for="end-time" class="block text-sm font-medium text-slate-700">End Time</label>
-                        <!-- <input type="time" id="end-time" name="end-time" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm"> -->
-                        <input type="time" id="end-time" name="end-time" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm" step="1800">
+                        <label for="end-time" class="block text-sm font-medium text-gray-700">End Time</label>
+                        <input type="time" id="end-time" name="end-time" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red" step="1800">
                     </div>
                     <div>
-                        <label for="participants" class="block text-sm font-medium text-slate-700">Number of Participants</label>
-                        <input type="number" id="participants" name="participants" required min="2" max="25" value="2" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm">
+                        <label for="participants" class="block text-sm font-medium text-gray-700">Number of Participants</label>
+                        <input type="number" id="participants" name="participants" required min="1" value="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
                     </div>
                 </div>
                 <div class="text-center -mt-2 mb-4">
-                    <p id="participants-helper-text" class="text-xs text-slate-500"></p>
+                    <p id="participants-helper-text" class="text-xs text-gray-500"></p>
                 </div>
     
                 <div class="mb-4">
-                    <label for="notes" class="block text-sm font-medium text-slate-700">Notes (Optional)</label>
-                    <textarea id="notes" name="notes" rows="2" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm"></textarea>
+                    <label for="notes" class="block text-sm font-medium text-gray-700">Notes (Optional)</label>
+                    <textarea id="notes" name="notes" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red"></textarea>
                 </div>
     
                 <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" class="cancel-btn px-4 py-2 bg-slate-200 rounded-md hover:bg-slate-300">Cancel</button>
-                    <button type="submit" id="submit-booking" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Confirm Booking</button>
+                    <button type="button" class="cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancel</button>
+                    <button type="submit" id="submit-booking" class="px-4 py-2 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark">Confirm Booking</button>
                 </div>
             </form>
         </div>
@@ -132,23 +199,27 @@
     
     <dialog id="cancel-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6">
-            <h3 class="text-2xl font-bold mb-2">Cancel a Booking</h3>
-            <p class="mb-4 text-slate-600">Select the booking you wish to cancel.</p>
+            <h3 class="text-2xl font-bold mb-2 font-heading text-ccf-blue">Cancel a Booking</h3>
+            <p class="mb-4 text-gray-600">Select the booking you wish to cancel.</p>
             
             <form id="cancel-form" novalidate>
-                <div id="cancel-booking-list" class="space-y-2 border-y border-slate-200 py-3 mb-4">
-                    </div>
+                <div id="cancel-booking-list" class="space-y-2 border-y border-gray-200 py-3 mb-4">
+                </div>
     
                 <div id="cancel-confirmation-section" class="hidden">
                     <div class="mb-4">
-                        <label for="cancel-email" class="block text-sm font-medium text-slate-700">Confirm with your Email</label>
-                        <input type="email" id="cancel-email" name="cancel-email" required placeholder="you@example.com" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500">
+                        <label for="cancel-email" class="block text-sm font-medium text-gray-700">Confirm with your Email</label>
+                        <input type="email" id="cancel-email" name="cancel-email" required placeholder="you@example.com" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ccf-red focus:border-ccf-red">
+                    </div>
+                     <div class="mb-4">
+                        <label for="admin-pin-cancel" class="block text-sm font-medium text-gray-500">Admin PIN (Optional)</label>
+                        <input type="password" id="admin-pin-cancel" name="admin-pin" placeholder="Enter PIN to override" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
                     </div>
                 </div>
     
                 <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" class="cancel-btn px-4 py-2 bg-slate-200 rounded-md hover:bg-slate-300">Back</button>
-                    <button type="submit" id="confirm-cancel-btn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-red-300" disabled>Confirm Cancellation</button>
+                    <button type="button" class="cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Back</button>
+                    <button type="submit" id="confirm-cancel-btn" class="px-4 py-2 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark disabled:bg-red-300" disabled>Confirm Cancellation</button>
                 </div>
             </form>
         </div>
@@ -156,43 +227,47 @@
 
     <dialog id="confirm-summary-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6">
-            <h3 class="text-2xl font-bold mb-4">Confirm Your Booking</h3>
-            <p class="mb-5 text-slate-600">Please review your booking details below. Are you sure you want to proceed?</p>
+            <h3 class="text-2xl font-bold mb-4 font-heading text-ccf-blue">Confirm Your Booking</h3>
+            <p class="mb-5 text-gray-600">Please review your booking details below. Are you sure you want to proceed?</p>
     
-            <div class="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4 mb-6">
+            <div class="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4 mb-6">
                 <div class="flex justify-between">
-                    <span class="text-sm font-medium text-slate-500">Name:</span>
-                    <span id="summary-name" class="font-semibold text-slate-800"></span>
+                    <span class="text-sm font-medium text-gray-500">Room:</span>
+                    <span id="summary-room" class="font-semibold text-gray-800"></span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-sm font-medium text-slate-500">Event:</span>
-                    <span id="summary-event" class="font-semibold text-slate-800"></span>
+                    <span class="text-sm font-medium text-gray-500">Name:</span>
+                    <span id="summary-name" class="font-semibold text-gray-800"></span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-sm font-medium text-slate-500">Leader:</span>
-                    <span id="summary-leader" class="font-semibold text-slate-800"></span>
+                    <span class="text-sm font-medium text-gray-500">Event:</span>
+                    <span id="summary-event" class="font-semibold text-gray-800"></span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-sm font-medium text-slate-500">Date:</span>
-                    <span id="summary-date" class="font-semibold text-slate-800"></span>
+                    <span class="text-sm font-medium text-gray-500">Leader:</span>
+                    <span id="summary-leader" class="font-semibold text-gray-800"></span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-sm font-medium text-slate-500">Time:</span>
-                    <span id="summary-time" class="font-semibold text-slate-800"></span>
+                    <span class="text-sm font-medium text-gray-500">Date:</span>
+                    <span id="summary-date" class="font-semibold text-gray-800"></span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-sm font-medium text-slate-500">Group Size:</span>
-                    <span id="summary-participants" class="font-semibold text-slate-800"></span>
+                    <span class="text-sm font-medium text-gray-500">Time:</span>
+                    <span id="summary-time" class="font-semibold text-gray-800"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm font-medium text-gray-500">Group Size:</span>
+                    <span id="summary-participants" class="font-semibold text-gray-800"></span>
                 </div>
                  <div class="flex justify-between">
-                    <span class="text-sm font-medium text-slate-500">Email:</span>
-                    <span id="summary-email" class="font-semibold text-slate-800"></span>
+                    <span class="text-sm font-medium text-gray-500">Email:</span>
+                    <span id="summary-email" class="font-semibold text-gray-800"></span>
                 </div>
             </div>
     
             <div class="flex justify-end gap-3 mt-6">
-                <button type="button" id="summary-no-btn" class="px-5 py-2 bg-slate-200 rounded-md hover:bg-slate-300">No, Go Back</button>
-                <button type="button" id="summary-yes-btn" class="px-5 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Yes, Confirm</button>
+                <button type="button" id="summary-no-btn" class="px-5 py-2 bg-gray-200 rounded-md hover:bg-gray-300">No, Go Back</button>
+                <button type="button" id="summary-yes-btn" class="px-5 py-2 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark">Yes, Confirm</button>
             </div>
         </div>
     </dialog>
@@ -209,26 +284,26 @@
                 <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
             </div>
             
-            <h3 class="text-2xl font-bold mb-3">Booking Confirmed!</h3>
-            <p class="text-slate-600 mb-4">Your booking is confirmed. Here is your booking code. Please save it for your records.</p>
+            <h3 class="text-2xl font-bold mb-3 font-heading text-ccf-blue">Booking Confirmed!</h3>
+            <p id="success-redirect-message" class="text-gray-600 mb-4"></p> 
             
-            <div class="rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-4 mb-6">
-                <span id="success-booking-code" class="text-2xl font-bold text-slate-800 tracking-wider"></span>
+            <div class="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4 mb-6 text-left">
+                <p class="text-sm"><strong>Booking Code:</strong></p>
+                <span id="success-booking-code" class="text-2xl font-bold text-gray-800 tracking-wider"></span>
+                <p class="text-sm mt-2"><strong>Room:</strong></p>
+                <span id="success-room-name" class="text-xl font-bold text-gray-800"></span>
             </div>
     
-            <button type="button" id="success-done-btn" class_="w-full px-5 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold">
+            <button type="button" id="success-done-btn" class="w-full px-5 py-3 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark font-semibold">
                 Done
             </button>
         </div>
     </dialog>
 
-
-    <!-- Toasts / Notifications -->
-    <div id="toast-container" class="fixed bottom-5 right-5 space-y-3"></div>
+    <div id="toast-container" class="fixed bottom-5 right-5 space-y-3 z-[100]"></div>
     
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
-    <script src="config.js"></script>
-    <script src="script.js"></script>
+    <script src="config.js?v=1.4"></script>
+    <script src="script.js?v=1.4"></script>
 </body>
 </html>
