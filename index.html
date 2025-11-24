@@ -95,14 +95,26 @@
                 <button id="choice-book-btn" class="px-6 py-3 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark font-semibold">Book a New Slot</button>
                 <button id="choice-cancel-btn" class="px-6 py-3 bg-gray-200 rounded-md hover:bg-gray-300 font-semibold">Cancel a Booking</button>
             </div>
+            <div class="mt-4">
+                <button type="button" id="choice-back-btn" class="px-6 py-2 text-sm text-gray-600 hover:text-black">
+                    Back
+                </button>
+            </div>
         </div>
     </dialog>
     
     <dialog id="booking-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6">
+            <button type="button" class="cancel-btn absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
             <h3 class="text-2xl font-bold mb-4 font-heading text-ccf-blue" id="modal-title">New Booking</h3>
             <h3 class="text-1xl font-bold mb-4 font-heading text-ccf-blue" id="modal-date-info" class="text-md text-gray-600 font-semibold"></h3>
             <form id="booking-form" novalidate>
+
+
                 <input type="hidden" id="start-iso">
                 
                 <div class="grid grid-cols-2 gap-4 mb-4">

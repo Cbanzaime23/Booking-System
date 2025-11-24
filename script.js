@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const EVENT_OPTIONS = {
         USER: [
-            { name: "Discipleship Meeting", setsMaxCapacity: false },
+            { name: "Discipleship Group Meeting", setsMaxCapacity: false },
             { name: "Ministry Event - Meeting", setsMaxCapacity: false }
         ],
         ADMIN_ADDITIONS: [
@@ -31,7 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: "Ministry Event - Exalt Rehearsal", setsMaxCapacity: true },
             { name: "Ministry Event - Intercede Prayer Ministry", setsMaxCapacity: true },
             { name: "Ministry Event - Women 2 Women", setsMaxCapacity: true },
-            { name: "Ministry Event - MOVEMENT", setsMaxCapacity: true }
+            { name: "Ministry Event - MOVEMENT", setsMaxCapacity: true },
+            { name: "Ministry Event - ACROSS Family Ministry", setsMaxCapacity: true }
         ]
     };
     
@@ -126,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Modal Listeners
         document.getElementById('choice-book-btn').addEventListener('click', openBookingModalForSelectedSlot);
         document.getElementById('choice-cancel-btn').addEventListener('click', openCancelModalForSelectedSlot);
+        document.getElementById('choice-back-btn').addEventListener('click', () => choiceModal.close());
         bookingForm.addEventListener('submit', handleBookingFormSubmit);
         cancelForm.addEventListener('submit', handleCancelFormSubmit);
         document.getElementById('cancel-booking-list').addEventListener('change', handleCancelSelectionChange);
@@ -372,14 +374,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxAllowed = Math.min(rules.MAX_BOOKING_SIZE, remainingCapacity);
         const minAllowed = rules.MIN_BOOKING_SIZE;
         const participantsInput = bookingForm.querySelector('#participants');
+
         participantsInput.max = maxAllowed;
         participantsInput.min = minAllowed;
         if (parseInt(participantsInput.value, 10) < minAllowed) {
             participantsInput.value = minAllowed;
         }
-        let helperText = `Group size: ${minAllowed} - ${maxAllowed} participants.`;
+        // --- START OF CHANGE ---
+
+        // 1. Build the helper text string
+        let helperText = `Group size: ${minAllowed} - ${maxAllowed} participants. `;
+        
+        // 2. Add the max concurrent groups from the rules
+        helperText += `Max groups for this room: ${rules.MAX_CONCURRENT_GROUPS}. `;
+
+        // 3. Add the booking window date
         const maxDate = DateTime.local().plus(isAdmin ? { months: 6 } : { days: 7 });
-        helperText += ` Can book up to ${maxDate.toFormat('LLL d')}.`;
+        helperText += `Can book up to ${maxDate.toFormat('LLL d')}.`;
+        
+        // --- END OF CHANGE ---
         document.getElementById('participants-helper-text').textContent = helperText;
     }
 

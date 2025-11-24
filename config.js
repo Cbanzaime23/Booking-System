@@ -16,7 +16,7 @@ window.APP_CONFIG = {
     /**
      * The URL of your deployed Google Apps Script Web App for writing bookings.
      */
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyRvOuAPYqowcITECWQQYlWb2wod1YW_M25prTd8TJ1JnpTZGc1FbyKv7Ug7leEjQ4/exec',
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwO2l8VepWuFFaZ7ex9MBM6kR-20i4IQgRY3bZEQJNOWQyR9oKv9dbjys26TmdPNHP0/exec',
   
     // --- Optional Configurations ---
   
