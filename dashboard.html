@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - CCF Manila Booking</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              fontFamily: {
+                'heading': ['"EB Garamond"', 'serif'],
+                'body': ['"Montserrat"', 'sans-serif'],
+              },
+              colors: {
+                'ccf-blue': { DEFAULT: '#004d60', 'dark': '#003e4d' },
+                'ccf-red': { DEFAULT: '#e00000', 'dark': '#b80000' },
+                'ccf-cream': '#f8fafc',
+              }
+            }
+          }
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+
+    <style>
+        tbody tr:hover { background-color: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-ccf-cream font-body text-gray-800">
+
+    <header class="bg-white text-black p-4 shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-4">
+            
+            <div class="flex items-center w-full md:w-auto">
+                <div class="mb-0 mr-4">
+                    <img src="./ccf-full-logo-black.png" alt="CCF Logo" class="h-10 w-auto">
+                </div>
+                <h1 class="text-xl md:text-2xl font-bold font-heading text-ccf-blue">Admin Dashboard</h1>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                
+                <div class="relative group">
+                    <button id="room-filter-btn" class="flex items-center justify-between w-48 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-ccf-blue">
+                        <span id="room-filter-label">All Rooms</span>
+                        <svg class="w-5 h-5 ml-2 -mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    </button>
+                    <div id="room-filter-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                        <div class="p-2 border-b border-gray-100">
+                            <label class="flex items-center px-2 py-1 hover:bg-gray-100 rounded cursor-pointer">
+                                <input type="checkbox" id="select-all-rooms" class="form-checkbox h-4 w-4 text-ccf-blue rounded border-gray-300 focus:ring-ccf-blue" checked>
+                                <span class="ml-2 text-sm font-semibold text-gray-700">Select All</span>
+                            </label>
+                        </div>
+                        <div class="py-1 max-h-60 overflow-y-auto custom-scrollbar" id="room-list-container"></div>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <input type="date" id="date-filter" class="px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ccf-blue text-gray-700">
+                    <button id="clear-date-btn" class="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500" title="Clear Date">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    </button>
+                </div>
+
+                <button onclick="fetchData()" class="px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark text-sm font-medium transition-colors shadow-sm flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    Refresh
+                </button>
+            </div>
+        </div>
+        <div class="container mx-auto max-w-7xl mt-2 text-right">
+             <span id="status-indicator" class="text-xs font-medium text-gray-500">Waiting for update...</span>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-6 max-w-7xl">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                <div class="p-4 bg-blue-50 rounded-full text-ccf-blue mr-4">
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                </div>
+                <div><p class="text-sm font-medium text-gray-500">Filtered Bookings</p><h3 class="text-3xl font-bold font-heading text-gray-800" id="total-bookings-count">--</h3></div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                <div class="p-4 bg-teal-50 rounded-full text-teal-600 mr-4">
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                </div>
+                <div><p class="text-sm font-medium text-gray-500">Main Hall</p><h3 class="text-3xl font-bold font-heading text-gray-800" id="main-hall-count">--</h3></div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                <div class="p-4 bg-orange-50 rounded-full text-orange-500 mr-4">
+                   <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                </div>
+                <div><p class="text-sm font-medium text-gray-500">Mezzanine (All)</p><h3 class="text-3xl font-bold font-heading text-gray-800" id="mezzanine-count">--</h3></div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                <div class="p-4 bg-red-50 rounded-full text-ccf-red mr-4">
+                   <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                </div>
+                <div><p class="text-sm font-medium text-gray-500">Bookings (Selected Date)</p><h3 class="text-3xl font-bold font-heading text-gray-800" id="date-specific-count">--</h3></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Bookings by Room Type</h3>
+                <div class="relative h-[250px] w-full">
+                    <canvas id="roomBarChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Booking Distribution (Event Type)</h3>
+                 <div class="relative h-[250px] w-full flex justify-center">
+                    <canvas id="distributionPieChart"></canvas>
+                 </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+            <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Room Schedule (Time View)</h3>
+            <div class="relative h-[300px] w-full">
+                <canvas id="ganttChart"></canvas>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">* Overlapping bookings in Main Hall are displayed with transparency.</p>
+        </div>
+
+        <div id="room-tables-container" class="space-y-8 pb-10">
+            </div>
+
+    </main>
+
+    <script src="config.js?v=1.5"></script>
+
+    <script>
+        // Security Check
+        if (sessionStorage.getItem('ccf_admin_logged_in') !== 'true') {
+            alert("Unauthorized access. Please login via the main page.");
+            window.location.href = 'index.html';
+        }
+
+        let allBookings = [];
+        let roomChart = null;
+        let eventChart = null;
+        let ganttChart = null; // New chart instance
+        
+        let selectedRooms = [];
+        let selectedDate = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeFilters();
+            createTableSkeletons();
+            fetchData();
+        });
+
+        function createTableSkeletons() {
+            const container = document.getElementById('room-tables-container');
+            const rooms = ['Main Hall', 'Jonah', 'Joseph', 'Moses'];
+            
+            const roomColors = { 'Main Hall': 'teal', 'Jonah': 'orange', 'Joseph': 'blue', 'Moses': 'indigo' };
+
+            container.innerHTML = ''; 
+
+            rooms.forEach(room => {
+                const color = roomColors[room] || 'gray';
+                const roomId = room.replace(/\s+/g, '-'); 
+                
+                const html = `
+                <div id="container-${roomId}" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-${color}-50">
+                        <h3 class="text-xl font-bold font-heading text-ccf-blue">${room}</h3>
+                        <span class="text-xs font-semibold text-${color}-700 bg-white px-2 py-1 rounded border border-${color}-200" id="count-${roomId}">0 Bookings</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Code</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Event</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date & Time</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Booked By</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Pax</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="tbody-${roomId}">
+                                <tr><td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function initializeFilters() {
+            // 1. Room Filters
+            const roomListContainer = document.getElementById('room-list-container');
+            const rooms = Object.keys(APP_CONFIG.ROOM_CONFIG);
+            selectedRooms = [...rooms];
+
+            rooms.forEach(room => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label class="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
+                        <input type="checkbox" value="${room}" class="room-checkbox form-checkbox h-4 w-4 text-ccf-blue rounded border-gray-300 focus:ring-ccf-blue" checked>
+                        <span class="ml-2 text-sm text-gray-700">${room}</span>
+                    </label>
+                `;
+                roomListContainer.appendChild(div);
+            });
+
+            const btn = document.getElementById('room-filter-btn');
+            const menu = document.getElementById('room-filter-menu');
+            const selectAll = document.getElementById('select-all-rooms');
+            const checkboxes = document.querySelectorAll('.room-checkbox');
+
+            btn.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
+            document.addEventListener('click', (e) => { if (!btn.contains(e.target) && !menu.contains(e.target)) menu.classList.add('hidden'); });
+
+            selectAll.addEventListener('change', (e) => {
+                checkboxes.forEach(cb => cb.checked = e.target.checked);
+                updateRoomFilterState();
+            });
+
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    selectAll.checked = Array.from(checkboxes).every(c => c.checked);
+                    updateRoomFilterState();
+                });
+            });
+
+            // 2. Date Filters - DEFAULT TO TODAY
+            const dateInput = document.getElementById('date-filter');
+            const clearDateBtn = document.getElementById('clear-date-btn');
+            
+            // Set Today's Date
+            const todayISO = luxon.DateTime.now().setZone(APP_CONFIG.TIMEZONE).toISODate();
+            dateInput.value = todayISO;
+            selectedDate = todayISO;
+            clearDateBtn.classList.remove('hidden'); // Show clear button
+
+            dateInput.addEventListener('change', (e) => {
+                selectedDate = e.target.value;
+                clearDateBtn.classList.toggle('hidden', !selectedDate);
+                applyFilters();
+            });
+            clearDateBtn.addEventListener('click', () => {
+                dateInput.value = '';
+                selectedDate = null;
+                clearDateBtn.classList.add('hidden');
+                applyFilters();
+            });
+        }
+
+        function updateRoomFilterState() {
+            const checkboxes = document.querySelectorAll('.room-checkbox:checked');
+            selectedRooms = Array.from(checkboxes).map(cb => cb.value);
+            const label = document.getElementById('room-filter-label');
+            
+            if (selectedRooms.length === Object.keys(APP_CONFIG.ROOM_CONFIG).length) label.textContent = "All Rooms";
+            else if (selectedRooms.length === 0) label.textContent = "No Rooms";
+            else if (selectedRooms.length === 1) label.textContent = selectedRooms[0];
+            else label.textContent = `${selectedRooms.length} Rooms Selected`;
+
+            applyFilters();
+        }
+
+        function fetchData() {
+            const statusEl = document.getElementById('status-indicator');
+            statusEl.textContent = 'Fetching data...';
+            statusEl.className = 'text-xs font-medium text-orange-600';
+
+            const callbackName = `dashboard_callback_${Date.now()}`;
+            const script = document.createElement('script');
+            
+            window[callbackName] = (response) => {
+                if (response.success) {
+                    statusEl.textContent = 'Last updated: ' + luxon.DateTime.now().toFormat('h:mm:ss a');
+                    statusEl.className = 'text-xs font-medium text-green-600';
+                    allBookings = response.data;
+                    applyFilters();
+                } else {
+                    statusEl.textContent = 'Error fetching data';
+                    statusEl.className = 'text-xs font-medium text-red-600';
+                    console.error("Fetch error:", response.message);
+                }
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+
+            script.src = `${APP_CONFIG.APPS_SCRIPT_URL}?action=fetch_all&callback=${callbackName}&payload={}`;
+            script.onerror = () => { statusEl.textContent = 'Connection failed'; statusEl.className = 'text-xs font-medium text-red-600'; };
+            document.body.appendChild(script);
+        }
+
+        function applyFilters() {
+            if (!allBookings) return;
+            const DateTime = luxon.DateTime;
+            
+            const filteredBookings = allBookings.filter(b => {
+                if (!selectedRooms.includes(b.room)) return false;
+                if (selectedDate) {
+                    const bDate = DateTime.fromISO(b.start_iso).setZone(APP_CONFIG.TIMEZONE).toISODate();
+                    if (bDate !== selectedDate) return false;
+                }
+                return true;
+            });
+            processData(filteredBookings);
+        }
+
+        function processData(bookings) {
+            const DateTime = luxon.DateTime;
+            const today = DateTime.now().setZone(APP_CONFIG.TIMEZONE).toISODate();
+
+            let countMain = 0, countMezz = 0, countToday = 0;
+            const roomCounts = {};
+            const eventCounts = {};
+
+            bookings.forEach(b => {
+                if (b.room === 'Main Hall') countMain++; else countMezz++;
+                
+                const bDate = DateTime.fromISO(b.start_iso).setZone(APP_CONFIG.TIMEZONE).toISODate();
+                if (bDate === today) countToday++;
+
+                roomCounts[b.room] = (roomCounts[b.room] || 0) + 1;
+                eventCounts[b.event] = (eventCounts[b.event] || 0) + 1;
+            });
+
+            document.getElementById('total-bookings-count').textContent = bookings.length;
+            document.getElementById('main-hall-count').textContent = countMain;
+            document.getElementById('mezzanine-count').textContent = countMezz;
+            
+            const dateLabel = document.getElementById('date-specific-count').previousElementSibling;
+            if (selectedDate) {
+                dateLabel.textContent = `Bookings on ${DateTime.fromISO(selectedDate).toFormat('MMM d')}`;
+                document.getElementById('date-specific-count').textContent = bookings.length;
+            } else {
+                dateLabel.textContent = "Bookings Today";
+                document.getElementById('date-specific-count').textContent = countToday;
+            }
+
+            // Render All Charts
+            renderCharts(roomCounts, eventCounts);
+            renderGanttChart(bookings);
+            
+            bookings.sort((a, b) => new Date(a.start_iso) - new Date(b.start_iso));
+            renderRoomTables(bookings);
+        }
+
+        function renderCharts(roomData, eventData) {
+            // Room Chart
+            const ctxRoom = document.getElementById('roomBarChart').getContext('2d');
+            const allRooms = Object.keys(APP_CONFIG.ROOM_CONFIG);
+            const dataRoom = allRooms.map(r => roomData[r] || 0);
+
+            if (roomChart) roomChart.destroy();
+            roomChart = new Chart(ctxRoom, {
+                type: 'bar',
+                data: {
+                    labels: allRooms,
+                    datasets: [{
+                        label: 'Total',
+                        data: dataRoom,
+                        backgroundColor: '#004d60',
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // Event Chart
+            const ctxEvent = document.getElementById('distributionPieChart').getContext('2d');
+            if (eventChart) eventChart.destroy();
+            eventChart = new Chart(ctxEvent, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(eventData),
+                    datasets: [{
+                        data: Object.values(eventData),
+                        backgroundColor: ['#004d60', '#e00000', '#0d9488', '#f97316', '#64748b', '#eab308', '#8b5cf6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+            });
+        }
+
+        // --- NEW GANTT CHART (HORIZONTAL BAR) ---
+        function renderGanttChart(bookings) {
+            const ctx = document.getElementById('ganttChart').getContext('2d');
+            const DateTime = luxon.DateTime;
+
+            if (ganttChart) ganttChart.destroy();
+
+            // Prepare Data: Convert time to decimal (9:30 -> 9.5)
+            // Group data points by Room
+            const rooms = Object.keys(APP_CONFIG.ROOM_CONFIG);
+            
+            // We need a dataset that Chart.js understands for floating bars
+            // Format: data: [ [start, end], [start, end] ] mapped to labels
+            
+            const datasets = [];
+
+            // We create a "dummy" dataset for each booking so they can overlap visually using transparency
+            // This is a workaround because standard bar charts stack or group side-by-side
+            
+            const backgroundColors = {
+                'Main Hall': 'rgba(0, 77, 96, 0.5)', // CCF Blue transparent
+                'Jonah': 'rgba(234, 179, 8, 0.6)',
+                'Joseph': 'rgba(249, 115, 22, 0.6)',
+                'Moses': 'rgba(13, 148, 136, 0.6)'
+            };
+
+            // Optimization: If "All Time" is selected, Gantt is chaotic. Restrict Gantt to specific date view mainly.
+            // If range > 1 day, maybe show day range? No, user asked for time visual.
+            // Let's stick to showing the filtered bookings on a 24h scale.
+            
+            // Transform bookings into data points
+            bookings.forEach(b => {
+                const start = DateTime.fromISO(b.start_iso).setZone(APP_CONFIG.TIMEZONE);
+                const end = DateTime.fromISO(b.end_iso).setZone(APP_CONFIG.TIMEZONE);
+                
+                // Only plot if on selected date (if date selected) OR plot purely time if viewing aggregation?
+                // If viewing multiple days, the Gantt of 0-24h will overlap days. 
+                // Assumption: Dashboard Gantt is most useful for Single Date.
+                
+                // Get Decimal Hours
+                const startDec = start.hour + (start.minute / 60);
+                let endDec = end.hour + (end.minute / 60);
+                if (endDec === 0 && end.day > start.day) endDec = 24; // Handle midnight end
+
+                // Find index of room
+                const yIndex = rooms.indexOf(b.room);
+                if (yIndex === -1) return;
+
+                // Create a mini dataset for this bar (allows overlapping transparency)
+                // We use a scatter-like structure in a bar chart by setting data at specific index
+                const dataArr = new Array(rooms.length).fill(null);
+                dataArr[yIndex] = [startDec, endDec];
+
+                datasets.push({
+                    label: b.event, // For tooltip
+                    data: dataArr,
+                    backgroundColor: backgroundColors[b.room] || 'rgba(100,100,100,0.5)',
+                    borderWidth: 1,
+                    borderColor: backgroundColors[b.room]?.replace('0.5', '1') || '#666',
+                    barPercentage: 0.6, // Make bars thinner
+                    categoryPercentage: 1.0,
+                    // Store extra data for tooltip
+                    customData: { booker: b.name, time: `${start.toFormat('h:mm a')} - ${end.toFormat('h:mm a')}` }
+                });
+            });
+
+            ganttChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: rooms,
+                    datasets: datasets
+                },
+                options: {
+                    indexAxis: 'y', // Horizontal bars
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }, // Hide legend as it would show 1 item per booking
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const raw = context.dataset.customData;
+                                    return `${context.dataset.label} (${raw.booker}): ${raw.time}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            min: 6, // Start at 6 AM
+                            max: 23, // End at 11 PM
+                            title: { display: true, text: 'Time of Day (Hour)' },
+                            ticks: { stepSize: 1 }
+                        },
+                        y: {
+                            stacked: true, // This allows bars to sit on top of each other (overlapping)
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderRoomTables(bookings) {
+            const DateTime = luxon.DateTime;
+            const rooms = ['Main Hall', 'Jonah', 'Joseph', 'Moses'];
+
+            rooms.forEach(roomName => {
+                const roomId = roomName.replace(/\s+/g, '-');
+                const tbody = document.getElementById(`tbody-${roomId}`);
+                const container = document.getElementById(`container-${roomId}`);
+                const countBadge = document.getElementById(`count-${roomId}`);
+
+                if (!tbody || !container) return;
+
+                if (!selectedRooms.includes(roomName)) {
+                    container.classList.add('hidden');
+                    return;
+                }
+                container.classList.remove('hidden');
+
+                const roomBookings = bookings.filter(b => b.room === roomName);
+                countBadge.textContent = `${roomBookings.length} Booking${roomBookings.length !== 1 ? 's' : ''}`;
+                tbody.innerHTML = '';
+
+                if (roomBookings.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400 italic">No bookings found for this room.</td></tr>';
+                } else {
+                    roomBookings.forEach(b => {
+                        const start = DateTime.fromISO(b.start_iso).setZone(APP_CONFIG.TIMEZONE);
+                        const end = DateTime.fromISO(b.end_iso).setZone(APP_CONFIG.TIMEZONE);
+                        const bookingCode = b.id ? b.id.substring(0, 8).toUpperCase() : '---';
+
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-xs font-mono font-medium text-ccf-blue">${bookingCode}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">${b.event}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                <div class="flex flex-col">
+                                    <span class="font-medium">${start.toFormat('MMM d, yyyy')}</span>
+                                    <span class="text-xs text-gray-500">${start.toFormat('h:mm a')} - ${end.toFormat('h:mm a')}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${b.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">${b.pax}</span>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
