@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - CCF Manila Booking</title>
 
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -28,30 +30,58 @@
         }
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- D3.js & Luxon -->
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
 
     <style>
         tbody tr:hover { background-color: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        
+        /* D3 Tooltip Styles */
+        #d3-tooltip {
+            position: absolute;
+            text-align: left;
+            padding: 8px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 100;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 250px;
+        }
     </style>
 </head>
 <body class="bg-ccf-cream font-body text-gray-800">
 
+    <!-- Tooltip Container -->
+    <div id="d3-tooltip"></div>
+
+    <!-- HEADER WITH FILTERS -->
     <header class="bg-white text-black p-4 shadow-sm sticky top-0 z-50">
         <div class="container mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-4">
             
+            <!-- Left: Logo & Back Button -->
             <div class="flex items-center w-full md:w-auto">
                 <div class="mb-0 mr-4">
                     <img src="./ccf-full-logo-black.png" alt="CCF Logo" class="h-10 w-auto">
                 </div>
-                <h1 class="text-xl md:text-2xl font-bold font-heading text-ccf-blue">Admin Dashboard</h1>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold font-heading text-ccf-blue">Admin Dashboard</h1>
+                    <a href="index.html" class="text-xs text-gray-500 hover:text-ccf-blue flex items-center mt-1">
+                        &larr; Back to Booking Form
+                    </a>
+                </div>
             </div>
 
             <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
                 
+                <!-- 1. ROOM FILTER -->
                 <div class="relative group">
                     <button id="room-filter-btn" class="flex items-center justify-between w-48 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-ccf-blue">
                         <span id="room-filter-label">All Rooms</span>
@@ -68,13 +98,15 @@
                     </div>
                 </div>
 
+                <!-- 2. DATE FILTER -->
                 <div class="relative">
                     <input type="date" id="date-filter" class="px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ccf-blue text-gray-700">
-                    <button id="clear-date-btn" class="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500" title="Clear Date">
+                    <button id="clear-date-btn" class="hidden absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500" title="Clear Date">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
                     </button>
                 </div>
 
+                <!-- REFRESH BUTTON -->
                 <button onclick="fetchData()" class="px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark text-sm font-medium transition-colors shadow-sm flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                     Refresh
@@ -88,6 +120,7 @@
 
     <main class="container mx-auto p-6 max-w-7xl">
         
+        <!-- SECTION 1: COUNTERS -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="p-4 bg-blue-50 rounded-full text-ccf-blue mr-4">
@@ -115,36 +148,36 @@
             </div>
         </div>
 
+        <!-- SECTION 2: CHARTS -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Bookings by Room Type</h3>
-                <div class="relative h-[250px] w-full">
-                    <canvas id="roomBarChart"></canvas>
-                </div>
+                <div class="relative h-[300px] w-full" id="d3-room-bar-chart"></div>
             </div>
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Booking Distribution (Event Type)</h3>
-                 <div class="relative h-[250px] w-full flex justify-center">
-                    <canvas id="distributionPieChart"></canvas>
-                 </div>
+                 <div class="relative h-[300px] w-full flex justify-center" id="d3-event-pie-chart"></div>
             </div>
         </div>
 
+        <!-- SECTION 3: NEW GANTT CHART -->
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
             <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Room Schedule (Time View)</h3>
-            <div class="relative h-[300px] w-full">
-                <canvas id="ganttChart"></canvas>
-            </div>
-            <p class="text-xs text-gray-500 mt-2">* Overlapping bookings in Main Hall are displayed with transparency.</p>
+            <div class="relative w-full overflow-x-auto" id="d3-gantt-chart"></div>
+            <p class="text-xs text-gray-500 mt-2">* Overlapping bookings in Main Hall are displayed on separate tracks.</p>
         </div>
 
+        <!-- SECTION 4: ROOM DETAILED TABLES -->
         <div id="room-tables-container" class="space-y-8 pb-10">
-            </div>
+            <!-- Tables will be injected here by JS -->
+        </div>
 
     </main>
 
+    <!-- Import Config -->
     <script src="config.js?v=1.5"></script>
 
+    <!-- DASHBOARD LOGIC -->
     <script>
         // Security Check
         if (sessionStorage.getItem('ccf_admin_logged_in') !== 'true') {
@@ -152,24 +185,71 @@
             window.location.href = 'index.html';
         }
 
+        const DateTime = luxon.DateTime; // Define globally
+
         let allBookings = [];
-        let roomChart = null;
-        let eventChart = null;
-        let ganttChart = null; // New chart instance
-        
         let selectedRooms = [];
         let selectedDate = null;
+
+        // D3 Color Palette
+        const COLORS = {
+            blue: '#004d60',
+            red: '#e00000',
+            teal: '#0d9488',
+            orange: '#f97316',
+            gray: '#64748b',
+            yellow: '#eab308',
+            purple: '#8b5cf6',
+            pink: '#ec4899'
+        };
+
+        const ROOM_COLORS = {
+            'Main Hall': COLORS.blue,
+            'Jonah': COLORS.yellow,
+            'Joseph': COLORS.orange,
+            'Moses': COLORS.teal
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeFilters();
             createTableSkeletons();
             fetchData();
+            
+            window.addEventListener('resize', () => {
+                if (allBookings.length > 0) applyFilters();
+            });
         });
 
+        // --- HELPER: ROBUST DATE PARSER (Crucial Fix) ---
+        function parseDate(dateInput) {
+            if (!dateInput) return DateTime.invalid('missing data');
+            
+            // Handle "Fake UTC" strings by stripping 'Z'
+            if (typeof dateInput === 'string' && dateInput.endsWith('Z')) {
+                dateInput = dateInput.slice(0, -1); 
+            }
+
+            // 1. Try ISO
+            let dt = DateTime.fromISO(dateInput, { zone: APP_CONFIG.TIMEZONE });
+            if (dt.isValid) return dt;
+
+            // 2. Try SQL/Sheets
+            dt = DateTime.fromSQL(dateInput, { zone: APP_CONFIG.TIMEZONE });
+            if (dt.isValid) return dt;
+
+            // 3. Fallback to JS Date
+            const jsDate = new Date(dateInput);
+            if (!isNaN(jsDate)) {
+                return DateTime.fromJSDate(jsDate, { zone: APP_CONFIG.TIMEZONE });
+            }
+
+            return DateTime.invalid('unsupported format');
+        }
+
+        // --- FILTER & UI SETUP ---
         function createTableSkeletons() {
             const container = document.getElementById('room-tables-container');
             const rooms = ['Main Hall', 'Jonah', 'Joseph', 'Moses'];
-            
             const roomColors = { 'Main Hall': 'teal', 'Jonah': 'orange', 'Joseph': 'blue', 'Moses': 'indigo' };
 
             container.innerHTML = ''; 
@@ -206,19 +286,15 @@
         }
 
         function initializeFilters() {
-            // 1. Room Filters
             const roomListContainer = document.getElementById('room-list-container');
             const rooms = Object.keys(APP_CONFIG.ROOM_CONFIG);
             selectedRooms = [...rooms];
 
             rooms.forEach(room => {
                 const div = document.createElement('div');
-                div.innerHTML = `
-                    <label class="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
+                div.innerHTML = `<label class="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
                         <input type="checkbox" value="${room}" class="room-checkbox form-checkbox h-4 w-4 text-ccf-blue rounded border-gray-300 focus:ring-ccf-blue" checked>
-                        <span class="ml-2 text-sm text-gray-700">${room}</span>
-                    </label>
-                `;
+                        <span class="ml-2 text-sm text-gray-700">${room}</span></label>`;
                 roomListContainer.appendChild(div);
             });
 
@@ -242,15 +318,13 @@
                 });
             });
 
-            // 2. Date Filters - DEFAULT TO TODAY
             const dateInput = document.getElementById('date-filter');
             const clearDateBtn = document.getElementById('clear-date-btn');
             
-            // Set Today's Date
-            const todayISO = luxon.DateTime.now().setZone(APP_CONFIG.TIMEZONE).toISODate();
+            const todayISO = DateTime.now().setZone(APP_CONFIG.TIMEZONE).toISODate();
             dateInput.value = todayISO;
             selectedDate = todayISO;
-            clearDateBtn.classList.remove('hidden'); // Show clear button
+            clearDateBtn.classList.remove('hidden');
 
             dateInput.addEventListener('change', (e) => {
                 selectedDate = e.target.value;
@@ -269,12 +343,10 @@
             const checkboxes = document.querySelectorAll('.room-checkbox:checked');
             selectedRooms = Array.from(checkboxes).map(cb => cb.value);
             const label = document.getElementById('room-filter-label');
-            
             if (selectedRooms.length === Object.keys(APP_CONFIG.ROOM_CONFIG).length) label.textContent = "All Rooms";
             else if (selectedRooms.length === 0) label.textContent = "No Rooms";
             else if (selectedRooms.length === 1) label.textContent = selectedRooms[0];
             else label.textContent = `${selectedRooms.length} Rooms Selected`;
-
             applyFilters();
         }
 
@@ -288,7 +360,7 @@
             
             window[callbackName] = (response) => {
                 if (response.success) {
-                    statusEl.textContent = 'Last updated: ' + luxon.DateTime.now().toFormat('h:mm:ss a');
+                    statusEl.textContent = 'Last updated: ' + DateTime.now().toFormat('h:mm:ss a');
                     statusEl.className = 'text-xs font-medium text-green-600';
                     allBookings = response.data;
                     applyFilters();
@@ -308,12 +380,15 @@
 
         function applyFilters() {
             if (!allBookings) return;
-            const DateTime = luxon.DateTime;
             
             const filteredBookings = allBookings.filter(b => {
                 if (!selectedRooms.includes(b.room)) return false;
                 if (selectedDate) {
-                    const bDate = DateTime.fromISO(b.start_iso).setZone(APP_CONFIG.TIMEZONE).toISODate();
+                    // Use Robust Parser for Filter Logic
+                    const bStart = parseDate(b.start_iso);
+                    if (!bStart.isValid) return false;
+                    
+                    const bDate = bStart.toISODate();
                     if (bDate !== selectedDate) return false;
                 }
                 return true;
@@ -322,7 +397,6 @@
         }
 
         function processData(bookings) {
-            const DateTime = luxon.DateTime;
             const today = DateTime.now().setZone(APP_CONFIG.TIMEZONE).toISODate();
 
             let countMain = 0, countMezz = 0, countToday = 0;
@@ -332,8 +406,8 @@
             bookings.forEach(b => {
                 if (b.room === 'Main Hall') countMain++; else countMezz++;
                 
-                const bDate = DateTime.fromISO(b.start_iso).setZone(APP_CONFIG.TIMEZONE).toISODate();
-                if (bDate === today) countToday++;
+                const bStart = parseDate(b.start_iso);
+                if (bStart.isValid && bStart.toISODate() === today) countToday++;
 
                 roomCounts[b.room] = (roomCounts[b.room] || 0) + 1;
                 eventCounts[b.event] = (eventCounts[b.event] || 0) + 1;
@@ -352,157 +426,233 @@
                 document.getElementById('date-specific-count').textContent = countToday;
             }
 
-            // Render All Charts
-            renderCharts(roomCounts, eventCounts);
-            renderGanttChart(bookings);
+            renderD3BarChart(roomCounts);
+            renderD3DonutChart(eventCounts);
+            renderD3GanttChart(bookings);
             
-            bookings.sort((a, b) => new Date(a.start_iso) - new Date(b.start_iso));
+            bookings.sort((a, b) => {
+                 const dA = parseDate(a.start_iso);
+                 const dB = parseDate(b.start_iso);
+                 return dA - dB;
+            });
             renderRoomTables(bookings);
         }
 
-        function renderCharts(roomData, eventData) {
-            // Room Chart
-            const ctxRoom = document.getElementById('roomBarChart').getContext('2d');
-            const allRooms = Object.keys(APP_CONFIG.ROOM_CONFIG);
-            const dataRoom = allRooms.map(r => roomData[r] || 0);
+        // --- D3.JS CHARTS ---
 
-            if (roomChart) roomChart.destroy();
-            roomChart = new Chart(ctxRoom, {
-                type: 'bar',
-                data: {
-                    labels: allRooms,
-                    datasets: [{
-                        label: 'Total',
-                        data: dataRoom,
-                        backgroundColor: '#004d60',
-                        borderRadius: 4
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
-
-            // Event Chart
-            const ctxEvent = document.getElementById('distributionPieChart').getContext('2d');
-            if (eventChart) eventChart.destroy();
-            eventChart = new Chart(ctxEvent, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(eventData),
-                    datasets: [{
-                        data: Object.values(eventData),
-                        backgroundColor: ['#004d60', '#e00000', '#0d9488', '#f97316', '#64748b', '#eab308', '#8b5cf6'],
-                        borderWidth: 0
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
-            });
+        function showTooltip(html, event) {
+            const tooltip = document.getElementById('d3-tooltip');
+            tooltip.innerHTML = html;
+            tooltip.style.opacity = 1;
+            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.top = (event.pageY + 10) + 'px';
         }
 
-        // --- NEW GANTT CHART (HORIZONTAL BAR) ---
-        function renderGanttChart(bookings) {
-            const ctx = document.getElementById('ganttChart').getContext('2d');
-            const DateTime = luxon.DateTime;
+        function hideTooltip() {
+            document.getElementById('d3-tooltip').style.opacity = 0;
+        }
 
-            if (ganttChart) ganttChart.destroy();
+        function renderD3BarChart(dataObj) {
+            const container = document.getElementById('d3-room-bar-chart');
+            container.innerHTML = ''; 
+            const width = container.clientWidth;
+            const height = 300;
+            const margin = {top: 20, right: 20, bottom: 30, left: 40};
 
-            // Prepare Data: Convert time to decimal (9:30 -> 9.5)
-            // Group data points by Room
+            const svg = d3.select(container).append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("viewBox", [0, 0, width, height]);
+
+            const rooms = Object.keys(APP_CONFIG.ROOM_CONFIG); 
+            const data = rooms.map(room => ({ room: room, value: dataObj[room] || 0 }));
+
+            const x = d3.scaleBand()
+                .domain(rooms)
+                .range([margin.left, width - margin.right])
+                .padding(0.4);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.value) > 0 ? d3.max(data, d => d.value) + 1 : 5])
+                .nice()
+                .range([height - margin.bottom, margin.top]);
+
+            svg.append("g")
+                .attr("fill", COLORS.blue)
+                .selectAll("rect")
+                .data(data)
+                .join("rect")
+                .attr("x", d => x(d.room))
+                .attr("y", d => y(d.value))
+                .attr("height", d => y(0) - y(d.value))
+                .attr("width", x.bandwidth())
+                .attr("rx", 3)
+                .on("mouseover", (event, d) => showTooltip(`<strong>${d.room}</strong><br>Bookings: ${d.value}`, event))
+                .on("mousemove", (event) => showTooltip(null, event))
+                .on("mouseout", hideTooltip);
+
+            svg.append("g")
+                .attr("transform", `translate(0,${height - margin.bottom})`)
+                .call(d3.axisBottom(x).tickSize(0))
+                .call(g => g.select(".domain").remove())
+                .selectAll("text")
+                .attr("font-family", "Montserrat")
+                .attr("font-size", "11px");
+
+            svg.append("g")
+                .attr("transform", `translate(${margin.left},0)`)
+                .call(d3.axisLeft(y).ticks(5))
+                .call(g => g.select(".domain").remove())
+                .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1).attr("x2", width - margin.left - margin.right));
+        }
+
+        function renderD3DonutChart(dataObj) {
+            const container = document.getElementById('d3-event-pie-chart');
+            container.innerHTML = '';
+            const width = 300;
+            const height = 300;
+            const radius = Math.min(width, height) / 2;
+
+            const svg = d3.select(container).append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("viewBox", [-width / 2, -height / 2, width, height]);
+
+            const data = Object.entries(dataObj).map(([key, value]) => ({name: key, value: value}));
+            
+            const color = d3.scaleOrdinal()
+                .domain(data.map(d => d.name))
+                .range([COLORS.blue, COLORS.red, COLORS.teal, COLORS.orange, COLORS.gray, COLORS.yellow, COLORS.purple]);
+
+            const pie = d3.pie().value(d => d.value).sort(null);
+            const arc = d3.arc().innerRadius(radius * 0.5).outerRadius(radius * 0.8);
+            const hoverArc = d3.arc().innerRadius(radius * 0.5).outerRadius(radius * 0.9);
+
+            svg.selectAll("path")
+                .data(pie(data))
+                .join("path")
+                .attr("fill", d => color(d.data.name))
+                .attr("d", arc)
+                .on("mouseover", function(event, d) {
+                    d3.select(this).transition().duration(200).attr("d", hoverArc);
+                    showTooltip(`<strong>${d.data.name}</strong><br>Count: ${d.data.value}`, event);
+                })
+                .on("mouseout", function() {
+                    d3.select(this).transition().duration(200).attr("d", arc);
+                    hideTooltip();
+                });
+        }
+
+        function renderD3GanttChart(bookings) {
+            const container = document.getElementById('d3-gantt-chart');
+            container.innerHTML = '';
+            const width = Math.max(container.clientWidth, 800);
+            const margin = {top: 20, right: 30, bottom: 40, left: 100};
+            
             const rooms = Object.keys(APP_CONFIG.ROOM_CONFIG);
             
-            // We need a dataset that Chart.js understands for floating bars
-            // Format: data: [ [start, end], [start, end] ] mapped to labels
-            
-            const datasets = [];
+            const roomBookings = {};
+            rooms.forEach(r => roomBookings[r] = []);
+            bookings.forEach(b => { if (rooms.includes(b.room)) roomBookings[b.room].push(b); });
 
-            // We create a "dummy" dataset for each booking so they can overlap visually using transparency
-            // This is a workaround because standard bar charts stack or group side-by-side
-            
-            const backgroundColors = {
-                'Main Hall': 'rgba(0, 77, 96, 0.5)', // CCF Blue transparent
-                'Jonah': 'rgba(234, 179, 8, 0.6)',
-                'Joseph': 'rgba(249, 115, 22, 0.6)',
-                'Moses': 'rgba(13, 148, 136, 0.6)'
-            };
+            let allChartLabels = []; 
+            let dataPoints = [];
 
-            // Optimization: If "All Time" is selected, Gantt is chaotic. Restrict Gantt to specific date view mainly.
-            // If range > 1 day, maybe show day range? No, user asked for time visual.
-            // Let's stick to showing the filtered bookings on a 24h scale.
-            
-            // Transform bookings into data points
-            bookings.forEach(b => {
-                const start = DateTime.fromISO(b.start_iso).setZone(APP_CONFIG.TIMEZONE);
-                const end = DateTime.fromISO(b.end_iso).setZone(APP_CONFIG.TIMEZONE);
+            rooms.forEach(roomName => {
+                const roomData = roomBookings[roomName];
                 
-                // Only plot if on selected date (if date selected) OR plot purely time if viewing aggregation?
-                // If viewing multiple days, the Gantt of 0-24h will overlap days. 
-                // Assumption: Dashboard Gantt is most useful for Single Date.
+                // Sort using parser
+                roomData.sort((a, b) => parseDate(a.start_iso) - parseDate(b.start_iso));
                 
-                // Get Decimal Hours
-                const startDec = start.hour + (start.minute / 60);
-                let endDec = end.hour + (end.minute / 60);
-                if (endDec === 0 && end.day > start.day) endDec = 24; // Handle midnight end
+                const tracks = []; 
+                let baseTrackIndex = allChartLabels.length;
 
-                // Find index of room
-                const yIndex = rooms.indexOf(b.room);
-                if (yIndex === -1) return;
+                roomData.forEach(b => {
+                    const start = parseDate(b.start_iso);
+                    const end = parseDate(b.end_iso);
+                    
+                    if (!start.isValid || !end.isValid) return;
 
-                // Create a mini dataset for this bar (allows overlapping transparency)
-                // We use a scatter-like structure in a bar chart by setting data at specific index
-                const dataArr = new Array(rooms.length).fill(null);
-                dataArr[yIndex] = [startDec, endDec];
+                    const startDec = start.hour + (start.minute / 60);
+                    let endDec = end.hour + (end.minute / 60);
+                    if (endDec === 0 && end.day > start.day) endDec = 24;
 
-                datasets.push({
-                    label: b.event, // For tooltip
-                    data: dataArr,
-                    backgroundColor: backgroundColors[b.room] || 'rgba(100,100,100,0.5)',
-                    borderWidth: 1,
-                    borderColor: backgroundColors[b.room]?.replace('0.5', '1') || '#666',
-                    barPercentage: 0.6, // Make bars thinner
-                    categoryPercentage: 1.0,
-                    // Store extra data for tooltip
-                    customData: { booker: b.name, time: `${start.toFormat('h:mm a')} - ${end.toFormat('h:mm a')}` }
-                });
-            });
-
-            ganttChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: rooms,
-                    datasets: datasets
-                },
-                options: {
-                    indexAxis: 'y', // Horizontal bars
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }, // Hide legend as it would show 1 item per booking
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const raw = context.dataset.customData;
-                                    return `${context.dataset.label} (${raw.booker}): ${raw.time}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            min: 6, // Start at 6 AM
-                            max: 23, // End at 11 PM
-                            title: { display: true, text: 'Time of Day (Hour)' },
-                            ticks: { stepSize: 1 }
-                        },
-                        y: {
-                            stacked: true, // This allows bars to sit on top of each other (overlapping)
-                            grid: { display: false }
-                        }
+                    let trackIndex = -1;
+                    for (let i = 0; i < tracks.length; i++) {
+                        if (startDec >= tracks[i] + 0.05) { trackIndex = i; break; }
                     }
-                }
+                    if (trackIndex === -1) { trackIndex = tracks.length; tracks.push(0); }
+                    tracks[trackIndex] = endDec;
+
+                    const globalYIndex = baseTrackIndex + trackIndex;
+                    if (globalYIndex >= allChartLabels.length) {
+                        const label = trackIndex === 0 ? roomName : `${roomName} (${trackIndex + 1})`;
+                        allChartLabels.push(label);
+                    }
+
+                    dataPoints.push({ yIndex: globalYIndex, startDec, endDec, room: roomName, data: b });
+                });
+                
+                if (roomData.length === 0) allChartLabels.push(roomName);
             });
+
+            const rowHeight = 40;
+            const height = (allChartLabels.length * rowHeight) + margin.top + margin.bottom;
+
+            const svg = d3.select(container).append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const x = d3.scaleLinear()
+                .domain([6, 23]) 
+                .range([margin.left, width - margin.right]);
+
+            const y = d3.scaleBand()
+                .domain(d3.range(allChartLabels.length))
+                .range([margin.top, height - margin.bottom])
+                .padding(0.2);
+
+            svg.append("g")
+                .attr("transform", `translate(0,${height - margin.bottom})`)
+                .call(d3.axisBottom(x).ticks(17).tickFormat(d => d > 12 ? `${d-12}pm` : `${d}am`))
+                .attr("color", "#9ca3af");
+
+            svg.append("g")
+                .selectAll("text")
+                .data(allChartLabels)
+                .join("text")
+                .attr("x", margin.left - 10)
+                .attr("y", (d, i) => y(i) + y.bandwidth() / 2)
+                .attr("dy", "0.32em")
+                .attr("text-anchor", "end")
+                .text(d => d)
+                .attr("font-size", "12px")
+                .attr("font-family", "Montserrat")
+                .attr("font-weight", "500")
+                .attr("fill", "#4b5563");
+
+            svg.append("g")
+                .selectAll("rect")
+                .data(dataPoints)
+                .join("rect")
+                .attr("x", d => x(d.startDec))
+                .attr("y", d => y(d.yIndex))
+                .attr("width", d => x(d.endDec) - x(d.startDec))
+                .attr("height", y.bandwidth())
+                .attr("fill", d => ROOM_COLORS[d.room] || COLORS.gray)
+                .attr("rx", 4)
+                .on("mouseover", (event, d) => {
+                    const start = parseDate(d.data.start_iso);
+                    const end = parseDate(d.data.end_iso);
+                    const startStr = start.isValid ? start.toFormat('h:mm a') : '?';
+                    const endStr = end.isValid ? end.toFormat('h:mm a') : '?';
+                    showTooltip(`<strong>${d.data.event}</strong><br>${d.data.name}<br>${startStr} - ${endStr}`, event);
+                })
+                .on("mouseout", hideTooltip);
         }
 
+        // --- TABLE RENDERING ---
         function renderRoomTables(bookings) {
-            const DateTime = luxon.DateTime;
             const rooms = ['Main Hall', 'Jonah', 'Joseph', 'Moses'];
 
             rooms.forEach(roomName => {
@@ -513,10 +663,7 @@
 
                 if (!tbody || !container) return;
 
-                if (!selectedRooms.includes(roomName)) {
-                    container.classList.add('hidden');
-                    return;
-                }
+                if (!selectedRooms.includes(roomName)) { container.classList.add('hidden'); return; }
                 container.classList.remove('hidden');
 
                 const roomBookings = bookings.filter(b => b.room === roomName);
@@ -527,8 +674,8 @@
                     tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400 italic">No bookings found for this room.</td></tr>';
                 } else {
                     roomBookings.forEach(b => {
-                        const start = DateTime.fromISO(b.start_iso).setZone(APP_CONFIG.TIMEZONE);
-                        const end = DateTime.fromISO(b.end_iso).setZone(APP_CONFIG.TIMEZONE);
+                        const start = parseDate(b.start_iso);
+                        const end = parseDate(b.end_iso);
                         const bookingCode = b.id ? b.id.substring(0, 8).toUpperCase() : '---';
 
                         const row = document.createElement('tr');
@@ -537,8 +684,8 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">${b.event}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                 <div class="flex flex-col">
-                                    <span class="font-medium">${start.toFormat('MMM d, yyyy')}</span>
-                                    <span class="text-xs text-gray-500">${start.toFormat('h:mm a')} - ${end.toFormat('h:mm a')}</span>
+                                    <span class="font-medium">${start.isValid ? start.toFormat('MMM d, yyyy') : 'Invalid Date'}</span>
+                                    <span class="text-xs text-gray-500">${start.isValid ? start.toFormat('h:mm a') : '?'} - ${end.isValid ? end.toFormat('h:mm a') : '?'}</span>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${b.name}</td>

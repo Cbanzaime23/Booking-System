@@ -32,7 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: "Ministry Event - Intercede Prayer Ministry", setsMaxCapacity: true },
             { name: "Ministry Event - Women 2 Women", setsMaxCapacity: true },
             { name: "Ministry Event - MOVEMENT", setsMaxCapacity: true },
-            { name: "Ministry Event - ACROSS Family Ministry", setsMaxCapacity: true }
+            { name: "Ministry Event - ACROSS Family Ministry", setsMaxCapacity: true },
+            { name: "Sunday Service", setsMaxCapacity: true }
         ]
     };
     
@@ -95,6 +96,34 @@ document.addEventListener('DOMContentLoaded', () => {
             option.dataset.setsMaxCapacity = eventObj.setsMaxCapacity; 
             eventSelector.appendChild(option);
         });
+    }
+
+    // --- HELPER: ROBUST DATE PARSER ---
+    function parseDate(dateInput) {
+        if (!dateInput) return DateTime.invalid('missing data');
+        
+        // FIX: Handle "Fake UTC" strings. 
+        // The server sends Manila time (e.g. 10:00) but adds 'Z' (UTC marker).
+        // We strip the 'Z' so Luxon treats "2025-11-29T10:00:00" as 10:00 AM in the configured APP_CONFIG.TIMEZONE.
+        if (typeof dateInput === 'string' && dateInput.endsWith('Z')) {
+            dateInput = dateInput.slice(0, -1); 
+        }
+
+        // 1. Try Standard ISO (now treated as Local due to stripped Z)
+        let dt = DateTime.fromISO(dateInput, { zone: APP_CONFIG.TIMEZONE });
+        if (dt.isValid) return dt;
+
+        // 2. Try SQL/Sheets Format (e.g., "2025-11-29 13:00:00")
+        dt = DateTime.fromSQL(dateInput, { zone: APP_CONFIG.TIMEZONE });
+        if (dt.isValid) return dt;
+
+        // 3. Try standard Javascript Date constructor as fallback
+        const jsDate = new Date(dateInput);
+        if (!isNaN(jsDate)) {
+            return DateTime.fromJSDate(jsDate, { zone: APP_CONFIG.TIMEZONE });
+        }
+
+        return DateTime.invalid('unsupported format');
     }
 
     function init() {
@@ -266,18 +295,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const slotStart = DateTime.fromISO(slotEl.dataset.startIso);
             const slotEnd = slotStart.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
             let totalParticipants = 0, totalGroups = 0;
+            // FIX: Using the Robust Date Parser here
             const overlappingBookings = roomBookings.filter(b => {
-                const bStart = DateTime.fromISO(b.start_iso);
-                const bEnd = DateTime.fromISO(b.end_iso);
+                const bStart = parseDate(b.start_iso); // Tries multiple formats
+                const bEnd = parseDate(b.end_iso);     // Tries multiple formats
+                
+                if (!bStart.isValid || !bEnd.isValid) return false; // Safety check
+                
                 return bStart < slotEnd && bEnd > slotStart;
             });
+
             overlappingBookings.forEach(b => {
                 totalParticipants += parseInt(b.participants, 10);
                 totalGroups++;
             });
             slotEl.dataset.totalParticipants = totalParticipants;
             slotEl.dataset.totalGroups = totalGroups;
-            const primaryBooking = overlappingBookings.find(b => DateTime.fromISO(b.start_iso).equals(slotStart));
+            const primaryBooking = overlappingBookings.find(b => {
+                const bStart = parseDate(b.start_iso); // Uses parser
+                return bStart.equals(slotStart);
+            });
             if (primaryBooking) {
                 slotEl.dataset.bookingId = primaryBooking.id;
                 slotEl.dataset.bookingName = `${primaryBooking.first_name} ${primaryBooking.last_name}`;
