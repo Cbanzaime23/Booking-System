@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isLoading: false,
         selectedSlot: null,
         pendingBookingData: null,
+        pendingMoveData: null,
     };
 
     // Define the overall maximum capacity for each room (used for admin max bookings)
@@ -144,6 +145,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupEventListeners() {
+
+        // Add Move Modal Logic
+        const moveModal = document.getElementById('move-modal');
+        const moveForm = document.getElementById('move-form');
+
+
         roomSelector.addEventListener('change', (e) => {
             state.selectedRoom = e.target.value;
             render();
@@ -156,6 +163,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Modal Listeners
         document.getElementById('choice-book-btn').addEventListener('click', openBookingModalForSelectedSlot);
         document.getElementById('choice-cancel-btn').addEventListener('click', openCancelModalForSelectedSlot);
+        const moveBtn = document.getElementById('choice-move-btn');
+        if (moveBtn) { 
+             moveBtn.addEventListener('click', openMoveModalForSelectedSlot);
+        }
+        document.getElementById('move-sum-no-btn').addEventListener('click', () => document.getElementById('move-summary-modal').close());
+        document.getElementById('move-sum-yes-btn').addEventListener('click', proceedWithMove);
+        
         document.getElementById('choice-back-btn').addEventListener('click', () => choiceModal.close());
         bookingForm.addEventListener('submit', handleBookingFormSubmit);
         cancelForm.addEventListener('submit', handleCancelFormSubmit);
@@ -165,10 +179,25 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('success-done-btn').addEventListener('click', () => successModal.close());
         document.querySelectorAll('.cancel-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                bookingModal.close();
-                cancelModal.close();
+                // Close ALL modals when any cancel button is clicked
+                if (typeof bookingModal !== 'undefined') bookingModal.close();
+                if (typeof cancelModal !== 'undefined') cancelModal.close();
+                if (moveModal) moveModal.close();
             });
         });
+
+        // Conflict Modal Listeners
+        const conflictModal = document.getElementById('conflict-modal');
+        document.getElementById('conflict-cancel-btn').addEventListener('click', () => conflictModal.close());
+        document.getElementById('conflict-proceed-btn').addEventListener('click', () => {
+            conflictModal.close();
+            openMoveSummaryModal(); // Go to the next step
+        });
+
+
+        
+        moveForm.addEventListener('submit', handleMoveFormSubmit);
+        document.getElementById('move-booking-list').addEventListener('change', handleMoveSelectionChange);
 
         // NEW: Listener for Admin Toggle
         document.getElementById('admin-toggle').addEventListener('change', (e) => {
@@ -439,8 +468,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const slotEnd = startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
         const overlappingBookings = state.allBookings.filter(b => {
             if (b.room !== state.selectedRoom) return false;
-            const bStart = DateTime.fromISO(b.start_iso);
-            const bEnd = DateTime.fromISO(b.end_iso);
+            // --- OLD CODE (Cause of Bug) ---
+            // const bStart = DateTime.fromISO(b.start_iso);
+            // const bEnd = DateTime.fromISO(b.end_iso);
+
+            // --- NEW CODE (The Fix) ---
+            const bStart = parseDate(b.start_iso); // Use the robust parser
+            const bEnd = parseDate(b.end_iso);     // Use the robust parser
+
+            // Safety check in case parsing fails
+            if (!bStart.isValid || !bEnd.isValid) return false;
+
             return bStart < slotEnd && bEnd > startTime;
         });
         const listContainer = document.getElementById('cancel-booking-list');
@@ -450,9 +488,21 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             overlappingBookings.forEach(booking => {
                 const label = document.createElement('label');
+                // label.innerHTML = `
+                //     <input type="radio" name="booking-to-cancel" value="${booking.id}" class="mr-2">
+                //     <span>Booking by <strong>${booking.first_name} ${booking.last_name}</strong> (${booking.participants} participants)</span>
+                // `;
+                // Added a styling fix for better readability
+                label.className = "block p-3 border border-gray-200 rounded-md cursor-pointer hover:bg-gray-50 transition-colors";
                 label.innerHTML = `
-                    <input type="radio" name="booking-to-cancel" value="${booking.id}" class="mr-2">
-                    <span>Booking by <strong>${booking.first_name} ${booking.last_name}</strong> (${booking.participants} participants)</span>
+                    <div class="flex items-start gap-3">
+                        <input type="radio" name="booking-to-cancel" value="${booking.id}" class="mt-1 text-ccf-red focus:ring-ccf-red">
+                        <div class="text-sm">
+                            <span class="font-bold text-gray-800">${booking.event}</span><br>
+                            <span class="text-gray-600">Booked by: ${booking.first_name} ${booking.last_name}</span>
+                            <span class="text-xs text-gray-500 block mt-1">(${booking.participants} participants)</span>
+                        </div>
+                    </div>
                 `;
                 listContainer.appendChild(label);
             });
@@ -470,6 +520,171 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('#cancel-booking-list label').forEach(l => l.classList.remove('selected'));
             e.target.closest('label').classList.add('selected');
         }
+    }
+
+    function openMoveModalForSelectedSlot() {
+        choiceModal.close();
+        const { startTime } = state.selectedSlot;
+        const slotEnd = startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
+        
+        // Use the robust parser logic we discussed earlier
+        const overlappingBookings = state.allBookings.filter(b => {
+            if (b.room !== state.selectedRoom) return false;
+            const bStart = parseDate(b.start_iso);
+            const bEnd = parseDate(b.end_iso);
+            if (!bStart.isValid || !bEnd.isValid) return false;
+            return bStart < slotEnd && bEnd > startTime;
+        });
+
+        const listContainer = document.getElementById('move-booking-list');
+        listContainer.innerHTML = '';
+        
+        // Populate Room Dropdown
+        const roomSelect = document.getElementById('move-new-room');
+        roomSelect.innerHTML = '';
+        Object.keys(APP_CONFIG.ROOM_CONFIG).forEach(room => {
+            const opt = document.createElement('option');
+            opt.value = room;
+            opt.textContent = room;
+            if(room === state.selectedRoom) opt.selected = true;
+            roomSelect.appendChild(opt);
+        });
+
+        if (overlappingBookings.length === 0) {
+            listContainer.innerHTML = '<p class="text-slate-500 text-center py-4">No bookings found to move.</p>';
+        } else {
+            overlappingBookings.forEach(booking => {
+                const label = document.createElement('label');
+                label.className = "block p-3 border border-gray-200 rounded-md cursor-pointer hover:bg-gray-50 transition-colors";
+                label.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <input type="radio" name="booking_to_move" value="${booking.id}" class="mt-1 text-ccf-blue focus:ring-ccf-blue">
+                        <div class="text-sm">
+                            <span class="font-bold text-gray-800">${booking.event}</span>
+                            <span class="text-gray-600 block text-xs">By: ${booking.first_name} ${booking.last_name}</span>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(label);
+            });
+        }
+        
+        document.getElementById('move-details-section').classList.add('hidden');
+        document.getElementById('confirm-move-btn').disabled = true;
+        const moveModal = document.getElementById('move-modal');
+        const moveForm = document.getElementById('move-form');
+        moveForm.reset();
+        moveModal.showModal();
+    }
+
+    function handleMoveSelectionChange(e) {
+        if (e.target.name === 'booking_to_move') {
+            const moveModal = document.getElementById('move-modal');
+            const moveForm = document.getElementById('move-form');
+
+            document.getElementById('move-details-section').classList.remove('hidden');
+            document.getElementById('confirm-move-btn').disabled = false;
+            
+            // Optional: Pre-fill dates based on the selected booking (requires finding the booking obj)
+            const bookingId = e.target.value;
+            const booking = state.allBookings.find(b => b.id === bookingId);
+            if(booking) {
+                const bStart = parseDate(booking.start_iso);
+                const bEnd = parseDate(booking.end_iso);
+                
+                const dateInput = moveForm.querySelector('[name="new_date"]');
+                const startInput = moveForm.querySelector('[name="new_start_time"]');
+                const endInput = moveForm.querySelector('[name="new_end_time"]');
+
+                if(bStart.isValid) {
+                    dateInput.value = bStart.toISODate();
+                    startInput.value = bStart.toFormat('HH:mm');
+                }
+                if(bEnd.isValid) {
+                    endInput.value = bEnd.toFormat('HH:mm');
+                }
+            }
+        }
+    }
+
+    function handleMoveFormSubmit(e) {
+        const moveModal = document.getElementById('move-modal');
+        const moveForm = document.getElementById('move-form');
+        e.preventDefault();
+
+        const formData = new FormData(moveForm);
+        // ... (keep variable extraction: bookingId, newDate, etc.) ...
+        const bookingId = formData.get('booking_to_move');
+        const newDate = formData.get('new_date'); 
+        const newRoom = formData.get('new_room');
+        const newStartTime = formData.get('new_start_time'); 
+        const newEndTime = formData.get('new_end_time');     
+        const reason = formData.get('move_reason');
+        const adminPin = formData.get('admin_pin');
+
+        if(!bookingId || !newDate || !newStartTime || !newEndTime || !reason || !adminPin) {
+            return showToast("All fields including Admin PIN are required.", "error");
+        }
+
+        const startIso = DateTime.fromISO(`${newDate}T${newStartTime}`, { zone: APP_CONFIG.TIMEZONE });
+        const endIso = DateTime.fromISO(`${newDate}T${newEndTime}`, { zone: APP_CONFIG.TIMEZONE });
+
+        if (endIso <= startIso) return showToast("End time must be after start time.", "error");
+
+        // 1. Save Preliminary Data to State (So we can access it after the modal)
+        state.pendingMoveData = { 
+            bookingId, adminPin, newRoom, 
+            start_iso: startIso.toISO(), 
+            end_iso: endIso.toISO(), 
+            reason,
+            // Save display info for the summary modal
+            eventName: document.querySelector('input[name="booking_to_move"]:checked')?.nextElementSibling.querySelector('span').textContent || 'Event',
+            displayDate: startIso.toFormat('MMM d, yyyy (ccc)'),
+            displayTime: `${startIso.toFormat('h:mm a')} - ${endIso.toFormat('h:mm a')}`
+        };
+
+        // 2. Conflict Check
+        const conflicts = state.allBookings.filter(b => {
+            if (b.id === bookingId) return false;
+            if (b.room !== newRoom) return false;
+            const bStart = parseDate(b.start_iso);
+            const bEnd = parseDate(b.end_iso);
+            if (!bStart.isValid || !bEnd.isValid) return false;
+            return startIso < bEnd && endIso > bStart;
+        });
+
+        if (conflicts.length > 0) {
+            // Populate Conflict Modal
+            const listEl = document.getElementById('conflict-list');
+            listEl.innerHTML = '';
+            conflicts.forEach(c => {
+                const item = document.createElement('div');
+                item.className = "flex justify-between border-b border-amber-200 pb-1 last:border-0";
+                item.innerHTML = `<span><strong>${c.event}</strong></span> <span>${parseDate(c.start_iso).toFormat('h:mm a')} - ${parseDate(c.end_iso).toFormat('h:mm a')}</span>`;
+                listEl.appendChild(item);
+            });
+            
+            // Show Custom Modal instead of confirm()
+            document.getElementById('conflict-modal').showModal();
+            return; // Stop here, wait for user input
+        }
+
+        // 3. If No Conflict, proceed directly
+        openMoveSummaryModal();
+    }
+
+    function openMoveSummaryModal() {
+        const data = state.pendingMoveData;
+        if (!data) return;
+
+        // Populate Summary Modal
+        document.getElementById('move-sum-event').textContent = data.eventName;
+        document.getElementById('move-sum-room').textContent = data.newRoom;
+        document.getElementById('move-sum-date').textContent = data.displayDate;
+        document.getElementById('move-sum-time').textContent = data.displayTime;
+        document.getElementById('move-sum-reason').textContent = data.reason;
+
+        document.getElementById('move-summary-modal').showModal();
     }
 
     // --- FORM SUBMISSION ---
@@ -601,6 +816,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function proceedWithMove() {
+        document.getElementById('move-summary-modal').close();
+        document.getElementById('move-modal').close(); // Also close the input form
+        loadingModal.showModal();
+        
+        if (state.pendingMoveData) {
+            submitRequest('move', state.pendingMoveData);
+            state.pendingMoveData = null; // Clear state
+        }
+    }
+
     /**
      * UPDATED: Relaxes email validation if admin pin is present.
      */
@@ -726,6 +952,8 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(toast);
         setTimeout(() => { toast.remove(); }, 6000);
     }
+
+
 
     // --- START THE APP ---
     init();
