@@ -1,6 +1,6 @@
 # CCF Manila Booking System
 
-![Version](https://img.shields.io/badge/version-1.4-blue.svg)
+![Version](https://img.shields.io/badge/version-1.5-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 ![Tech](https://img.shields.io/badge/stack-HTML%20%7C%20JS%20%7C%20Google%20Apps%20Script-orange)
 
@@ -31,7 +31,8 @@ A comprehensive, serverless room reservation web application designed for **CCF 
 ### For Administrators
 - **Secure Access:** PIN-protected admin capabilities.
 - **Recurrent Bookings:** Schedule repeating events (Weekly, Monthly, Quarterly) in one go.
-- **Schedule Management:** - **Move Bookings:** Drag-and-drop style functionality to reschedule events with conflict detection.
+- **Schedule Management:**
+    - **Move Bookings:** Drag-and-drop style functionality to reschedule events with conflict detection.
     - **Conflict Handling:** Smart system warnings when double-booking or moving events into occupied slots.
     - **Cancel/Override:** Ability to cancel any booking and override participant limits.
 - **Dashboard:** Dedicated view for high-level schedule management.
@@ -43,14 +44,15 @@ A comprehensive, serverless room reservation web application designed for **CCF 
 * **Frontend:** HTML5, Vanilla JavaScript (ES6+), Tailwind CSS (via CDN).
 * **Backend / API:** Google Apps Script (GAS) deployed as a Web App.
 * **Database:** Google Sheets (Acting as a relational database).
-* **Libraries:** * `Luxon.js` (Date & Time manipulation)
+* **Libraries:**
+    * `Luxon.js` (Date & Time manipulation)
     * `Google Fonts` (Typography)
 
 ---
 
 ## 🔄 System Architecture
 
-The following flowchart illustrates the detailed user and admin journey, from opening the app to data synchronization with Google Services.
+The following flowchart illustrates the complete User and Admin journey, including **Booking**, **Cancellation**, and **Rescheduling (Move)** workflows.
 
 ```mermaid
 graph TD
@@ -64,118 +66,135 @@ graph TD
     Start((Start))
     End((End))
 
-    subgraph User_Admin [User / Admin]
+    subgraph User_Admin [User / Admin Interactions]
         direction TB
         Step1[1. Open App URL]:::actor
-        Step5{5. Select Different Room?}:::actor
         Step7[7. Click Time Slot]:::actor
+        Step9_Dec{9. Action Choice?}:::actor
+        
+        %% Create Flow
         Step12[12. Fill Booking Form]:::actor
-        Step13{13. Is Admin?}:::actor
-        Step16[16. Select Admin Event]:::actor
-        Step18[18. Confirm Booking]:::actor
-        Step21[21. Review & Confirm]:::actor
+        Step18[18. Confirm Creation]:::actor
+        
+        %% Cancel Flow
+        StepC1[C1. Select Booking to Cancel]:::actor
+        StepC2[C2. Verify Email / Admin PIN]:::actor
+        
+        %% Move Flow
+        StepM1[M1. Input New Schedule]:::actor
+        StepM3{M3. Proceed w/ Conflict?}:::actor
+        StepM4[M4. Confirm Move Summary]:::actor
     end
 
-    subgraph Frontend_UI [Frontend]
+    subgraph Frontend_UI [Frontend Logic]
         direction TB
-        Step2[2. Load UI & Default Room]:::frontend
-        Step3[3. Fetch Data]:::frontend
-        Step4[4. Render Calendar]:::frontend
-        Step6[6. Re-render Calendar]:::frontend
-        Step8{8. Is Slot Available?}:::frontend
+        Step2[2. Load UI & Fetch Data]:::frontend
+        Step8{8. Is Slot Empty?}:::frontend
         Step9[9. Show Choice Modal]:::frontend
+        
+        %% Create Logic
         Step10[10. Open Booking Modal]:::frontend
-        Step11[11. Set Rules & Limits]:::frontend
-        Step14[14. Show Admin UI]:::frontend
-        Step15[15. Load Admin Events]:::frontend
-        Step17[17. Auto-fill Capacity]:::frontend
         Step19{19. Valid Form?}:::frontend
-        Step20[20. Show Summary Modal]:::frontend
-        Step22[22. Show Loading]:::frontend
-        Step23[23. Send Request]:::frontend
-        Step35[35. Receive Response]:::frontend
-        Step36{36. Success?}:::frontend
-        Step37[37. Show Success Modal]:::frontend
-        Step38[38. Check Redirect/Prioritization]:::frontend
+        Step23[23. Send 'Create' Request]:::frontend
+        
+        %% Cancel Logic
+        StepC_UI[Open Cancel Modal]:::frontend
+        StepC_Send[Send 'Cancel' Request]:::frontend
+        
+        %% Move Logic
+        StepM_UI[Open Move Modal]:::frontend
+        StepM_Check{M2. Conflict Check}:::frontend
+        StepM_Warn[Show Conflict Modal]:::frontend
+        StepM_Sum[Show Summary Modal]:::frontend
+        StepM_Send[Send 'Move' Request]:::frontend
+        
+        %% Common
+        Step36{Success?}:::frontend
+        Step37[Show Success Modal]:::frontend
         Toast[Show Error Toast]:::frontend
     end
 
     subgraph Backend_GAS [Backend Google Apps Script]
         direction TB
-        Step24[24. Handle Request]:::backend
-        Step25[25. Verify Admin PIN]:::backend
-        Step26[26. Check Prioritization logic]:::backend
-        Step27[27. Validate Input]:::backend
-        Step28{28. Valid?}:::backend
-        Step29{29. Recurrent?}:::backend
-        Step30[30. Append Booking Row]:::backend
-        Step32[32. Build Confirmation Email]:::backend
-        Step34[34. Return JSON Response]:::backend
-        RecurLoop[Handle Recurrence Loop]:::backend
+        Step24[24. Handle Request Type]:::backend
+        
+        %% Create Path
+        Step27[Create: Validate & Append]:::backend
+        
+        %% Cancel Path
+        StepBackend_Cancel[Cancel: Update Status 'CANCELLED']:::backend
+        
+        %% Move Path
+        StepBackend_Move[Move: Update Date/Time/Room]:::backend
+        
+        %% Common
+        Step32[Build Email Notification]:::backend
+        Step34[Return JSON Response]:::backend
     end
 
     subgraph Google_Services [Google Services]
         direction TB
-        Step31[(31. Write to Sheets)]:::google
-        Step33[33. Send Email via MailApp]:::google
+        Step31[(Write to Sheets)]:::google
+        Step33[Send Email via MailApp]:::google
     end
 
-    %% Connections
+    %% -- MAIN FLOW --
     Start --> Step1
     Step1 --> Step2
-    Step2 --> Step3
-    Step3 --> Step4
-    Step4 --> Step5
-    
-    Step5 -- Yes --> Step6
-    Step6 --> Step7
-    Step5 -- No --> Step7
-    
+    Step2 --> Step7
     Step7 --> Step8
-    Step8 -- Partial/Full --> Step9
-    Step9 -- User clicks Book --> Step10
-    Step8 -- Available --> Step10
     
-    Step10 --> Step11
-    Step11 --> Step12
-    Step12 --> Step13
-    
-    Step13 -- Yes --> Step14
-    Step14 --> Step15
-    Step15 --> Step16
-    Step16 --> Step17
-    Step17 --> Step18
-    Step13 -- No --> Step18
-    
+    Step8 -- "Empty" --> Step10
+    Step8 -- "Booked / Partial" --> Step9
+    Step9 --> Step9_Dec
+
+    %% -- CREATE BRANCH --
+    Step9_Dec -- "Book New" --> Step10
+    Step10 --> Step12
+    Step12 --> Step18
     Step18 --> Step19
+    Step19 -- Yes --> Step23
     Step19 -- No --> Toast
-    Step19 -- Yes --> Step20
-    
-    Step20 --> Step21
-    Step21 --> Step22
-    Step22 --> Step23
     Step23 --> Step24
+
+    %% -- CANCEL BRANCH --
+    Step9_Dec -- "Cancel Booking" --> StepC_UI
+    StepC_UI --> StepC1
+    StepC1 --> StepC2
+    StepC2 --> StepC_Send
+    StepC_Send --> Step24
+
+    %% -- MOVE BRANCH (Admin) --
+    Step9_Dec -- "Move (Admin)" --> StepM_UI
+    StepM_UI --> StepM1
+    StepM1 --> StepM_Check
     
-    Step24 --> Step25
-    Step25 --> Step26
-    Step26 --> Step27
-    Step27 --> Step28
+    StepM_Check -- "No Conflict" --> StepM_Sum
+    StepM_Check -- "Conflict!" --> StepM_Warn
+    StepM_Warn --> StepM3
+    StepM3 -- "Yes (Double Book)" --> StepM_Sum
+    StepM3 -- "No" --> End
     
-    Step28 -- No --> Step34
-    Step28 -- Yes --> Step29
-    
-    Step29 -- Yes --> RecurLoop
-    RecurLoop --> Step31
-    Step29 -- No --> Step30
-    Step30 --> Step31
+    StepM_Sum --> StepM4
+    StepM4 --> StepM_Send
+    StepM_Send --> Step24
+
+    %% -- BACKEND ROUTING --
+    Step24 -- "Action: Create" --> Step27
+    Step24 -- "Action: Cancel" --> StepBackend_Cancel
+    Step24 -- "Action: Move" --> StepBackend_Move
+
+    %% -- DB & NOTIFICATIONS --
+    Step27 --> Step31
+    StepBackend_Cancel --> Step31
+    StepBackend_Move --> Step31
     
     Step31 --> Step32
     Step32 --> Step33
     Step33 --> Step34
-    
-    Step34 --> Step35
-    Step35 --> Step36
-    Step36 -- No --> Toast
+
+    %% -- RESPONSE --
+    Step34 --> Step36
     Step36 -- Yes --> Step37
-    Step37 --> Step38
-    Step38 --> End
+    Step36 -- No --> Toast
+    Step37 --> End
