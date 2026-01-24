@@ -118,26 +118,50 @@ dialog::backdrop {
     backdrop-filter: blur(3px);
 }
 
-/* Toast notifications (uses new red color) */
+
+/* TOAST NOTIFICATION FIX */
+#toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    /* Use Max Z-Index to ensure it sits on top of <dialog> and backdrops */
+    z-index: 2147483647; 
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none; /* Allows clicks to pass through the empty container space */
+}
+
 .toast {
-    padding: 1rem 1.5rem;
-    border-radius: 0.5rem;
+    pointer-events: auto; /* Re-enable clicks on the specific toast message */
+    min-width: 300px;
+    max-width: 450px;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     opacity: 0;
-    transform: translateY(20px);
-    animation: fadeIn 0.3s forwards;
+    transform: translateX(100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-}
-.toast-success {
-    background-color: #16a34a; /* green-600 */
+    border-radius: 6px;
+    padding: 16px;
     color: white;
+    font-size: 0.95rem;
+    line-height: 1.4;
 }
-.toast-error {
-    background-color: var(--ccf-red); /* Use CCF Red */
-    color: white;
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(0);
 }
+
+/* Toast Variants */
+.toast-success { background-color: #059669; } /* Emerald 600 */
+.toast-error { background-color: #DC2626; }   /* Red 600 */
+.toast-info { background-color: #0284c7; }    /* Sky 600 */
+
+
+
+
 @keyframes fadeIn {
     to {
         opacity: 1;

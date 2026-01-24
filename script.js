@@ -380,6 +380,37 @@ document.addEventListener('DOMContentLoaded', () => {
             totalGroups: parseInt(slot.dataset.totalGroups || '0', 10),
             rules: roomRules
         };
+
+        // --- START NEW VALIDATION LOGIC ---
+        // 1. Calculate the difference in days from NOW
+        const now = DateTime.now().setZone(APP_CONFIG.TIMEZONE).startOf('day');
+        const targetDate = state.selectedSlot.startTime.setZone(APP_CONFIG.TIMEZONE).startOf('day'); 
+        const diffInDays = targetDate.diff(now, 'days').days;
+
+        // 2. Define the Booking Window
+        const MAX_ADVANCE_DAYS = 7; 
+
+        // 3. Check Restriction (Soft check to allow Admin override)
+        if (diffInDays > MAX_ADVANCE_DAYS) {
+             showToast(`Note: Dates beyond ${MAX_ADVANCE_DAYS} days are restricted to Admins.`, 'info');
+             // We do NOT return here, allowing the modal to open so Admins can proceed.
+        }
+        // --- END NEW VALIDATION LOGIC ---
+
+
+        // --- 2. Min Notice Check (24 Hours) ---
+        // Uses exact time comparison for immediate notice
+        const nowExact = DateTime.now().setZone(APP_CONFIG.TIMEZONE);
+        const slotStartExact = state.selectedSlot.startTime.setZone(APP_CONFIG.TIMEZONE);
+        const diffInHours = slotStartExact.diff(nowExact, 'hours').hours;
+        const MIN_NOTICE_HOURS = 24;
+
+        // Check if within 24 hours (and not in the past)
+        if (diffInHours < MIN_NOTICE_HOURS && diffInHours > 0) {
+             showToast(`Note: Bookings within ${MIN_NOTICE_HOURS} hours are restricted to Admins.`, 'info');
+        }
+        // --------------------------------------------
+
         if (slot.classList.contains('partial') || slot.classList.contains('full')) {
             const bookButton = document.getElementById('choice-book-btn');
             const remainingGroups = roomRules.MAX_CONCURRENT_GROUPS - state.selectedSlot.totalGroups;
@@ -692,6 +723,32 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleBookingFormSubmit(e) {
         e.preventDefault();
         const isAdmin = document.getElementById('admin-toggle').checked;
+
+        // --- START STEP 3: SUBMISSION VALIDATION (Fail Fast) ---
+        // We grab the value directly here to validate before processing the rest of the form
+        const startIsoInput = document.getElementById('start-iso').value;
+        const startDate = DateTime.fromISO(startIsoInput).setZone(APP_CONFIG.TIMEZONE).startOf('day');
+        const now = DateTime.now().setZone(APP_CONFIG.TIMEZONE).startOf('day');
+        const diffInDays = startDate.diff(now, 'days').days;
+        const MAX_ADVANCE_DAYS = 7;
+
+        if (!isAdmin && diffInDays > MAX_ADVANCE_DAYS) {
+            return showToast(`Regular bookings cannot be made more than ${MAX_ADVANCE_DAYS} days in advance. Please login as Admin.`, "error");
+        }
+        // --- END STEP 3 ---
+
+        // 2. NEW: Min Notice Check (24 Hours)
+        const startDateExact = DateTime.fromISO(startIsoInput).setZone(APP_CONFIG.TIMEZONE);
+        const nowExact = DateTime.now().setZone(APP_CONFIG.TIMEZONE);
+        const diffInHours = startDateExact.diff(nowExact, 'hours').hours;
+        const MIN_NOTICE_HOURS = 24;
+
+        // Only block if it is in the future (diff > 0) but less than 24 hours away
+        if (!isAdmin && diffInHours > 0 && diffInHours < MIN_NOTICE_HOURS) {
+            return showToast(`Regular bookings require at least ${MIN_NOTICE_HOURS} hours notice. Please login as Admin.`, "error");
+        }
+        // --- END SUBMISSION VALIDATION ---
+
         const roomRules = state.selectedSlot.rules;
         const formData = new FormData(bookingForm);
         const firstName = formData.get('first_name').trim();
@@ -770,13 +827,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         
-        const maxDate = DateTime.local().plus(isAdmin ? { months: 6 } : { days: 7 });
-        if (startTime > maxDate) {
-            return showToast(isAdmin ? "Admins can only book up to 6 months in advance." : "Users can only book up to 7 days in advance.", "error");
-        }
+        // Validate Past Bookings
         if (startTime < DateTime.local()) {
             return showToast("Cannot create a booking in the past.", "error");
         }
+
+        // Validate Admin 6-Month Limit 
+        // (7-day User limit is already handled by Step 3 at the top)
+        if (isAdmin) {
+             const maxAdminDate = DateTime.local().plus({ months: 6 });
+             if (startTime > maxAdminDate) {
+                 return showToast("Admins can only book up to 6 months in advance.", "error");
+             }
+        }
+
+
         
         state.pendingBookingData = {
             room: state.selectedRoom,
@@ -888,6 +953,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         redirectMsgEl.textContent = `Your booking for ${bookedRoom} is confirmed. Please save this code for your records.`;
                     }
+
+                    renderCalendarButtons({
+                        id: data.id,
+                        event: data.event || document.getElementById('event').value,
+                        room: data.room,
+                        start_iso: data.start_iso, 
+                        end_iso: data.end_iso,
+                        notes: document.getElementById('notes')?.value || ''
+                    });
+
                     successModal.showModal();
                 } else {
                     showToast(data.message, "success");
@@ -951,6 +1026,121 @@ document.addEventListener('DOMContentLoaded', () => {
         toast.innerHTML = `<span>${type === 'success' ? '✔' : '✖'}</span><p>${message}</p>`;
         container.appendChild(toast);
         setTimeout(() => { toast.remove(); }, 6000);
+    }
+    /**
+     * Generates Google Calendar Link and ICS Download Button
+     * and renders them into the DOM container.
+     * * Paste this at the bottom of script.js
+     */
+    function renderCalendarButtons(booking) {
+        const container = document.getElementById('calendar-links-container');
+        if (!container) return;
+
+        // 1. Format Dates for Calendar Clients (YYYYMMDDTHHmmSS)
+        // We use Luxon to strictly enforce Asia/Manila timezone
+        const fmt = "yyyyMMdd'T'HHmmss";
+        const startObj = DateTime.fromISO(booking.start_iso).setZone('Asia/Manila');
+        const endObj = DateTime.fromISO(booking.end_iso).setZone('Asia/Manila');
+        
+        const startStr = startObj.toFormat(fmt);
+        const endStr = endObj.toFormat(fmt);
+
+        // 2. Prepare Data for URL
+        const title = encodeURIComponent(`CCF Booking: ${booking.event}`);
+        const location = encodeURIComponent(`CCF Manila - ${booking.room}`);
+        const details = encodeURIComponent(`Booking Ref: ${booking.id}\nNote: ${booking.notes || ''}`);
+
+        // 3. Generate Google Calendar URL
+        // ctz=Asia/Manila ensures the calendar opens in the correct timezone
+        const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&details=${details}&location=${location}&ctz=Asia/Manila`;
+
+        // 4. Generate ICS File Content
+        const icsData = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//CCF Manila//Booking System//EN',
+            'BEGIN:VEVENT',
+            `UID:${booking.id}@ccfmanila.org`,
+            `DTSTAMP:${DateTime.now().setZone('Asia/Manila').toFormat(fmt)}Z`,
+            `DTSTART;TZID=Asia/Manila:${startStr}`,
+            `DTEND;TZID=Asia/Manila:${endStr}`,
+            `SUMMARY:CCF Booking: ${booking.event}`,
+            `DESCRIPTION:${booking.notes || ''}`,
+            `LOCATION:CCF Manila - ${booking.room}`,
+            'END:VEVENT',
+            'END:VCALENDAR'
+        ].join('\r\n');
+
+        // Create a downloadable file blob
+        const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
+        const icsUrl = URL.createObjectURL(blob);
+
+        // 5. Inject HTML
+        container.innerHTML = `
+            <a href="${gCalUrl}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 text-sm font-medium transition-colors">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5v-5z"/></svg>
+                Add to Google
+            </a>
+            <a href="${icsUrl}" download="ccf-booking-${booking.id}.ics" class="flex items-center justify-center gap-2 px-3 py-2 bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 text-sm font-medium transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Download .ics
+            </a>
+        `;
+    }
+
+
+    /**
+     * Toast Notification Helper
+     * Creates and manages the floating alert messages.
+     * Place this at the bottom of script.js
+     */
+    function showToast(message, type = 'info') {
+        // 1. Get or Create Container
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        // 2. Create Toast Element
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`; // Classes: toast-info, toast-success, toast-error
+        
+        // Select Icon based on type
+        let iconSvg = '';
+        if (type === 'success') {
+            // Checkmark Icon
+            iconSvg = '<svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+        } else if (type === 'error') {
+            // X Icon
+            iconSvg = '<svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+        } else {
+            // Info Icon
+            iconSvg = '<svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+        }
+
+        // Set Content
+        toast.innerHTML = `${iconSvg}<span>${message}</span>`;
+
+        // 3. Append to Container
+        container.appendChild(toast);
+
+        // Trigger Animation (Next Frame)
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        // 4. Auto Remove after 4 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            // Wait for transition to finish before removing from DOM
+            setTimeout(() => {
+                if (container.contains(toast)) {
+                    container.removeChild(toast);
+                }
+            }, 300);
+        }, 4000); 
     }
 
 
