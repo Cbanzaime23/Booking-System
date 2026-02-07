@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,41 +8,45 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@600;700&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@600;700&family=Montserrat:wght@400;500;600&display=swap"
+        rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script>
         tailwind.config = {
-          theme: {
-            extend: {
-              fontFamily: {
-                'heading': ['"EB Garamond"', 'serif'],
-                'body': ['"Montserrat"', 'sans-serif'],
-              },
-              colors: {
-                'ccf-blue': {
-                  DEFAULT: '#004d60',
-                  'dark': '#003e4d',
-                },
-                'ccf-red': {
-                  DEFAULT: '#e00000',
-                  'dark': '#b80000',
-                },
-              }
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'heading': ['"EB Garamond"', 'serif'],
+                        'body': ['"Montserrat"', 'sans-serif'],
+                    },
+                    colors: {
+                        'ccf-blue': {
+                            DEFAULT: '#004d60',
+                            'dark': '#003e4d',
+                        },
+                        'ccf-red': {
+                            DEFAULT: '#e00000',
+                            'dark': '#b80000',
+                        },
+                    }
+                }
             }
-          }
         }
     </script>
-        
+
     <link rel="stylesheet" href="style.css?v=1.4">
     <style>
         .calendar-sticky-header {
             position: -webkit-sticky;
             position: sticky;
-            top: 156px; /* Adjust this value based on the total height of all sticky elements above it */
-            z-index: 40;
-            background-color: #fff; /* Ensure white background for visibility */
+            top: var(--calendar-header-top, 215px);
+            /* Aligns below the sticky header + controls */
+            z-index: 30;
+            background-color: #fff;
+            /* Ensure white background for visibility */
         }
 
         /* Added for the time column on the left (if you implement a fixed time column) */
@@ -53,22 +58,60 @@
         }
     </style>
 </head>
+
 <body class="bg-white font-body text-gray-800">
+    <!-- Announcement Banner -->
+    <div id="announcement-banner" class="hidden relative bg-yellow-400 text-yellow-900 px-4 py-3 shadow-sm z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 animate-pulse" viewBox="0 0 20 20"
+                    fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clip-rule="evenodd" />
+                </svg>
+                <div class="font-medium" id="announcement-text">
+                    <!-- Text injected by JS -->
+                </div>
+            </div>
+            <button id="announcement-close" class="text-yellow-800 hover:text-yellow-900 focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clip-rule="evenodd" />
+                </svg>
+            </button>
+        </div>
+    </div>
 
     <div id="app" class="container mx-auto p-4 max-w-7xl">
-        
-        <header class="bg-white text-black p-4 shadow-md flex flex-col md:flex-row items-center justify-between sticky top-0 z-50">
+
+        <header id="main-header"
+            class="bg-white text-black p-4 shadow-md flex flex-col md:flex-row items-center justify-between sticky top-0 z-50">
             <div class="flex items-center justify-center md:justify-start w-full md:w-auto mb-2 md:mb-0">
-                <div class="mr-4"> 
+                <div class="mr-4">
                     <img src="./ccf-full-logo-black.png" alt="CCF Logo" class="h-12 w-auto">
                 </div>
-                <h1 class="text-2xl md:text-3xl font-bold text-center md:text-left font-heading text-ccf-blue">CCF Manila Booking System</h1>
+                <h1 class="text-2xl md:text-3xl font-bold text-center md:text-left font-heading text-ccf-blue">CCF
+                    Manila Booking System</h1>
             </div>
 
-            <div>
-                <button id="go-to-dashboard-btn" class="text-sm font-medium text-gray-500 hover:text-ccf-red transition-colors flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            <div class="flex gap-4">
+                <button id="my-bookings-btn"
+                    class="text-sm font-medium text-gray-500 hover:text-ccf-blue transition-colors flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    My Bookings
+                </button>
+                <button id="go-to-dashboard-btn"
+                    class="text-sm font-medium text-gray-500 hover:text-ccf-red transition-colors flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                     Admin Dashboard
                 </button>
@@ -76,21 +119,31 @@
         </header>
 
         <main>
-            <section id="room-selector-section" class="mb-4 relative sticky top-[80px] z-40 bg-white pt-4 pb-2 shadow-sm">
-                <label for="room-selector" class="block text-sm font-medium text-gray-700 mb-1">Select a Room:</label>
-                <select id="room-selector" class="block w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:outline-none focus:ring-ccf-red focus:border-ccf-red">
-                </select>
-            </section>
-            
-            <section id="calendar-controls" class="flex justify-between items-center mb-4 p-4 bg-white rounded-lg shadow-sm border border-gray-200 sticky top-[150px] z-30">
-                <button id="prev-week" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">&larr; Prev</button>
-                <h2 id="current-week-title" class="text-2xl font-semibold text-center font-heading text-ccf-blue"></h2>
-                <button id="next-week" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">Next &rarr;</button>
-            </section>
+            <div id="sticky-controls-wrapper" class="sticky z-40 bg-white border-b border-gray-200 pt-2"
+                style="top: var(--controls-top, 80px);">
+                <section id="room-selector-section" class="px-4 pb-2">
+                    <label for="room-selector" class="block text-sm font-medium text-gray-700 mb-1">Select a
+                        Room:</label>
+                    <select id="room-selector"
+                        class="block w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:outline-none focus:ring-ccf-red focus:border-ccf-red">
+                    </select>
+                </section>
 
-            <section id="calendar-view" class="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
-                <div class="grid grid-cols-1 md:grid-cols-7 border-t border-l border-gray-200">
-                    </div>
+                <section id="calendar-controls" class="flex justify-between items-center px-4 pb-4">
+                    <button id="prev-week"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors border border-gray-200">&larr;
+                        Prev</button>
+                    <h2 id="current-week-title"
+                        class="text-xl md:text-2xl font-semibold text-center font-heading text-ccf-blue"></h2>
+                    <button id="next-week"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors border border-gray-200">Next
+                        &rarr;</button>
+                </section>
+            </div>
+
+            <section id="calendar-view" class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="grid grid-cols-3 md:grid-cols-7 border-t border-l border-gray-200">
+                </div>
                 <div id="loader" class="hidden absolute inset-0 bg-white/70 flex justify-center items-center">
                     <div class="loader-spinner"></div>
                 </div>
@@ -103,11 +156,21 @@
     <dialog id="choice-modal" class="p-0 rounded-lg shadow-xl max-w-sm w-full">
         <div class="p-6 text-center">
             <h3 class="text-2xl font-bold mb-4 font-heading text-ccf-blue">What would you like to do?</h3>
-            <p class="mb-6 text-gray-600">This time slot is partially booked. You can book a new slot or cancel an existing one.</p>
-            <div class="flex flex-col gap-3"> <button id="choice-book-btn" class="w-full px-6 py-3 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark font-semibold">Book a New Slot</button>
+            <p class="mb-6 text-gray-600">This time slot is partially booked. You can book a new slot or cancel an
+                existing one.</p>
+            <div class="flex flex-col gap-3"> <button id="choice-book-btn"
+                    class="w-full px-6 py-3 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark font-semibold">Book a
+                    New Slot</button>
                 <div class="flex gap-3">
-                    <button id="choice-cancel-btn" class="flex-1 px-4 py-3 bg-gray-200 rounded-md hover:bg-gray-300 font-semibold text-sm">Cancel Booking</button>
-                    <button id="choice-move-btn" class="flex-1 px-4 py-3 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark font-semibold text-sm">Move (Admin)</button>
+                    <button id="choice-cancel-btn"
+                        class="flex-1 px-4 py-3 bg-gray-200 rounded-md hover:bg-gray-300 font-semibold text-sm">Cancel
+                        Booking</button>
+                    <button id="choice-duplicate-btn"
+                        class="hidden flex-1 px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold text-sm">Duplicate
+                        (Admin)</button>
+                    <button id="choice-move-btn"
+                        class="flex-1 px-4 py-3 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark font-semibold text-sm">Move
+                        (Admin)</button>
                 </div>
             </div>
             <div class="mt-4">
@@ -117,65 +180,114 @@
             </div>
         </div>
     </dialog>
-    
+
     <dialog id="booking-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6">
             <button type="button" class="cancel-btn absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
             <h3 class="text-2xl font-bold mb-4 font-heading text-ccf-blue" id="modal-title">New Booking</h3>
-            <h3 class="text-1xl font-bold mb-4 font-heading text-ccf-blue" id="modal-date-info" class="text-md text-gray-600 font-semibold"></h3>
+            <h4 class="text-xl font-semibold mb-2 text-gray-700" id="modal-room-title"></h4>
+            <h3 class="text-1xl font-bold mb-4 font-heading text-ccf-blue" id="modal-date-info"
+                class="text-md text-gray-600 font-semibold"></h3>
             <form id="booking-form" novalidate>
+
+                <!-- Duplicate Booking Date Picker (Hidden by default) -->
+                <div id="duplicate-date-wrapper" class="hidden mb-4 bg-blue-50 p-3 rounded border border-blue-200">
+                    <label for="duplicate-date" class="block text-sm font-bold text-blue-800 mb-1">Select New Date for
+                        Duplicate</label>
+                    <input type="date" id="duplicate-date"
+                        class="block w-full px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
 
 
                 <input type="hidden" id="start-iso">
-                
+
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
-                        <input type="text" id="first_name" name="first_name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        <div class="relative mt-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <input type="text" id="first_name" name="first_name" required
+                                class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        </div>
                     </div>
                     <div>
                         <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
-                        <input type="text" id="last_name" name="last_name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        <div class="relative mt-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <input type="text" id="last_name" name="last_name" required
+                                class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        </div>
                     </div>
                 </div>
-    
+
                 <div class="mb-4">
                     <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-                    <input type="email" id="email" name="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                    <div class="relative mt-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <input type="email" id="email" name="email" required
+                            class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                    </div>
                 </div>
 
                 <div class="mb-4">
                     <label class="flex items-center">
-                        <input type="checkbox" id="admin-toggle" class="form-checkbox h-4 w-4 text-ccf-red border-gray-300 rounded focus:ring-ccf-red">
+                        <input type="checkbox" id="admin-toggle"
+                            class="form-checkbox h-4 w-4 text-ccf-red border-gray-300 rounded focus:ring-ccf-red">
                         <span class="ml-2 text-sm text-gray-700">I am an Admin</span>
                     </label>
                 </div>
-    
+
                 <div id="user-fields" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label for="leader_first_name" class="block text-sm font-medium text-gray-700">Dgroup Leader First Name</label>
-                            <input type="text" id="leader_first_name" name="leader_first_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                            <label for="leader_first_name" class="block text-sm font-medium text-gray-700">Dgroup Leader
+                                First Name</label>
+                            <input type="text" id="leader_first_name" name="leader_first_name"
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
                         </div>
                         <div>
-                            <label for="leader_last_name" class="block text-sm font-medium text-gray-700">Dgroup Leader Last Name</label>
-                            <input type="text" id="leader_last_name" name="leader_last_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                            <label for="leader_last_name" class="block text-sm font-medium text-gray-700">Dgroup Leader
+                                Last Name</label>
+                            <input type="text" id="leader_last_name" name="leader_last_name"
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
                         </div>
                     </div>
                 </div>
-    
+
                 <div id="admin-fields" class="hidden space-y-4 rounded-lg border border-red-200 bg-red-50 p-4 my-4">
                     <div>
                         <label for="admin-pin" class="block text-sm font-medium text-ccf-red-dark">Admin PIN</label>
-                        <input type="password" id="admin-pin" name="admin-pin" placeholder="Enter PIN for admin booking" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        <input type="password" id="admin-pin" name="admin-pin" placeholder="Enter PIN for admin booking"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
                     </div>
                     <div>
-                        <label for="recurrence" class="block text-sm font-medium text-ccf-red-dark">Recurrence (Optional)</label>
-                        <select id="recurrence" name="recurrence" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:ring-ccf-red focus:border-ccf-red">
+                        <label for="recurrence" class="block text-sm font-medium text-ccf-red-dark">Recurrence
+                            (Optional)</label>
+                        <select id="recurrence" name="recurrence"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:ring-ccf-red focus:border-ccf-red">
                             <option value="none">One-time event</option>
                             <option value="weekly">Weekly (for 12 weeks)</option>
                             <option value="monthly">Monthly (for 6 months)</option>
@@ -185,68 +297,152 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="mb-4">
                     <label for="event" class="block text-sm font-medium text-gray-700">Event</label>
-                    <select id="event" name="event" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:ring-ccf-red focus:border-ccf-red">
-                        <option value="">Select an event type...</option>
-                        <option value="Rehearsal/Practice">Rehearsal/Practice</option>
-                        <option value="Ministry Event">Ministry Event</option>
-                        <option value="Dgroup">Dgroup</option>
-                        <option value="Celebration">Celebration</option>
-                    </select>
+                    <div class="relative mt-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                        </div>
+                        <select id="event" name="event" required
+                            class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:ring-ccf-red focus:border-ccf-red">
+                            <option value="">Select an event type...</option>
+                            <option value="Rehearsal/Practice">Rehearsal/Practice</option>
+                            <option value="Ministry Event">Ministry Event</option>
+                            <option value="Dgroup">Dgroup</option>
+                            <option value="Celebration">Celebration</option>
+                        </select>
+                    </div>
                 </div>
-                
+
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <label for="end-time" class="block text-sm font-medium text-gray-700">End Time</label>
-                        <input type="time" id="end-time" name="end-time" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red" step="1800">
+                        <div class="relative mt-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <input type="time" id="end-time" name="end-time" required
+                                class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red"
+                                step="1800">
+                        </div>
                     </div>
                     <div>
-                        <label for="participants" class="block text-sm font-medium text-gray-700">Number of Participants</label>
-                        <input type="number" id="participants" name="participants" required min="1" value="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        <label for="participants" class="block text-sm font-medium text-gray-700">Number of
+                            Participants</label>
+                        <div class="relative mt-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                            </div>
+                            <input type="number" id="participants" name="participants" required min="1" value="2"
+                                class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        </div>
                     </div>
                 </div>
                 <div class="text-center -mt-2 mb-4">
                     <p id="participants-helper-text" class="text-xs text-gray-500"></p>
                 </div>
-    
+
                 <div class="mb-4">
                     <label for="notes" class="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-                    <textarea id="notes" name="notes" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red"></textarea>
+                    <div class="relative mt-1">
+                        <div class="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <textarea id="notes" name="notes" rows="2"
+                            class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red"></textarea>
+                    </div>
                 </div>
-    
+
+                <div class="mb-6">
+                    <label class="flex items-start gap-2 cursor-pointer">
+                        <input type="checkbox" id="terms-checkbox" name="terms_accepted" required
+                            class="mt-1 h-4 w-4 text-ccf-red border-gray-300 rounded focus:ring-ccf-red">
+                        <span class="text-sm text-gray-700">
+                            I agree to the <button type="button" id="terms-link-btn"
+                                class="text-ccf-blue underline hover:text-ccf-blue-dark">Terms & Conditions</button>
+                        </span>
+                    </label>
+                </div>
+
                 <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" class="cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancel</button>
-                    <button type="submit" id="submit-booking" class="px-4 py-2 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark">Confirm Booking</button>
+                    <button type="button"
+                        class="cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancel</button>
+                    <button type="submit" id="submit-booking"
+                        class="px-4 py-2 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark">Confirm
+                        Booking</button>
                 </div>
             </form>
         </div>
     </dialog>
-    
+
     <dialog id="cancel-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6">
             <h3 class="text-2xl font-bold mb-2 font-heading text-ccf-blue">Cancel a Booking</h3>
             <p class="mb-4 text-gray-600">Select the booking you wish to cancel.</p>
-            
+
             <form id="cancel-form" novalidate>
                 <div id="cancel-booking-list" class="space-y-2 border-y border-gray-200 py-3 mb-4">
                 </div>
-    
+
                 <div id="cancel-confirmation-section" class="hidden">
                     <div class="mb-4">
-                        <label for="cancel-email" class="block text-sm font-medium text-gray-700">Confirm with your Email</label>
-                        <input type="email" id="cancel-email" name="cancel-email" required placeholder="you@example.com" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ccf-red focus:border-ccf-red">
+                        <label for="cancel-booking-code" class="block text-sm font-medium text-gray-700">Confirm with
+                            Booking Code</label>
+                        <div class="relative mt-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                </svg>
+                            </div>
+                            <input type="text" id="cancel-booking-code"
+                                placeholder="Enter the Booking Code (e.g. 8A2B...)"
+                                class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Found in your confirmation email or "My Bookings".</p>
                     </div>
-                     <div class="mb-4">
-                        <label for="admin-pin-cancel" class="block text-sm font-medium text-gray-500">Admin PIN (Optional)</label>
-                        <input type="password" id="admin-pin-cancel" name="admin-pin" placeholder="Enter PIN to override" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+
+                    <div class="mb-4 pt-4 border-t border-gray-100">
+                        <label for="admin-pin" class="block text-sm font-medium text-ccf-red-dark">Admin PIN
+                            (Optional)</label>
+                        <div class="relative mt-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <input type="password" id="admin-pin" placeholder="Enter PIN to override"
+                                class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        </div>
                     </div>
                 </div>
-    
+
                 <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" class="cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Back</button>
-                    <button type="submit" id="confirm-cancel-btn" class="px-4 py-2 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark disabled:bg-red-300" disabled>Confirm Cancellation</button>
+                    <button type="button"
+                        class="cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Back</button>
+                    <button type="submit" id="confirm-cancel-btn"
+                        class="px-4 py-2 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark disabled:bg-red-300"
+                        disabled>Confirm Cancellation</button>
                 </div>
             </form>
         </div>
@@ -256,10 +452,11 @@
         <div class="p-6">
             <h3 class="text-2xl font-bold mb-2 font-heading text-ccf-blue">Move a Booking</h3>
             <p class="mb-4 text-gray-600">Select the booking to move and specify the new details.</p>
-            
+
             <form id="move-form" novalidate>
-                <div id="move-booking-list" class="space-y-2 border-y border-gray-200 py-3 mb-4 max-h-40 overflow-y-auto">
-                    </div>
+                <div id="move-booking-list"
+                    class="space-y-2 border-y border-gray-200 py-3 mb-4 max-h-40 overflow-y-auto">
+                </div>
 
                 <div id="move-details-section" class="hidden space-y-4">
                     <div class="bg-blue-50 p-4 rounded-md border border-blue-100">
@@ -267,40 +464,125 @@
                         <div class="grid grid-cols-2 gap-3 mb-3">
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600">New Date</label>
-                                <input type="date" name="new_date" required class="w-full text-sm p-2 border rounded">
+                                <div class="relative mt-1">
+                                    <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <input type="date" name="new_date" required
+                                        class="block w-full pl-8 p-2 text-sm border rounded">
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600">New Room</label>
-                                <select name="new_room" id="move-new-room" class="w-full text-sm p-2 border rounded">
+                                <div class="relative mt-1">
+                                    <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                    </div>
+                                    <select name="new_room" id="move-new-room"
+                                        class="block w-full pl-8 p-2 text-sm border rounded">
                                     </select>
+                                </div>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600">Start Time</label>
-                                <input type="time" name="new_start_time" required class="w-full text-sm p-2 border rounded">
+                                <div class="relative mt-1">
+                                    <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <input type="time" name="new_start_time" required
+                                        class="block w-full pl-8 p-2 text-sm border rounded">
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600">End Time</label>
-                                <input type="time" name="new_end_time" required class="w-full text-sm p-2 border rounded">
+                                <div class="relative mt-1">
+                                    <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <input type="time" name="new_end_time" required
+                                        class="block w-full pl-8 p-2 text-sm border rounded">
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Reason for Movement</label>
-                        <textarea name="move_reason" required rows="2" placeholder="e.g., Room maintenance, Conflict resolution..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-blue focus:border-ccf-blue"></textarea>
+                        <div class="relative mt-1">
+                            <div class="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <textarea name="move_reason" required rows="2"
+                                placeholder="e.g., Room maintenance, Conflict resolution..."
+                                class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-blue focus:border-ccf-blue"></textarea>
+                        </div>
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-ccf-red-dark">Admin PIN</label>
-                        <input type="password" name="admin_pin" required placeholder="Required" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        <div class="relative mt-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <input type="password" name="admin_pin" required placeholder="Required"
+                                class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                        </div>
                     </div>
                 </div>
-    
+
                 <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" class="cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancel</button>
-                    <button type="submit" id="confirm-move-btn" class="px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark disabled:bg-blue-300" disabled>Confirm Move</button>
+                    <button type="button"
+                        class="cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancel</button>
+                    <button type="submit" id="confirm-move-btn"
+                        class="px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark disabled:bg-blue-300"
+                        disabled>Confirm Move</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <dialog id="duplicate-selection-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+            <h3 class="text-2xl font-bold mb-2 font-heading text-ccf-blue">Duplicate Booking</h3>
+            <p class="mb-4 text-gray-600">Select the booking you wish to duplicate.</p>
+
+            <form id="duplicate-selection-form" novalidate>
+                <div id="duplicate-booking-list"
+                    class="space-y-2 border-y border-gray-200 py-3 mb-4 max-h-40 overflow-y-auto">
+                </div>
+
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button"
+                        class="cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancel</button>
+                    <button type="submit" id="confirm-duplicate-selection-btn"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
+                        disabled>Duplicate Selected</button>
                 </div>
             </form>
         </div>
@@ -309,8 +591,9 @@
     <dialog id="confirm-summary-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6">
             <h3 class="text-2xl font-bold mb-4 font-heading text-ccf-blue">Confirm Your Booking</h3>
-            <p class="mb-5 text-gray-600">Please review your booking details below. Are you sure you want to proceed?</p>
-    
+            <p class="mb-5 text-gray-600">Please review your booking details below. Are you sure you want to proceed?
+            </p>
+
             <div class="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4 mb-6">
                 <div class="flex justify-between">
                     <span class="text-sm font-medium text-gray-500">Room:</span>
@@ -340,15 +623,17 @@
                     <span class="text-sm font-medium text-gray-500">Group Size:</span>
                     <span id="summary-participants" class="font-semibold text-gray-800"></span>
                 </div>
-                 <div class="flex justify-between">
+                <div class="flex justify-between">
                     <span class="text-sm font-medium text-gray-500">Email:</span>
                     <span id="summary-email" class="font-semibold text-gray-800"></span>
                 </div>
             </div>
-    
+
             <div class="flex justify-end gap-3 mt-6">
-                <button type="button" id="summary-no-btn" class="px-5 py-2 bg-gray-200 rounded-md hover:bg-gray-300">No, Go Back</button>
-                <button type="button" id="summary-yes-btn" class="px-5 py-2 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark">Yes, Confirm</button>
+                <button type="button" id="summary-no-btn" class="px-5 py-2 bg-gray-200 rounded-md hover:bg-gray-300">No,
+                    Go Back</button>
+                <button type="button" id="summary-yes-btn"
+                    class="px-5 py-2 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark">Yes, Confirm</button>
             </div>
         </div>
     </dialog>
@@ -358,16 +643,19 @@
             <div class="loader-spinner" style="width: 60px; height: 60px; border-width: 5px;"></div>
         </div>
     </dialog>
-    
+
     <dialog id="success-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6 text-center">
             <div class="w-16 h-16 rounded-full bg-green-100 p-4 flex items-center justify-center mx-auto mb-4">
-                <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
             </div>
-            
+
             <h3 class="text-2xl font-bold mb-3 font-heading text-ccf-blue">Booking Confirmed!</h3>
-            <p id="success-redirect-message" class="text-gray-600 mb-4"></p> 
-            
+            <p id="success-redirect-message" class="text-gray-600 mb-4"></p>
+
             <div class="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4 mb-6 text-left">
                 <p class="text-sm"><strong>Booking Code:</strong></p>
                 <span id="success-booking-code" class="text-2xl font-bold text-gray-800 tracking-wider"></span>
@@ -375,9 +663,10 @@
                 <span id="success-room-name" class="text-xl font-bold text-gray-800"></span>
             </div>
 
-            <div id="calendar-links-container" ></div>
-    
-            <button type="button" id="success-done-btn" class="w-full px-5 py-3 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark font-semibold">
+            <div id="calendar-links-container"></div>
+
+            <button type="button" id="success-done-btn"
+                class="w-full px-5 py-3 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark font-semibold">
                 Done
             </button>
         </div>
@@ -386,12 +675,13 @@
     <dialog id="move-summary-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6">
             <h3 class="text-2xl font-bold mb-2 font-heading text-ccf-blue">Confirm Schedule Move</h3>
-            
+
             <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-5">
                 <div class="flex">
                     <div class="ml-3">
                         <p class="text-sm text-yellow-700">
-                            <strong>Note:</strong> This action will immediately <strong>email the user</strong> with these new details.
+                            <strong>Note:</strong> This action will immediately <strong>email the user</strong> with
+                            these new details.
                         </p>
                     </div>
                 </div>
@@ -399,8 +689,8 @@
 
             <div class="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4 mb-6">
                 <div class="flex justify-between">
-                     <span class="text-sm font-medium text-gray-500">Booking:</span>
-                     <span id="move-sum-event" class="font-semibold text-gray-800 text-right text-sm"></span>
+                    <span class="text-sm font-medium text-gray-500">Booking:</span>
+                    <span id="move-sum-event" class="font-semibold text-gray-800 text-right text-sm"></span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-sm font-medium text-gray-500">New Room:</span>
@@ -414,15 +704,19 @@
                     <span class="text-sm font-medium text-gray-500">New Time:</span>
                     <span id="move-sum-time" class="font-semibold text-gray-800 text-right text-sm"></span>
                 </div>
-                 <div class="flex flex-col mt-2">
+                <div class="flex flex-col mt-2">
                     <span class="text-sm font-medium text-gray-500 mb-1">Reason for Move:</span>
-                    <div id="move-sum-reason" class="text-gray-800 text-sm italic bg-white p-2 border rounded border-gray-200"></div>
+                    <div id="move-sum-reason"
+                        class="text-gray-800 text-sm italic bg-white p-2 border rounded border-gray-200"></div>
                 </div>
             </div>
-    
+
             <div class="flex justify-end gap-3 mt-6">
-                <button type="button" id="move-sum-no-btn" class="px-5 py-2 bg-gray-200 rounded-md hover:bg-gray-300 font-medium">No, Go Back</button>
-                <button type="button" id="move-sum-yes-btn" class="px-5 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark font-medium">Yes, Confirm Move</button>
+                <button type="button" id="move-sum-no-btn"
+                    class="px-5 py-2 bg-gray-200 rounded-md hover:bg-gray-300 font-medium">No, Go Back</button>
+                <button type="button" id="move-sum-yes-btn"
+                    class="px-5 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark font-medium">Yes, Confirm
+                    Move</button>
             </div>
         </div>
     </dialog>
@@ -430,28 +724,89 @@
     <dialog id="conflict-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6">
             <div class="flex items-center gap-3 mb-4 text-amber-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <h3 class="text-2xl font-bold font-heading text-gray-800">Schedule Conflict!</h3>
             </div>
-            
+
             <p class="mb-4 text-gray-600">The new schedule overlaps with the following existing booking(s):</p>
 
-            <div id="conflict-list" class="bg-amber-50 border border-amber-200 rounded-md p-3 mb-6 max-h-40 overflow-y-auto text-sm text-gray-700 space-y-2">
-                </div>
+            <div id="conflict-list"
+                class="bg-amber-50 border border-amber-200 rounded-md p-3 mb-6 max-h-40 overflow-y-auto text-sm text-gray-700 space-y-2">
+            </div>
 
             <p class="mb-6 text-sm font-semibold text-gray-800">Do you want to proceed anyway (Double Book)?</p>
-    
+
             <div class="flex justify-end gap-3">
-                <button type="button" id="conflict-cancel-btn" class="px-5 py-2 bg-gray-200 rounded-md hover:bg-gray-300 font-medium">Cancel</button>
-                <button type="button" id="conflict-proceed-btn" class="px-5 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 font-medium">Yes, Double Book</button>
+                <button type="button" id="conflict-cancel-btn"
+                    class="px-5 py-2 bg-gray-200 rounded-md hover:bg-gray-300 font-medium">Cancel</button>
+                <button type="button" id="conflict-proceed-btn"
+                    class="px-5 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 font-medium">Yes, Double
+                    Book</button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="my-bookings-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold font-heading text-ccf-blue">My Bookings</h3>
+                <button type="button" class="cancel-btn text-gray-400 hover:text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <p class="mb-4 text-sm text-gray-600">Enter your email address to find your confirmed future bookings.</p>
+
+            <form id="my-bookings-form" class="mb-6">
+                <div class="flex gap-2">
+                    <input type="email" name="lookup_email" required placeholder="you@example.com"
+                        class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-ccf-blue focus:border-ccf-blue">
+                    <button type="submit"
+                        class="px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark font-medium whitespace-nowrap">Find</button>
+                </div>
+            </form>
+
+            <div id="my-bookings-results" class="max-h-60 overflow-y-auto space-y-3">
+                <!-- Results will be injected here -->
+                <div class="text-center text-gray-500 text-sm py-4 hidden" id="my-bookings-empty">
+                    No future bookings found for this email.
+                </div>
+                <div class="text-center text-gray-500 text-sm py-4 hidden" id="my-bookings-loading">
+                    Searching...
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="terms-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+            <h3 class="text-2xl font-bold mb-4 font-heading text-ccf-blue">Terms & Conditions</h3>
+            <div class="space-y-3 text-sm text-gray-700 mb-6 bg-gray-50 p-4 rounded border border-gray-200">
+                <p>By proceeding with this booking, you agree to the following:</p>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li><strong>Clean Up:</strong> I agree to clean up the venue after use.</li>
+                    <li><strong>Reset:</strong> I will reset chairs and equipment to their original arrangement.</li>
+                    <li><strong>Cancellation:</strong> I agree to cancel at least 24 hours in advance if the event works
+                        cannot proceed.</li>
+                </ul>
+            </div>
+            <div class="flex justify-end">
+                <button type="button" id="terms-close-btn"
+                    class="px-5 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark font-medium">I
+                    Understand</button>
             </div>
         </div>
     </dialog>
 
     <div id="toast-container" class="fixed bottom-5 right-5 space-y-3 z-[100]"></div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
     <script src="config.js?v=1.4"></script>
     <script src="script.js?v=1.4"></script>
@@ -460,14 +815,14 @@
         document.getElementById('go-to-dashboard-btn').addEventListener('click', () => {
             // 1. Prompt for PIN
             const input = prompt("Please enter the Admin PIN to access the dashboard:");
-            
+
             // 2. Check PIN (Must match your server-side PIN)
-            const ADMIN_PIN = "CCFManila@2025"; 
-            
+            const ADMIN_PIN = "CCFManila@2025";
+
             if (input === ADMIN_PIN) {
                 // 3. Save a "Session Token" so the dashboard knows we are authorized
                 sessionStorage.setItem('ccf_admin_logged_in', 'true');
-                
+
                 // 4. Redirect
                 window.location.href = 'dashboard.html';
             } else if (input !== null) {
@@ -477,4 +832,5 @@
         });
     </script>
 </body>
+
 </html>

@@ -37,12 +37,12 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: "Sunday Service", setsMaxCapacity: true }
         ]
     };
-    
+
 
     const calendarView = document.querySelector('#calendar-view .grid');
     const loader = document.getElementById('loader');
     const roomSelector = document.getElementById('room-selector');
-    
+
     // Modals and Forms
     const choiceModal = document.getElementById('choice-modal');
     const bookingModal = document.getElementById('booking-modal');
@@ -52,12 +52,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmSummaryModal = document.getElementById('confirm-summary-modal');
     const loadingModal = document.getElementById('loading-modal');
     const successModal = document.getElementById('success-modal');
-    
+
     const calendarControls = {
         prevWeekBtn: document.getElementById('prev-week'),
         nextWeekBtn: document.getElementById('next-week'),
         currentWeekTitle: document.getElementById('current-week-title'),
     };
+
+    // My Bookings UI
+    const myBookingsBtn = document.getElementById('my-bookings-btn');
+    const myBookingsModal = document.getElementById('my-bookings-modal');
+    const myBookingsForm = document.getElementById('my-bookings-form');
+    const myBookingsResults = document.getElementById('my-bookings-results');
+    const myBookingsEmpty = document.getElementById('my-bookings-empty');
+    const myBookingsLoading = document.getElementById('my-bookings-loading');
 
     // --- CORE APP FUNCTIONS ---
 
@@ -70,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!eventSelector) return;
 
         // Start with a clean slate
-        eventSelector.innerHTML = ''; 
+        eventSelector.innerHTML = '';
 
         // Add the default placeholder option
         const placeholder = document.createElement('option');
@@ -79,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
         placeholder.disabled = true;
         placeholder.selected = true;
         eventSelector.appendChild(placeholder);
-        
+
         // 1. Add User (Base) options
         const allOptions = [...EVENT_OPTIONS.USER];
 
@@ -87,14 +95,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isAdmin) {
             allOptions.push(...EVENT_OPTIONS.ADMIN_ADDITIONS);
         }
-        
+
         // 3. Populate the dropdown
         allOptions.forEach(eventObj => { // Loop through event objects
             const option = document.createElement('option');
             option.value = eventObj.name; // Use eventObj.name for the value
             option.textContent = eventObj.name; // Use eventObj.name for display text
             // Store the setsMaxCapacity property as a data attribute on the option
-            option.dataset.setsMaxCapacity = eventObj.setsMaxCapacity; 
+            option.dataset.setsMaxCapacity = eventObj.setsMaxCapacity;
             eventSelector.appendChild(option);
         });
     }
@@ -102,12 +110,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- HELPER: ROBUST DATE PARSER ---
     function parseDate(dateInput) {
         if (!dateInput) return DateTime.invalid('missing data');
-        
+
         // FIX: Handle "Fake UTC" strings. 
         // The server sends Manila time (e.g. 10:00) but adds 'Z' (UTC marker).
         // We strip the 'Z' so Luxon treats "2025-11-29T10:00:00" as 10:00 AM in the configured APP_CONFIG.TIMEZONE.
         if (typeof dateInput === 'string' && dateInput.endsWith('Z')) {
-            dateInput = dateInput.slice(0, -1); 
+            dateInput = dateInput.slice(0, -1);
         }
 
         // 1. Try Standard ISO (now treated as Local due to stripped Z)
@@ -127,10 +135,45 @@ document.addEventListener('DOMContentLoaded', () => {
         return DateTime.invalid('unsupported format');
     }
 
+    function adjustStickyOffsets() {
+        const header = document.getElementById('main-header');
+        const controlsWrapper = document.getElementById('sticky-controls-wrapper');
+
+        if (!header || !controlsWrapper) return;
+
+        const headerHeight = header.offsetHeight;
+        const controlsHeight = controlsWrapper.offsetHeight;
+
+        // 1. Set Controls Wrapper Top
+        document.body.style.setProperty('--controls-top', `${headerHeight}px`);
+
+        // 2. Set Calendar Header Top
+        const totalTop = headerHeight + controlsHeight;
+        document.body.style.setProperty('--calendar-header-top', `${totalTop}px`);
+    }
+
     function init() {
         initializeRoomSelector();
         setupEventListeners();
-        render();
+        render(); // This renders the empty grid or initial state
+
+        // Layout Adjustment - Initial Call
+        adjustStickyOffsets();
+
+        // Robust Observation for Size Changes (Images loading, banner, etc.)
+        const header = document.getElementById('main-header');
+        const controls = document.getElementById('sticky-controls-wrapper');
+        const banner = document.getElementById('announcement-banner');
+
+        const resizeObserver = new ResizeObserver(() => {
+            requestAnimationFrame(adjustStickyOffsets);
+        });
+
+        if (header) resizeObserver.observe(header);
+        if (controls) resizeObserver.observe(controls);
+        if (banner) resizeObserver.observe(banner); // Also watch banner height directly
+
+        window.addEventListener('resize', adjustStickyOffsets);
     }
 
     function initializeRoomSelector() {
@@ -155,21 +198,30 @@ document.addEventListener('DOMContentLoaded', () => {
             state.selectedRoom = e.target.value;
             render();
         });
-        
+
         calendarControls.prevWeekBtn.addEventListener('click', () => changeWeek(-1));
         calendarControls.nextWeekBtn.addEventListener('click', () => changeWeek(1));
         calendarView.addEventListener('click', handleSlotClick);
-        
+
         // Modal Listeners
         document.getElementById('choice-book-btn').addEventListener('click', openBookingModalForSelectedSlot);
         document.getElementById('choice-cancel-btn').addEventListener('click', openCancelModalForSelectedSlot);
         const moveBtn = document.getElementById('choice-move-btn');
-        if (moveBtn) { 
-             moveBtn.addEventListener('click', openMoveModalForSelectedSlot);
+        if (moveBtn) {
+            moveBtn.addEventListener('click', openMoveModalForSelectedSlot);
         }
+        // Duplicate Logic Listeners
+        const duplicateBtn = document.getElementById('choice-duplicate-btn');
+        if (duplicateBtn) {
+            duplicateBtn.addEventListener('click', openDuplicateSelectionModalForSelectedSlot);
+        }
+        document.getElementById('duplicate-booking-list').addEventListener('change', handleDuplicateSelectionChange);
+        document.getElementById('confirm-duplicate-selection-btn').addEventListener('click', handleDuplicateConfirmation);
+        document.getElementById('duplicate-date').addEventListener('change', handleDuplicateDateChange);
+
         document.getElementById('move-sum-no-btn').addEventListener('click', () => document.getElementById('move-summary-modal').close());
         document.getElementById('move-sum-yes-btn').addEventListener('click', proceedWithMove);
-        
+
         document.getElementById('choice-back-btn').addEventListener('click', () => choiceModal.close());
         bookingForm.addEventListener('submit', handleBookingFormSubmit);
         cancelForm.addEventListener('submit', handleCancelFormSubmit);
@@ -182,9 +234,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Close ALL modals when any cancel button is clicked
                 if (typeof bookingModal !== 'undefined') bookingModal.close();
                 if (typeof cancelModal !== 'undefined') cancelModal.close();
+                if (typeof bookingModal !== 'undefined') bookingModal.close();
+                if (typeof cancelModal !== 'undefined') cancelModal.close();
                 if (moveModal) moveModal.close();
+                const duplicateModal = document.getElementById('duplicate-selection-modal');
+                if (duplicateModal) duplicateModal.close();
+                // Reset Duplicate State
+                document.getElementById('duplicate-date-wrapper').classList.add('hidden');
+                document.getElementById('duplicate-date').value = '';
+                state.duplicationSource = null;
             });
         });
+
+        // Terms Modal Logic
+        const termsModal = document.getElementById('terms-modal');
+        const termsLinkBtn = document.getElementById('terms-link-btn');
+        const termsCloseBtn = document.getElementById('terms-close-btn');
+
+        if (termsLinkBtn && termsModal) {
+            termsLinkBtn.addEventListener('click', () => termsModal.showModal());
+        }
+        if (termsCloseBtn && termsModal) {
+            termsCloseBtn.addEventListener('click', () => termsModal.close());
+        }
 
         // Conflict Modal Listeners
         const conflictModal = document.getElementById('conflict-modal');
@@ -195,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
 
-        
+
         moveForm.addEventListener('submit', handleMoveFormSubmit);
         document.getElementById('move-booking-list').addEventListener('change', handleMoveSelectionChange);
 
@@ -232,14 +304,14 @@ document.addEventListener('DOMContentLoaded', () => {
         bookingForm.querySelector('#event').addEventListener('change', (e) => {
             const selectedOption = e.target.selectedOptions[0];
             const setsMaxCapacity = selectedOption.dataset.setsMaxCapacity === 'true'; // Convert string to boolean
-            
+
             if (setsMaxCapacity && state.selectedSlot) {
                 const participantsInput = bookingForm.querySelector('#participants');
-                
+
                 // --- CRITICAL CHANGE: Use overall room capacity ---
                 const selectedRoomName = state.selectedRoom; // e.g., "Main Hall"
                 const maxRoomCapacity = ROOM_CAPACITIES[selectedRoomName] || 0; // Get 55, 20, etc.
-                
+
                 // 1. Ensure the admin bypass is active if this feature is used (optional check)
                 const isAdmin = document.getElementById('admin-toggle').checked;
                 if (!isAdmin) {
@@ -251,11 +323,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 2. Set participants to the room's OVERALL MAX CAPACITY
                 participantsInput.value = maxRoomCapacity;
-                
+
                 // 3. Re-apply the overall room capacity as the max attribute (if not already removed by admin logic)
-                participantsInput.max = maxRoomCapacity; 
+                participantsInput.max = maxRoomCapacity;
             }
         });
+
+
+        // --- MY BOOKINGS EVENTS ---
+        if (myBookingsBtn) {
+            myBookingsBtn.addEventListener('click', () => {
+                myBookingsModal.showModal();
+                // Reset form and results
+                myBookingsForm.reset();
+                myBookingsResults.querySelectorAll('.booking-item').forEach(e => e.remove());
+                myBookingsEmpty.classList.add('hidden');
+                myBookingsLoading.classList.add('hidden');
+            });
+        }
+
+        if (myBookingsForm) {
+            myBookingsForm.addEventListener('submit', handleMyBookingsSubmit);
+        }
+
+        // Close My Bookings Modal
+        if (myBookingsModal) {
+            myBookingsModal.querySelector('.cancel-btn').addEventListener('click', () => myBookingsModal.close());
+            // Close on backdrop click
+            myBookingsModal.addEventListener('click', (e) => {
+                if (e.target === myBookingsModal) myBookingsModal.close();
+            });
+        }
     }
 
     async function render() {
@@ -284,8 +382,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const dayColumn = document.createElement('div');
             dayColumn.className = 'border-r border-b border-slate-200';
             const dayHeader = document.createElement('div');
-            dayHeader.className = 'text-center p-2 border-b border-slate-200 sticky top-0 bg-white z-10';
-            dayHeader.innerHTML = `<span class="font-semibold">${day.toFormat('ccc')}</span><br><span class="text-sm text-slate-500">${day.toFormat('d')}</span>`;
+            dayHeader.className = 'text-center p-2 border-b border-slate-200 calendar-sticky-header z-20';
+            dayHeader.innerHTML = `<span class="font-semibold text-sm md:text-base">${day.toFormat('ccc')}</span><br><span class="text-xs md:text-sm text-slate-500">${day.toFormat('d')}</span>`;
             dayColumn.appendChild(dayHeader);
             const hours = APP_CONFIG.BUSINESS_HOURS[day.weekday % 7];
             if (hours && hours.start) {
@@ -296,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 const closedDiv = document.createElement('div');
-                closedDiv.className = 'p-4 text-center text-slate-400';
+                closedDiv.className = 'p-4 text-center text-slate-400 text-xs md:text-base';
                 closedDiv.textContent = 'Closed';
                 dayColumn.appendChild(closedDiv);
             }
@@ -307,7 +405,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function createTimeSlot(time) {
         const slot = document.createElement('div');
         const isPast = time < DateTime.local().setZone(APP_CONFIG.TIMEZONE);
-        slot.className = 'time-slot p-2 text-center text-sm border-t border-slate-100 h-14 flex items-center justify-center';
+        // MOBILE OPTIMIZATION: text-xs on mobile, text-sm on desktop
+        slot.className = 'time-slot p-2 text-center text-xs md:text-sm border-t border-slate-100 h-14 flex items-center justify-center';
         slot.dataset.startIso = time.toISO();
         if (isPast) {
             slot.classList.add('past', 'bg-slate-100', 'text-slate-400', 'cursor-not-allowed');
@@ -320,17 +419,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const roomRules = APP_CONFIG.ROOM_CONFIG[state.selectedRoom];
         const roomBookings = state.allBookings.filter(b => b.room === state.selectedRoom);
         document.querySelectorAll('.time-slot').forEach(slotEl => {
-            if (slotEl.classList.contains('past')) return;
+            // REMOVED: if (slotEl.classList.contains('past')) return; 
+            // We want to render bookings even if they are in the past.
+
             const slotStart = DateTime.fromISO(slotEl.dataset.startIso);
             const slotEnd = slotStart.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
+            const isPast = slotEl.classList.contains('past');
+
+            // --- NEW: BLOCKED DATE CHECK ---
+            const slotDateStr = slotStart.toISODate(); // YYYY-MM-DD
+            const blockedInfo = state.blockedDates && state.blockedDates.find(d => {
+                const dateMatch = d.date === slotDateStr;
+                const roomMatch = d.room === "All Rooms" || d.room === state.selectedRoom;
+                return dateMatch && roomMatch;
+            });
+
+            if (blockedInfo) {
+                slotEl.className = 'time-slot p-2 text-center text-xs md:text-sm border-t border-slate-100 h-14 flex flex-col items-center justify-center bg-gray-200 text-gray-500 cursor-not-allowed';
+                slotEl.innerHTML = `<div class="time-label">${slotStart.toFormat('h:mm a')}</div><div class="text-xs font-bold text-gray-600 mt-1">Closed: ${blockedInfo.reason}</div>`;
+                delete slotEl.dataset.bookingId;
+                delete slotEl.dataset.bookingName;
+                slotEl.classList.add('past'); // Ensure blocked dates are treated as non-clickable
+                return;
+            }
+            // -------------------------------
+
             let totalParticipants = 0, totalGroups = 0;
             // FIX: Using the Robust Date Parser here
             const overlappingBookings = roomBookings.filter(b => {
                 const bStart = parseDate(b.start_iso); // Tries multiple formats
                 const bEnd = parseDate(b.end_iso);     // Tries multiple formats
-                
+
                 if (!bStart.isValid || !bEnd.isValid) return false; // Safety check
-                
+
                 return bStart < slotEnd && bEnd > slotStart;
             });
 
@@ -351,11 +472,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete slotEl.dataset.bookingId;
                 delete slotEl.dataset.bookingName;
             }
-            slotEl.className = 'time-slot p-2 text-center text-sm border-t border-slate-100 h-14 flex flex-col items-center justify-center';
+
+            // Reset classes but preserve 'past' styling if needed
+            slotEl.className = 'time-slot p-2 text-center text-xs md:text-sm border-t border-slate-100 h-14 flex flex-col items-center justify-center';
+            if (isPast) {
+                slotEl.classList.add('past', 'bg-slate-100', 'text-slate-400', 'cursor-not-allowed');
+            }
+
             const timeLabelHTML = `<div class="time-label">${slotStart.toFormat('h:mm a')}</div>`;
             let statusLabelHTML = '';
+
             if (totalParticipants >= roomRules.MAX_TOTAL_PARTICIPANTS || totalGroups >= roomRules.MAX_CONCURRENT_GROUPS) {
                 slotEl.classList.add('full');
+                // If full, we might want to override the 'past' gray with red, or keep it gray?
+                // Usually 'past' implies read-only. We still want to see it was full.
                 statusLabelHTML = `<div class="status-label">Full</div>`;
             } else if (totalParticipants > 0) {
                 const remainingPax = roomRules.MAX_TOTAL_PARTICIPANTS - totalParticipants;
@@ -384,16 +514,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- START NEW VALIDATION LOGIC ---
         // 1. Calculate the difference in days from NOW
         const now = DateTime.now().setZone(APP_CONFIG.TIMEZONE).startOf('day');
-        const targetDate = state.selectedSlot.startTime.setZone(APP_CONFIG.TIMEZONE).startOf('day'); 
+        const targetDate = state.selectedSlot.startTime.setZone(APP_CONFIG.TIMEZONE).startOf('day');
         const diffInDays = targetDate.diff(now, 'days').days;
 
         // 2. Define the Booking Window
-        const MAX_ADVANCE_DAYS = 7; 
+        const MAX_ADVANCE_DAYS = 7;
 
         // 3. Check Restriction (Soft check to allow Admin override)
         if (diffInDays > MAX_ADVANCE_DAYS) {
-             showToast(`Note: Dates beyond ${MAX_ADVANCE_DAYS} days are restricted to Admins.`, 'info');
-             // We do NOT return here, allowing the modal to open so Admins can proceed.
+            showToast(`Note: Dates beyond ${MAX_ADVANCE_DAYS} days are restricted to Admins.`, 'info');
+            // We do NOT return here, allowing the modal to open so Admins can proceed.
         }
         // --- END NEW VALIDATION LOGIC ---
 
@@ -407,15 +537,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check if within 24 hours (and not in the past)
         if (diffInHours < MIN_NOTICE_HOURS && diffInHours > 0) {
-             showToast(`Note: Bookings within ${MIN_NOTICE_HOURS} hours are restricted to Admins.`, 'info');
+            showToast(`Note: Bookings within ${MIN_NOTICE_HOURS} hours are restricted to Admins.`, 'info');
         }
         // --------------------------------------------
 
         if (slot.classList.contains('partial') || slot.classList.contains('full')) {
             const bookButton = document.getElementById('choice-book-btn');
+            const duplicateButton = document.getElementById('choice-duplicate-btn');
+
             const remainingGroups = roomRules.MAX_CONCURRENT_GROUPS - state.selectedSlot.totalGroups;
             const remainingPax = roomRules.MAX_TOTAL_PARTICIPANTS - state.selectedSlot.totalParticipants;
+
+            // Toggle Book Button
             bookButton.style.display = (remainingGroups <= 0 || remainingPax < roomRules.MIN_BOOKING_SIZE) ? 'none' : 'inline-block';
+
+            // Toggle Duplicate Button (Always visible logic, just hidden by class default, so we remove hidden)
+            // Reusing the same "flex-1" classes might be tricky if Book is hidden.
+            // Simplified:
+            if (duplicateButton) duplicateButton.classList.remove('hidden');
+
             choiceModal.showModal();
         } else if (slot.classList.contains('available')) {
             openBookingModalForSelectedSlot();
@@ -428,7 +568,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // document.getElementById('admin-toggle').checked = false;
 
         // Ensure Admin Toggle is reset to User (unchecked)
-        const isAdmin = document.getElementById('admin-toggle').checked = false;
+        const adminToggle = document.getElementById('admin-toggle');
+        adminToggle.disabled = false; // Re-enable for normal booking
+        const isAdmin = adminToggle.checked = false;
 
         document.getElementById('user-fields').classList.remove('hidden');
         document.getElementById('admin-fields').classList.add('hidden');
@@ -438,24 +580,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         // --- REVISED CHANGE: Using a dedicated element for date info ---
-        
+
         // 1. Format the date/time string
         // Example: "Mon, Nov 10, 9:00 AM" (using current time of Nov 8, 2025)
         const formattedDate = startTime.toFormat('ccc, MMM d, h:mm a');
-        
+
         // 2. Set the room name title (if you kept the original ID, use that here)
         // Assuming you use the new ID 'modal-room-title'
         const roomTitleElement = document.getElementById('modal-room-title');
         if (roomTitleElement) {
-             roomTitleElement.textContent = `Book ${state.selectedRoom}`;
+            roomTitleElement.textContent = `Book ${state.selectedRoom}`;
         }
-        
+
         // 3. Populate the dedicated date/time element (This targets the highlighted area)
         const dateInfoElement = document.getElementById('modal-date-info');
         if (dateInfoElement) {
-             dateInfoElement.textContent = formattedDate;
+            dateInfoElement.textContent = formattedDate;
         }
-        
+
         // --- END OF REVISED CHANGE ---
 
         updateParticipantRules(rules, false);
@@ -481,14 +623,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 1. Build the helper text string
         let helperText = `Group size: ${minAllowed} - ${maxAllowed} participants. `;
-        
+
         // 2. Add the max concurrent groups from the rules
         helperText += `Max groups for this room: ${rules.MAX_CONCURRENT_GROUPS}. `;
 
         // 3. Add the booking window date
         const maxDate = DateTime.local().plus(isAdmin ? { months: 6 } : { days: 7 });
         helperText += `Can book up to ${maxDate.toFormat('LLL d')}.`;
-        
+
         // --- END OF CHANGE ---
         document.getElementById('participants-helper-text').textContent = helperText;
     }
@@ -557,7 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
         choiceModal.close();
         const { startTime } = state.selectedSlot;
         const slotEnd = startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
-        
+
         // Use the robust parser logic we discussed earlier
         const overlappingBookings = state.allBookings.filter(b => {
             if (b.room !== state.selectedRoom) return false;
@@ -569,7 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const listContainer = document.getElementById('move-booking-list');
         listContainer.innerHTML = '';
-        
+
         // Populate Room Dropdown
         const roomSelect = document.getElementById('move-new-room');
         roomSelect.innerHTML = '';
@@ -577,7 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const opt = document.createElement('option');
             opt.value = room;
             opt.textContent = room;
-            if(room === state.selectedRoom) opt.selected = true;
+            if (room === state.selectedRoom) opt.selected = true;
             roomSelect.appendChild(opt);
         });
 
@@ -599,7 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 listContainer.appendChild(label);
             });
         }
-        
+
         document.getElementById('move-details-section').classList.add('hidden');
         document.getElementById('confirm-move-btn').disabled = true;
         const moveModal = document.getElementById('move-modal');
@@ -615,23 +757,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.getElementById('move-details-section').classList.remove('hidden');
             document.getElementById('confirm-move-btn').disabled = false;
-            
+
             // Optional: Pre-fill dates based on the selected booking (requires finding the booking obj)
             const bookingId = e.target.value;
             const booking = state.allBookings.find(b => b.id === bookingId);
-            if(booking) {
+            if (booking) {
                 const bStart = parseDate(booking.start_iso);
                 const bEnd = parseDate(booking.end_iso);
-                
+
                 const dateInput = moveForm.querySelector('[name="new_date"]');
                 const startInput = moveForm.querySelector('[name="new_start_time"]');
                 const endInput = moveForm.querySelector('[name="new_end_time"]');
 
-                if(bStart.isValid) {
+                if (bStart.isValid) {
                     dateInput.value = bStart.toISODate();
                     startInput.value = bStart.toFormat('HH:mm');
                 }
-                if(bEnd.isValid) {
+                if (bEnd.isValid) {
                     endInput.value = bEnd.toFormat('HH:mm');
                 }
             }
@@ -646,14 +788,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(moveForm);
         // ... (keep variable extraction: bookingId, newDate, etc.) ...
         const bookingId = formData.get('booking_to_move');
-        const newDate = formData.get('new_date'); 
+        const newDate = formData.get('new_date');
         const newRoom = formData.get('new_room');
-        const newStartTime = formData.get('new_start_time'); 
-        const newEndTime = formData.get('new_end_time');     
+        const newStartTime = formData.get('new_start_time');
+        const newEndTime = formData.get('new_end_time');
         const reason = formData.get('move_reason');
         const adminPin = formData.get('admin_pin');
 
-        if(!bookingId || !newDate || !newStartTime || !newEndTime || !reason || !adminPin) {
+        if (!bookingId || !newDate || !newStartTime || !newEndTime || !reason || !adminPin) {
             return showToast("All fields including Admin PIN are required.", "error");
         }
 
@@ -663,10 +805,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (endIso <= startIso) return showToast("End time must be after start time.", "error");
 
         // 1. Save Preliminary Data to State (So we can access it after the modal)
-        state.pendingMoveData = { 
-            bookingId, adminPin, newRoom, 
-            start_iso: startIso.toISO(), 
-            end_iso: endIso.toISO(), 
+        state.pendingMoveData = {
+            bookingId, adminPin, newRoom,
+            start_iso: startIso.toISO(),
+            end_iso: endIso.toISO(),
             reason,
             // Save display info for the summary modal
             eventName: document.querySelector('input[name="booking_to_move"]:checked')?.nextElementSibling.querySelector('span').textContent || 'Event',
@@ -694,7 +836,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.innerHTML = `<span><strong>${c.event}</strong></span> <span>${parseDate(c.start_iso).toFormat('h:mm a')} - ${parseDate(c.end_iso).toFormat('h:mm a')}</span>`;
                 listEl.appendChild(item);
             });
-            
+
             // Show Custom Modal instead of confirm()
             document.getElementById('conflict-modal').showModal();
             return; // Stop here, wait for user input
@@ -718,8 +860,175 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('move-summary-modal').showModal();
     }
 
-    // --- FORM SUBMISSION ---
+    // --- DUPLICATE BOOKING LOGIC ---
 
+    function openDuplicateSelectionModalForSelectedSlot() {
+        choiceModal.close();
+        const { startTime } = state.selectedSlot;
+        const slotEnd = startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
+
+        const overlappingBookings = state.allBookings.filter(b => {
+            if (b.room !== state.selectedRoom) return false;
+            const bStart = parseDate(b.start_iso);
+            const bEnd = parseDate(b.end_iso);
+            if (!bStart.isValid || !bEnd.isValid) return false;
+            return bStart < slotEnd && bEnd > startTime;
+        });
+
+        // If only 1 booking, skip selection and go straight to duplicating
+        if (overlappingBookings.length === 1) {
+            openDuplicateBookingModal(overlappingBookings[0]);
+            return;
+        }
+
+        // If multiple, show selection
+        const listContainer = document.getElementById('duplicate-booking-list');
+        listContainer.innerHTML = '';
+
+        if (overlappingBookings.length === 0) {
+            showToast("No bookings found to duplicate.", "error");
+            return;
+        }
+
+        overlappingBookings.forEach(booking => {
+            const label = document.createElement('label');
+            label.className = "block p-3 border border-gray-200 rounded-md cursor-pointer hover:bg-gray-50 transition-colors";
+            label.innerHTML = `
+                 <div class="flex items-start gap-3">
+                     <input type="radio" name="booking-to-duplicate" value="${booking.id}" class="mt-1 text-blue-600 focus:ring-blue-500">
+                     <div class="text-sm">
+                         <span class="font-bold text-gray-800">${booking.event}</span>
+                         <span class="text-gray-600 block text-xs">By: ${booking.first_name} ${booking.last_name}</span>
+                     </div>
+                 </div>
+             `;
+            listContainer.appendChild(label);
+        });
+
+        const modal = document.getElementById('duplicate-selection-modal');
+        document.getElementById('confirm-duplicate-selection-btn').disabled = true;
+        modal.showModal();
+    }
+
+    function handleDuplicateSelectionChange(e) {
+        if (e.target.name === 'booking-to-duplicate') {
+            document.getElementById('confirm-duplicate-selection-btn').disabled = false;
+        }
+    }
+
+    function handleDuplicateConfirmation(e) {
+        e.preventDefault();
+        const selectedId = document.querySelector('input[name="booking-to-duplicate"]:checked')?.value;
+        if (selectedId) {
+            const booking = state.allBookings.find(b => b.id === selectedId);
+            if (booking) {
+                document.getElementById('duplicate-selection-modal').close();
+                openDuplicateBookingModal(booking);
+            }
+        }
+    }
+
+    function openDuplicateBookingModal(sourceBooking) {
+        // Save source for logic
+        state.duplicationSource = sourceBooking;
+
+        // Reset Form
+        bookingForm.reset();
+
+        // 1. Pre-fill Fields
+        document.getElementById('first_name').value = sourceBooking.first_name;
+        document.getElementById('last_name').value = sourceBooking.last_name;
+        document.getElementById('email').value = sourceBooking.email;
+        document.getElementById('event').value = sourceBooking.event;
+        document.getElementById('participants').value = sourceBooking.participants;
+        document.getElementById('notes').value = sourceBooking.notes || '';
+
+        // Handle Leader fields if present (though usually hidden for Admins, we copy anyway)
+        document.getElementById('leader_first_name').value = sourceBooking.leader_first_name || ''; // Assuming property exists or empty
+        document.getElementById('leader_last_name').value = sourceBooking.leader_last_name || '';
+
+        // 2. Set Admin Mode
+        const adminToggle = document.getElementById('admin-toggle');
+        adminToggle.checked = true; // Auto-check "I am Admin"
+        adminToggle.disabled = true; // Force Admin Mode (Cannot uncheck)
+        document.getElementById('user-fields').classList.add('hidden');
+        document.getElementById('admin-fields').classList.remove('hidden');
+
+        // 3. Show Date Picker for Duplication
+        const dateWrapper = document.getElementById('duplicate-date-wrapper');
+        const dateInput = document.getElementById('duplicate-date');
+
+        dateWrapper.classList.remove('hidden');
+        dateInput.value = ''; // Expect user to pick
+
+        // 4. Update Modal Title
+        document.getElementById('modal-title').textContent = `Duplicate: ${sourceBooking.event}`;
+        document.getElementById('modal-date-info').textContent = "Please select a new date below";
+        document.getElementById('modal-room-title').textContent = `Book ${state.selectedRoom}`;
+
+        // 5. Update Rules (Assuming same room)
+        const roomRules = APP_CONFIG.ROOM_CONFIG[state.selectedRoom];
+        // We need a dummy 'rules' object if state.selectedSlot isn't set perfectly, 
+        // but typically selectedSlot is still set from the click that started this flow.
+        // However, we want to ensure we don't rely on selectedSlot.totalParticipants for the *new* date.
+        // We'll use the generic room rules.
+
+        const participantsInput = bookingForm.querySelector('#participants');
+        participantsInput.max = roomRules.MAX_TOTAL_PARTICIPANTS;
+        participantsInput.min = roomRules.MIN_BOOKING_SIZE;
+
+        // Mock helper text
+        document.getElementById('participants-helper-text').textContent = "Admin Override Enabled.";
+
+        // 6. Set Time Input (End Time duration)
+        // We calculate duration from source
+        const sStart = parseDate(sourceBooking.start_iso);
+        const sEnd = parseDate(sourceBooking.end_iso);
+        const durationMin = sEnd.diff(sStart, 'minutes').minutes;
+
+        // We can't set #end-time correctly until we have a start time.
+        // But we can store the duration to apply later.
+        state.duplicationDuration = durationMin;
+
+        // Clear hidden start-iso to prevent premature submission
+        bookingForm.querySelector('#start-iso').value = "";
+
+        bookingModal.showModal();
+        dateInput.focus();
+    }
+
+    function handleDuplicateDateChange(e) {
+        if (!state.duplicationSource) return;
+        const newDateStr = e.target.value; // YYYY-MM-DD
+        if (!newDateStr) return;
+
+        // 1. Get original time of day
+        const sStart = parseDate(state.duplicationSource.start_iso);
+        const sEnd = parseDate(state.duplicationSource.end_iso);
+
+        // 2. Combine new date with old time
+        // Note: newDateStr is YYYY-MM-DD. We assume local time.
+        const [year, month, day] = newDateStr.split('-').map(Number);
+
+        const newStart = DateTime.local(year, month, day, sStart.hour, sStart.minute, sStart.second, { zone: APP_CONFIG.TIMEZONE });
+        const newEnd = DateTime.local(year, month, day, sEnd.hour, sEnd.minute, sEnd.second, { zone: APP_CONFIG.TIMEZONE });
+
+        // 3. Update Hidden Field
+        bookingForm.querySelector('#start-iso').value = newStart.toISO();
+
+        // 4. Update End Time Input (Visual)
+        bookingForm.querySelector('#end-time').value = newEnd.toFormat('HH:mm');
+
+        // 5. Update Header Text
+        const formattedDate = newStart.toFormat('ccc, MMM d, h:mm a');
+        document.getElementById('modal-date-info').textContent = formattedDate;
+
+        // 6. Mock state.selectedSlot to pass validation in handleBookingFormSubmit
+        // logic there checks `state.selectedSlot.rules`.
+        // We reuse the existing selectedSlot (which has the room rules), 
+        // OR we ensure we don't crash.
+        // selectedSlot is likely still set from the click.
+    }
     function handleBookingFormSubmit(e) {
         e.preventDefault();
         const isAdmin = document.getElementById('admin-toggle').checked;
@@ -762,7 +1071,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const notes = formData.get('notes').trim();
         const adminPin = formData.get('admin-pin').trim();
         const recurrence = formData.get('recurrence');
-        
+
+        // --- ENFORCE DUPLICATE RESTRICTION ---
+        if (state.duplicationSource && !adminPin) {
+            return showToast("Admin PIN is required for Duplicate Booking.", "error");
+        }
+        // -------------------------------------
+
         let requiredFields = ['first_name', 'last_name', 'email', 'event'];
         if (isAdmin) {
             if (!adminPin) return showToast("Admin PIN is required.", "error");
@@ -779,7 +1094,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // if (!participants || participants < roomRules.MIN_BOOKING_SIZE || participants > roomRules.MAX_BOOKING_SIZE) {
         //     return showToast(`Invalid participant number. Must be between ${roomRules.MIN_BOOKING_SIZE} and ${roomRules.MAX_BOOKING_SIZE}.`, "error");
         // }
-    // --- CRITICAL FIX: Admin Bypass for Participant Max Size ---
+        // --- CRITICAL FIX: Admin Bypass for Participant Max Size ---
 
         // 1. Check Minimum size (Applies to everyone)
         if (participants < roomRules.MIN_PARTICIPANTS) {
@@ -790,7 +1105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isAdmin && participants > roomRules.MAX_BOOKING_SIZE) {
             return showToast(`Invalid participant number. Must be between ${roomRules.MIN_PARTICIPANTS} and ${roomRules.MAX_BOOKING_SIZE}.`, "error");
         }
-        
+
         // 3. For Admins, we must ensure they don't exceed the overall room capacity (55 for Main Hall)
         // We can use the overall MAX_TOTAL_PARTICIPANTS here for a strict client-side check.
         // We need ROOM_CAPACITIES available in script.js for this.
@@ -799,24 +1114,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (participants > maxRoomCapacity) {
             return showToast(`Invalid participant number. Admin booking cannot exceed room's total capacity (${maxRoomCapacity}).`, "error");
         }
-        
+
         // --- END CRITICAL FIX ---
 
         const maxAllowed = parseInt(bookingForm.querySelector('#participants').max, 10);
-         if (participants > maxAllowed) {
-             return showToast(`This slot only has ${maxAllowed} spots left.`, "error");
-         }
+        if (participants > maxAllowed) {
+            return showToast(`This slot only has ${maxAllowed} spots left.`, "error");
+        }
         const startTime = DateTime.fromISO(bookingForm.querySelector('#start-iso').value);
         const [endHour, endMinute] = endTimeStr.split(':').map(Number);
         const endTime = startTime.set({ hour: endHour, minute: endMinute });
         if (endTime <= startTime) return showToast("End time must be after the start time.", "error");
 
         // --- START OF REQUIRED CHANGE ---
-        
+
         // Calculate Duration
         const durationMinutes = endTime.diff(startTime, 'minutes').minutes;
         const durationHours = durationMinutes / 60;
-        
+
         let durationText = '';
         if (durationMinutes >= 60) {
             // Display as X hours
@@ -826,7 +1141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             durationText = `${durationMinutes} minute${durationMinutes !== 1 ? 's' : ''}`;
         }
 
-        
+
         // Validate Past Bookings
         if (startTime < DateTime.local()) {
             return showToast("Cannot create a booking in the past.", "error");
@@ -835,14 +1150,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Validate Admin 6-Month Limit 
         // (7-day User limit is already handled by Step 3 at the top)
         if (isAdmin) {
-             const maxAdminDate = DateTime.local().plus({ months: 6 });
-             if (startTime > maxAdminDate) {
-                 return showToast("Admins can only book up to 6 months in advance.", "error");
-             }
+            const maxAdminDate = DateTime.local().plus({ months: 6 });
+            if (startTime > maxAdminDate) {
+                return showToast("Admins can only book up to 6 months in advance.", "error");
+            }
         }
 
 
-        
+
         state.pendingBookingData = {
             room: state.selectedRoom,
             first_name: firstName,
@@ -856,7 +1171,8 @@ document.addEventListener('DOMContentLoaded', () => {
             start_iso: startTime.toISO(),
             end_iso: endTime.toISO(),
             adminPin: adminPin,
-            recurrence: isAdmin ? recurrence : 'none' // Only send recurrence if admin
+            recurrence: isAdmin ? recurrence : 'none', // Only send recurrence if admin
+            terms_accepted: true // Checkbox is required in HTML, so this is implicitly true on submit
         };
 
         document.getElementById('summary-room').textContent = state.selectedRoom;
@@ -885,7 +1201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('move-summary-modal').close();
         document.getElementById('move-modal').close(); // Also close the input form
         loadingModal.showModal();
-        
+
         if (state.pendingMoveData) {
             submitRequest('move', state.pendingMoveData);
             state.pendingMoveData = null; // Clear state
@@ -899,26 +1215,18 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const selectedRadio = document.querySelector('input[name="booking-to-cancel"]:checked');
         if (!selectedRadio) { return showToast("Please select a booking to cancel.", "error"); }
-        
+
         const bookingId = selectedRadio.value;
-        const email = document.getElementById('cancel-email').value;
-        const adminPin = document.getElementById('admin-pin').value;
-        
-        // If no admin pin is provided, email is strictly required and must be valid.
-        if (!adminPin && (!email || !/^\S+@\S+\.\S+$/.test(email))) { 
-            return showToast("Please enter a valid email to confirm.", "error"); 
-        }
-        
-        // If admin pin IS provided, email is optional (but we send it anyway).
-        // The server will prioritize the PIN.
-        
-        // We require *something* in the email field to help admins log who cancelled it.
-        if (!email) {
-             return showToast("Email field is required (use your admin email).", "error");
+        const bookingCode = document.getElementById('cancel-booking-code').value.trim();
+        const adminPin = document.getElementById('admin-pin').value.trim();
+
+        // If no admin pin is provided, booking code is strictly required.
+        if (!adminPin && !bookingCode) {
+            return showToast("Please enter the Booking Code to confirm.", "error");
         }
 
         loadingModal.showModal();
-        submitRequest('cancel', { bookingId, email: email, adminPin: adminPin });
+        submitRequest('cancel', { bookingId, bookingCode, adminPin });
     }
 
     function submitRequest(action, payload) {
@@ -931,11 +1239,11 @@ document.addEventListener('DOMContentLoaded', () => {
             delete window[callbackName];
             loadingModal.close();
         };
-        timeoutId = setTimeout(() => { 
-            cleanup(); 
-            showToast("Request timed out.", "error"); 
+        timeoutId = setTimeout(() => {
+            cleanup();
+            showToast("Request timed out.", "error");
         }, 30000);
-        
+
         window[callbackName] = (data) => {
             cleanup();
             if (data.success) {
@@ -958,7 +1266,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         id: data.id,
                         event: data.event || document.getElementById('event').value,
                         room: data.room,
-                        start_iso: data.start_iso, 
+                        start_iso: data.start_iso,
                         end_iso: data.end_iso,
                         notes: document.getElementById('notes')?.value || ''
                     });
@@ -974,12 +1282,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast((data.message || "An unknown error occurred.").replace(/^Error: /i, ''), "error");
             }
         };
-        
-        script.onerror = () => { 
-            cleanup(); 
-            showToast("Failed to send request.", "error"); 
+
+        script.onerror = () => {
+            cleanup();
+            showToast("Failed to send request.", "error");
         };
-        
+
         const encodedPayload = encodeURIComponent(JSON.stringify(payload));
         script.src = `${APP_CONFIG.APPS_SCRIPT_URL}?action=${action}&callback=${callbackName}&payload=${encodedPayload}`;
         document.body.appendChild(script);
@@ -995,7 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await response.json();
         const rows = data.values || [];
         const headers = rows[0];
-        
+
         state.allBookings = rows.slice(1).map(row => {
             const booking = {};
             if (headers) {
@@ -1041,7 +1349,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fmt = "yyyyMMdd'T'HHmmss";
         const startObj = DateTime.fromISO(booking.start_iso).setZone('Asia/Manila');
         const endObj = DateTime.fromISO(booking.end_iso).setZone('Asia/Manila');
-        
+
         const startStr = startObj.toFormat(fmt);
         const endStr = endObj.toFormat(fmt);
 
@@ -1094,8 +1402,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * Creates and manages the floating alert messages.
      * Place this at the bottom of script.js
      */
+    // --- TOAST NOTIFICATION ---
     function showToast(message, type = 'info') {
-        // 1. Get or Create Container
         let container = document.getElementById('toast-container');
         if (!container) {
             container = document.createElement('div');
@@ -1103,47 +1411,181 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(container);
         }
 
-        // 2. Create Toast Element
         const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`; // Classes: toast-info, toast-success, toast-error
-        
-        // Select Icon based on type
+        toast.className = `toast toast-${type}`;
+
         let iconSvg = '';
         if (type === 'success') {
-            // Checkmark Icon
             iconSvg = '<svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
         } else if (type === 'error') {
-            // X Icon
             iconSvg = '<svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
         } else {
-            // Info Icon
             iconSvg = '<svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
         }
 
-        // Set Content
         toast.innerHTML = `${iconSvg}<span>${message}</span>`;
-
-        // 3. Append to Container
         container.appendChild(toast);
 
-        // Trigger Animation (Next Frame)
         requestAnimationFrame(() => {
             toast.classList.add('show');
         });
 
-        // 4. Auto Remove after 4 seconds
         setTimeout(() => {
             toast.classList.remove('show');
-            // Wait for transition to finish before removing from DOM
             setTimeout(() => {
-                if (container.contains(toast)) {
-                    container.removeChild(toast);
-                }
+                if (container.contains(toast)) container.removeChild(toast);
             }, 300);
-        }, 4000); 
+        }, 4000);
+    }
+
+    // --- MY BOOKINGS LOGIC ---
+    function handleMyBookingsSubmit(e) {
+        e.preventDefault();
+        const email = new FormData(e.target).get('lookup_email');
+        if (!email) return;
+
+        myBookingsResults.querySelectorAll('.booking-item').forEach(e => e.remove());
+        myBookingsEmpty.classList.add('hidden');
+        myBookingsLoading.classList.remove('hidden');
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Searching...';
+
+        fetchUserBookings(email)
+            .then(bookings => {
+                myBookingsLoading.classList.add('hidden');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Find';
+
+                if (!bookings || bookings.length === 0) {
+                    myBookingsEmpty.classList.remove('hidden');
+                } else {
+                    bookings.forEach(booking => {
+                        const item = document.createElement('div');
+                        item.className = 'booking-item bg-gray-50 border border-gray-200 rounded p-3 flex justify-between items-center';
+                        item.innerHTML = `
+                            <div>
+                                <div class="font-bold text-ccf-blue text-sm">${booking.event}</div>
+                                <div class="text-xs text-gray-600 mt-1">
+                                    <span class="font-semibold">${booking.date}</span> at ${booking.start_time} - ${booking.end_time}
+                                </div>
+                                <div class="text-xs text-gray-500">${booking.room}</div>
+                            </div>
+                            <div class="text-right">
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">Confirmed</span>
+                            </div>
+                        `;
+                        myBookingsResults.appendChild(item);
+                    });
+                }
+            })
+            .catch(err => {
+                myBookingsLoading.classList.add('hidden');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Find';
+                alert(err.message);
+            });
+    }
+
+    async function fetchUserBookings(email) {
+        const url = `${APP_CONFIG.APPS_SCRIPT_URL}?action=fetch_user_bookings&payload=${encodeURIComponent(JSON.stringify({ email: email }))}`;
+
+        return new Promise((resolve, reject) => {
+            const callbackName = `my_bookings_callback_${Date.now()}`;
+            const script = document.createElement('script');
+
+            window[callbackName] = (response) => {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                if (response.success) {
+                    resolve(response.bookings);
+                } else {
+                    reject(new Error(response.message || "Failed to fetch bookings"));
+                }
+            };
+
+            script.src = `${url}&callback=${callbackName}`;
+            script.onerror = () => {
+                reject(new Error("Network connection failed"));
+            };
+            document.body.appendChild(script);
+        });
     }
 
 
+
+    // --- 4. FETCH BOOKINGS (Updated to use Apps Script for Blocked Dates support) ---
+    async function fetchAllBookings() {
+        const url = `${APP_CONFIG.APPS_SCRIPT_URL}?action=fetch_all`;
+
+        return new Promise((resolve, reject) => {
+            const callbackName = `fetch_all_callback_${Date.now()}`;
+            const script = document.createElement('script');
+
+            window[callbackName] = (response) => {
+                if (response.success) {
+                    // 1. Process Bookings
+                    state.allBookings = (response.data || []).map(b => ({
+                        ...b,
+                        // Robust mapping for backend changes
+                        participants: (b.participants !== undefined) ? b.participants : b.pax,
+                        first_name: b.first_name || (b.name ? b.name.split(' ')[0] : 'Unknown'),
+                        last_name: b.last_name || (b.name ? b.name.split(' ').slice(1).join(' ') : ''),
+                        start_iso: b.start_iso,
+                        end_iso: b.end_iso
+                    }));
+
+                    // 2. Process Blocked Dates
+                    state.blockedDates = (response.blocked_dates || []).map(d => ({
+                        date: d.date,
+                        room: d.room,
+                        reason: d.reason
+                    }));
+
+                    // 3. Process Global Announcement (NEW)
+                    console.log("Full Response:", response);
+                    console.log("Announcement Data:", (response.announcement ? response.announcement : "None"));
+
+                    if (response.announcement && response.announcement.isActive) {
+                        console.log("Banner should be active");
+                        const banner = document.getElementById('announcement-banner');
+                        const text = document.getElementById('announcement-text');
+                        if (banner && text) {
+                            text.textContent = response.announcement.message;
+                            banner.classList.remove('hidden');
+
+                            // Setup dismiss handler
+                            const closeBtn = document.getElementById('announcement-close');
+                            if (closeBtn) {
+                                closeBtn.onclick = () => {
+                                    banner.classList.add('hidden');
+                                };
+                            }
+                        }
+                    } else {
+                        // Ensure it's hidden if not active
+                        const banner = document.getElementById('announcement-banner');
+                        if (banner) banner.classList.add('hidden');
+                    }
+
+                    resolve();
+                } else {
+                    console.error("Fetch failed:", response.message);
+                    reject(new Error(response.message || "Failed to fetch bookings"));
+                }
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+
+            script.src = `${url}&callback=${callbackName}`;
+            script.onerror = () => {
+                console.error("Script injection failed.");
+                reject(new Error("Network error"));
+            };
+            document.body.appendChild(script);
+        });
+    }
 
     // --- START THE APP ---
     init();

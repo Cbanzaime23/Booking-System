@@ -1,0 +1,857 @@
+// Google Apps Script for handling booking writes to the Google Sheet.
+
+// --- CONFIGURATION ---
+const SPREADSHEET_ID = '13SROZHNchpiGKpgSc6bpxbuf2Fhw0AMIAcQyC48BKkM';
+const SHEET_NAME = 'Bookings';
+const BLOCKED_SHEET_NAME = 'BlockedDates';
+const SETTINGS_SHEET_NAME = 'Settings'; // NEW: Configuration for Global Settings
+const LOGS_SHEET_NAME = 'Logs'; // NEW: Audit Logs
+const SCRIPT_TIMEZONE = "Asia/Manila";
+const EMAIL_SENDER_NAME = "CCF Manila Booking";
+
+// --- SURVEY FORM CONFIGURATION ---
+const SURVEY_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfEZsWJRYGRh0Jqr6_L9Cw3OGcew6TGGV0YxM0cRTuB4GuJ3A/viewform?usp=pp_url&entry.1009510910=${bookingCode}";
+
+// --- !! ADMIN CONFIGURATION !! ---
+const ADMIN_PIN = "CCFManila@2025";
+
+// --- ROOM CONFIGURATION ---
+const ROOM_CONFIG = {
+    "Main Hall": {
+        MAX_TOTAL_PARTICIPANTS: 55,
+        MAX_CONCURRENT_GROUPS: 6,
+        MIN_BOOKING_SIZE: 2,
+        MAX_BOOKING_SIZE: 25
+    },
+    "Jonah": {
+        MAX_TOTAL_PARTICIPANTS: 20,
+        MAX_CONCURRENT_GROUPS: 2,
+        MIN_BOOKING_SIZE: 2,
+        MAX_BOOKING_SIZE: 10
+    },
+    "Joseph": {
+        MAX_TOTAL_PARTICIPANTS: 15,
+        MAX_CONCURRENT_GROUPS: 1,
+        MIN_BOOKING_SIZE: 2,
+        MAX_BOOKING_SIZE: 15
+    },
+    "Moses": {
+        MAX_TOTAL_PARTICIPANTS: 15,
+        MAX_CONCURRENT_GROUPS: 1,
+        MIN_BOOKING_SIZE: 2,
+        MAX_BOOKING_SIZE: 15
+    }
+};
+
+/**
+ * Main entry point for GET requests.
+ */
+function doGet(e) {
+    const callback = e.parameter.callback;
+    const action = e.parameter.action || 'create';
+    let result;
+    try {
+        if (action === 'fetch_all') {
+            result = handleFetchAllBookings();
+        } else if (e.parameter.payload) {
+            const payload = JSON.parse(e.parameter.payload);
+            switch (action) {
+                case 'create':
+                    result = handleCreateBooking(payload);
+                    break;
+                case 'cancel':
+                    result = handleCancelBooking(payload);
+                    break;
+                case 'move':
+                    result = handleMoveBooking(payload);
+                    break;
+                case 'block_date': // NEW Action
+                    result = handleBlockDate(payload);
+                    break;
+                case 'fetch_user_bookings': // NEW Action for "My Bookings"
+                    result = handleFetchUserBookings(payload);
+                    break;
+                default:
+                    throw new Error("Invalid action specified.");
+            }
+        } else {
+            throw new Error("Missing payload or invalid action.");
+        }
+    } catch (error) {
+        Logger.log('Error in doGet: ' + error.toString());
+        result = { success: false, message: error.message };
+    }
+    return ContentService.createTextOutput(`${callback}(${JSON.stringify(result)})`)
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+/**
+ * Handles the logic for creating a new booking.
+ */
+function handleCreateBooking(payload) {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+
+    try {
+        const isAdmin = (payload.adminPin && payload.adminPin === ADMIN_PIN);
+        if (payload.adminPin && !isAdmin) {
+            throw new Error("Invalid Admin PIN. Booking not created.");
+        }
+        const requestedRoom = payload.room;
+        let finalRoom = requestedRoom;
+        const newStart = new Date(payload.start_iso);
+        const newEnd = new Date(payload.end_iso);
+        payload.participants = parseInt(payload.participants, 10);
+
+        const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+        const sheet = ss.getSheetByName(SHEET_NAME);
+
+        // --- CHECK BLOCKED DATES ---
+        const blockedDates = getBlockedDates(ss);
+        const isBlocked = checkIsBlocked(newStart, requestedRoom, blockedDates);
+        if (isBlocked) throw new Error(`The room ${requestedRoom} is closed on this date: ${isBlocked.reason}`);
+
+        // --- EXISTING LOGIC ---
+        const allBookings = getActiveBookings(sheet);
+
+        // --- Prioritization Logic (Main Hall Squeeze) ---
+        if (!isAdmin && requestedRoom !== "Main Hall") {
+            const mainHallRules = ROOM_CONFIG["Main Hall"];
+            const mainHallConcurrent = findConcurrentBookings(newStart, newEnd, allBookings, "Main Hall");
+            const mainHallCurrentPax = mainHallConcurrent.reduce((sum, b) => sum + b.participantCount, 0);
+            const canFitGroup = (mainHallConcurrent.length + 1) <= mainHallRules.MAX_CONCURRENT_GROUPS;
+            const canFitPax = (mainHallCurrentPax + payload.participants) <= mainHallRules.MAX_TOTAL_PARTICIPANTS;
+            const meetsSizeRules = (payload.participants >= mainHallRules.MIN_BOOKING_SIZE) && (payload.participants <= mainHallRules.MAX_BOOKING_SIZE);
+
+            // Also check if Main Hall is blocked!
+            const isMainHallBlocked = checkIsBlocked(newStart, "Main Hall", blockedDates);
+
+            if (canFitGroup && canFitPax && meetsSizeRules && !isMainHallBlocked) {
+                finalRoom = "Main Hall";
+            }
+        }
+
+        const rules = ROOM_CONFIG[finalRoom];
+        if (!rules) throw new Error(`Invalid room name: ${finalRoom}`);
+        payload.room = finalRoom;
+
+        const validationError = validateInput(payload, rules, isAdmin);
+        if (validationError) throw new Error(validationError);
+
+        // --- Recurrence Logic ---
+        if (isAdmin && payload.recurrence && payload.recurrence !== 'none') {
+            return handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoom, blockedDates);
+        }
+
+        // --- Single Booking Logic ---
+        const concurrent = findConcurrentBookings(newStart, newEnd, allBookings, finalRoom);
+        const currentPax = concurrent.reduce((sum, b) => sum + b.participantCount, 0);
+        if (concurrent.length + 1 > rules.MAX_CONCURRENT_GROUPS) {
+            throw new Error(`Group Limit Exceeded for ${finalRoom}.`);
+        }
+        if (currentPax + payload.participants > rules.MAX_TOTAL_PARTICIPANTS) {
+            throw new Error(`Participant Capacity Exceeded for ${finalRoom}.`);
+        }
+
+        const newId = generateUUID();
+        appendBookingRow(sheet, newId, payload, newStart, newEnd);
+
+        try {
+            sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom);
+        } catch (emailError) {
+            Logger.log(`Booking ${newId} created, but email failed: ${emailError.message}`);
+        }
+
+        const result = { success: true, message: 'Booking confirmed!', id: newId, bookedRoom: finalRoom, requestedRoom: requestedRoom };
+        logActivity('Create', newId, payload.adminPin, payload);
+        return result;
+    } finally {
+        lock.releaseLock();
+    }
+}
+
+// --- NEW FUNCTION: Handle Blocking a Date ---
+function handleBlockDate(payload) {
+    if (payload.adminPin !== ADMIN_PIN) {
+        return { success: false, message: "Invalid Admin PIN." };
+    }
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sheet = ss.getSheetByName(BLOCKED_SHEET_NAME);
+    if (!sheet) {
+        sheet = ss.insertSheet(BLOCKED_SHEET_NAME);
+        sheet.appendRow(["Date", "Room", "Reason"]); // Headers
+    }
+
+    // payload.date comes as YYYY-MM-DD string
+    sheet.appendRow([payload.date, payload.room, payload.reason]);
+
+    return { success: true, message: "Date blocked successfully." };
+}
+
+// --- NEW HELPER: Audit Logging ---
+function logActivity(action, bookingId, adminPin, details) {
+    try {
+        const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+        let sheet = ss.getSheetByName(LOGS_SHEET_NAME);
+        if (!sheet) {
+            sheet = ss.insertSheet(LOGS_SHEET_NAME);
+            sheet.appendRow(["Timestamp", "Action", "Booking ID", "Admin PIN", "Details"]); // Headers
+        }
+
+        const timestamp = new Date();
+        const detailsStr = (typeof details === 'object') ? JSON.stringify(details) : String(details);
+
+        // Log: Date, Action, ID, PIN (or 'N/A'), Details
+        sheet.appendRow([timestamp, action, bookingId, adminPin || 'N/A', detailsStr]);
+    } catch (e) {
+        Logger.log("Logging failed: " + e.message);
+    }
+}
+
+// --- NEW HELPER: Get Blocked Dates ---
+function getBlockedDates(ss) {
+    const sheet = ss.getSheetByName(BLOCKED_SHEET_NAME);
+    if (!sheet) return [];
+
+    const data = sheet.getDataRange().getValues();
+    // Remove header
+    data.shift();
+
+    return data.map(row => {
+        // Row: [Date, Room, Reason]
+        // Date column might be a Date object or string
+        let dateStr = row[0];
+        if (dateStr instanceof Date) {
+            // Force YYYY-MM-DD in Manila Time
+            dateStr = Utilities.formatDate(dateStr, SCRIPT_TIMEZONE, "yyyy-MM-dd");
+        }
+        return {
+            date: dateStr,
+            room: row[1],
+            reason: row[2]
+        };
+    });
+}
+
+// --- NEW HELPER: Check if a date/room is blocked ---
+function checkIsBlocked(dateObj, roomName, blockedDates) {
+    const dateStr = Utilities.formatDate(dateObj, SCRIPT_TIMEZONE, "yyyy-MM-dd");
+    return blockedDates.find(b => {
+        // Check Date Match
+        if (b.date !== dateStr) return false;
+        // Check Room Match (Specific Room or "All Rooms")
+        if (b.room === "All Rooms" || b.room === roomName) return true;
+        return false;
+    });
+}
+
+// --- HELPER FUNCTIONS ---
+
+function getActiveBookings(sheet) {
+    const values = sheet.getDataRange().getValues();
+    const headers = values.shift();
+    const startIsoIndex = headers.indexOf('start_iso');
+    const endIsoIndex = headers.indexOf('end_iso');
+    const statusIndex = headers.indexOf('status');
+    const participantsIndex = headers.indexOf('participants');
+    const idIndex = headers.indexOf('id');
+    const firstNameIndex = headers.indexOf('first_name');
+    const lastNameIndex = headers.indexOf('last_name');
+    const roomIndex = headers.indexOf('room');
+
+    if ([startIsoIndex, endIsoIndex, statusIndex, participantsIndex, idIndex, firstNameIndex, lastNameIndex, roomIndex].some(i => i === -1)) {
+        throw new Error("Sheet is missing required columns. Check: id, start_iso, end_iso, status, participants, first_name, last_name, room.");
+    }
+
+    return values
+        .filter(row => row[statusIndex] === 'confirmed' && row[startIsoIndex])
+        .map(row => {
+            let startIsoValue = row[startIsoIndex];
+            let endIsoValue = row[endIsoIndex];
+
+            if (startIsoValue instanceof Date) {
+                startIsoValue = Utilities.formatDate(startIsoValue, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+            }
+            if (endIsoValue instanceof Date) {
+                endIsoValue = Utilities.formatDate(endIsoValue, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+            }
+
+            return {
+                id: row[idIndex],
+                start_iso: startIsoValue,
+                end_iso: endIsoValue,
+                participantCount: parseInt(row[participantsIndex], 10) || 0,
+                first_name: row[firstNameIndex],
+                last_name: row[lastNameIndex],
+                participants: row[participantsIndex],
+                room: row[roomIndex]
+            };
+        });
+}
+
+function validateInput(data, rules, isAdmin) {
+    let requiredFields;
+    if (isAdmin) {
+        requiredFields = ['first_name', 'last_name', 'email', 'event', 'participants', 'start_iso', 'end_iso', 'room'];
+    } else {
+        requiredFields = ['first_name', 'last_name', 'email', 'leader_first_name', 'leader_last_name', 'event', 'participants', 'start_iso', 'end_iso', 'room'];
+    }
+    for (const field of requiredFields) {
+        if (!data[field]) { return `Missing required field: ${field}.`; }
+    }
+
+    if (!isAdmin) {
+        if (data.participants < rules.MIN_BOOKING_SIZE || data.participants > rules.MAX_BOOKING_SIZE) {
+            return `Invalid group size for ${data.room}. Participants must be between ${rules.MIN_BOOKING_SIZE} and ${rules.MAX_BOOKING_SIZE}.`;
+        }
+    } else {
+        if (data.participants < rules.MIN_BOOKING_SIZE) {
+            return `Invalid group size. Must be at least ${rules.MIN_BOOKING_SIZE}.`;
+        }
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(data.email)) return "Invalid email format.";
+    const start = new Date(data.start_iso);
+    const end = new Date(data.end_iso);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return "Invalid date format.";
+    // Allow bookings ending at the same time (0 duration filtered by frontend, but logical here is strictly >)
+    if (start >= end) return "Start time must be before end time.";
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const maxDate = new Date(today);
+    if (isAdmin) {
+        maxDate.setMonth(maxDate.getMonth() + 6);
+    } else {
+        maxDate.setDate(maxDate.getDate() + 7);
+    }
+    if (start < today) return "Cannot create a booking in the past.";
+    if (start > maxDate) return isAdmin ? "Admins can only book up to 6 months in advance." : "Users can only book up to 7 days in advance.";
+    return null;
+}
+
+function findConcurrentBookings(newStart, newEnd, allBookings, roomName) {
+    const newStartTime = newStart.getTime();
+    const newEndTime = newEnd.getTime();
+    return allBookings.filter(booking => {
+        if (booking.room !== roomName) return false;
+        const existingStartTime = new Date(booking.start_iso).getTime();
+        const existingEndTime = new Date(booking.end_iso).getTime();
+        return newStartTime < existingEndTime && newEndTime > existingStartTime;
+    });
+}
+
+/**
+ * UPDATED: Handles saving recurrent bookings with blocked date check.
+ */
+function handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoom, blockedDates) {
+    let successCount = 0;
+    let failCount = 0;
+    let firstId = null;
+    let firstStart, firstEnd;
+    let loopCount, loopType, dayOfWeek;
+
+    switch (payload.recurrence) {
+        case 'weekly': loopCount = 12; loopType = 'weekly'; break;
+        case 'monthly': loopCount = 6; loopType = 'monthly'; break;
+        case 'quarterly': loopCount = 4; loopType = 'quarterly'; break;
+        case 'first_wednesday': loopCount = 6; loopType = 'first_day'; dayOfWeek = 3; break;
+        case 'last_saturday': loopCount = 6; loopType = 'last_day'; dayOfWeek = 6; break;
+        default: throw new Error("Invalid recurrence type.");
+    }
+
+    const originalStart = new Date(payload.start_iso);
+    const originalEnd = new Date(payload.end_iso);
+    const durationMs = originalEnd.getTime() - originalStart.getTime();
+
+    for (let i = 0; i < loopCount; i++) {
+        let iterStart, iterEnd;
+        let currentMonthIter = new Date(originalStart);
+        currentMonthIter.setDate(1);
+        currentMonthIter.setMonth(originalStart.getMonth() + i);
+
+        switch (loopType) {
+            case 'weekly':
+                iterStart = new Date(originalStart);
+                iterStart.setDate(iterStart.getDate() + (i * 7));
+                break;
+            case 'monthly':
+                iterStart = new Date(originalStart);
+                const targetMonth = iterStart.getMonth() + i;
+                iterStart.setMonth(targetMonth);
+                if (iterStart.getMonth() !== targetMonth % 12) {
+                    iterStart.setDate(0);
+                }
+                break;
+            case 'quarterly':
+                iterStart = new Date(originalStart);
+                iterStart.setMonth(iterStart.getMonth() + (i * 3));
+                break;
+            case 'first_day':
+                iterStart = findFirstDayOfWeekOfMonth(currentMonthIter, dayOfWeek);
+                iterStart.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+                break;
+            case 'last_day':
+                iterStart = findLastDayOfWeekOfMonth(currentMonthIter, dayOfWeek);
+                iterStart.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+                break;
+        }
+        iterEnd = new Date(iterStart.getTime() + durationMs);
+
+        // Check if in past
+        const today = new Date();
+        if (iterStart < today) {
+            if (i > 0) { failCount++; continue; }
+        }
+
+        // --- CHECK BLOCK (Optimization: Skip if blocked) ---
+        if (checkIsBlocked(iterStart, payload.room, blockedDates)) {
+            failCount++;
+            continue;
+        }
+
+        const concurrent = findConcurrentBookings(iterStart, iterEnd, allBookings, payload.room);
+        const currentPax = concurrent.reduce((sum, b) => sum + b.participantCount, 0);
+        const hasCapacity = (concurrent.length + 1) <= rules.MAX_CONCURRENT_GROUPS && (currentPax + payload.participants) <= rules.MAX_TOTAL_PARTICIPANTS;
+
+        if (hasCapacity) {
+            successCount++;
+            const newId = generateUUID();
+            appendBookingRow(sheet, newId, payload, iterStart, iterEnd);
+
+            if (firstId === null) { firstId = newId; firstStart = iterStart; firstEnd = iterEnd; }
+
+            const formattedStartIso = Utilities.formatDate(iterStart, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+            const formattedEndIso = Utilities.formatDate(iterEnd, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+            allBookings.push({ id: newId, start_iso: formattedStartIso, end_iso: formattedEndIso, participantCount: payload.participants, room: payload.room });
+        } else {
+            failCount++;
+        }
+    }
+
+    if (firstId) {
+        try { sendConfirmationEmail(payload, firstId, firstStart, firstEnd, requestedRoom); } catch (e) { Logger.log(e.message); }
+    } else {
+        throw new Error("No recurrent events could be booked due to conflicts or blocked dates.");
+    }
+    return { success: true, message: `Recurrent: ${successCount} booked, ${failCount} failed.`, id: firstId, bookedRoom: payload.room, requestedRoom: requestedRoom };
+}
+
+function findFirstDayOfWeekOfMonth(date, dayOfWeek) {
+    const d = new Date(date.getFullYear(), date.getMonth(), 1);
+    while (d.getDay() !== dayOfWeek) {
+        d.setDate(d.getDate() + 1);
+    }
+    return d;
+}
+
+function findLastDayOfWeekOfMonth(date, dayOfWeek) {
+    const d = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    while (d.getDay() !== dayOfWeek) {
+        d.setDate(d.getDate() - 1);
+    }
+    return d;
+}
+
+
+function appendBookingRow(sheet, id, payload, startDate, endDate) {
+    const formattedStartIso = Utilities.formatDate(startDate, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+    const formattedEndIso = Utilities.formatDate(endDate, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+
+    const newRow = [
+        id,
+        Utilities.formatDate(startDate, SCRIPT_TIMEZONE, "yyyy-MM-dd"),
+        formattedStartIso,
+        formattedEndIso,
+        payload.first_name, payload.last_name, payload.email,
+        payload.leader_first_name || '', payload.leader_last_name || '',
+        payload.event, payload.room, payload.participants, 'confirmed',
+        new Date(), payload.notes || '',
+        payload.terms_accepted ? "TRUE" : "FALSE"
+    ];
+    sheet.appendRow(newRow);
+}
+
+function handleCancelBooking(payload) {
+    const { bookingId, bookingCode, adminPin } = payload;
+    if (!bookingId) throw new Error("Booking ID required.");
+    const lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+        const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+        const data = sheet.getDataRange().getValues();
+        const headers = data[0];
+        const idIndex = headers.indexOf('id');
+        const statusIndex = headers.indexOf('status');
+        const notesIndex = headers.indexOf('notes');
+
+        if (idIndex === -1 || statusIndex === -1) throw new Error("Missing columns.");
+
+        for (let i = 1; i < data.length; i++) {
+            if (data[i][idIndex] === bookingId) {
+                const isAuthAdmin = (adminPin && adminPin === ADMIN_PIN);
+
+                // Verify Booking Code (User must provide at least the first 8 characters for security)
+                let isUserVerified = false;
+                if (bookingCode && bookingCode.length >= 8) {
+                    // Check if the Full UUID starts with the provided Code
+                    if (data[i][idIndex].toString().toUpperCase().startsWith(bookingCode.toUpperCase())) {
+                        isUserVerified = true;
+                    }
+                }
+
+                if (data[i][statusIndex] === 'cancelled') throw new Error("Already cancelled.");
+                if (!isAuthAdmin && !isUserVerified) throw new Error("Verification failed. Invalid Booking Code.");
+
+                sheet.getRange(i + 1, statusIndex + 1).setValue('cancelled');
+
+                if (isAuthAdmin && !isUserVerified && notesIndex !== -1) {
+                    const oldNotes = data[i][notesIndex] || "";
+                    sheet.getRange(i + 1, notesIndex + 1).setValue(`[Admin Cancel] ${oldNotes}`);
+                }
+                logActivity('Cancel', bookingId, adminPin, { bookingCode, reason: "Cancelled by user/admin" });
+                return { success: true, message: "Booking cancelled." };
+            }
+        }
+        throw new Error("Booking not found.");
+    } finally {
+        lock.releaseLock();
+    }
+}
+
+/**
+ * UPDATED: Returns bookings AND blocked dates
+ */
+function handleFetchAllBookings() {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_NAME);
+
+    // 1. Fetch Bookings
+    let bookings = [];
+    const range = sheet.getDataRange();
+    if (range.getNumRows() > 1) {
+        const data = range.getValues();
+        const headers = data.shift();
+        const idx = {
+            id: headers.indexOf('id'), date: headers.indexOf('date'),
+            start: headers.indexOf('start_iso'), end: headers.indexOf('end_iso'),
+            first: headers.indexOf('first_name'), last: headers.indexOf('last_name'),
+            event: headers.indexOf('event'), room: headers.indexOf('room'),
+            pax: headers.indexOf('participants'), status: headers.indexOf('status'),
+            email: headers.indexOf('email')
+        };
+
+        if (idx.id !== -1 && idx.status !== -1) {
+            bookings = data
+                .filter(row => row[idx.status] === 'confirmed')
+                .map(row => {
+                    let startIso = row[idx.start];
+                    let endIso = row[idx.end];
+                    if (startIso instanceof Date) startIso = Utilities.formatDate(startIso, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+                    if (endIso instanceof Date) endIso = Utilities.formatDate(endIso, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+                    return {
+                        id: row[idx.id], date: row[idx.date], start_iso: startIso, end_iso: endIso,
+                        first_name: row[idx.first], last_name: row[idx.last], // Return separate names
+                        event: row[idx.event], room: row[idx.room],
+                        participants: row[idx.pax], // Return as participants
+                        status: row[idx.status]
+                    };
+                });
+        }
+    }
+
+    // 2. Fetch Blocked Dates
+    const blocked = getBlockedDates(ss);
+
+    // 3. Fetch Global Settings (Announcement)
+    const settings = getGlobalSettings(ss);
+
+    return { success: true, data: bookings, blocked_dates: blocked, announcement: settings };
+}
+
+/**
+ * NEW: Fetch Global Settings (Announcement)
+ * Checks for Active status AND Date Range (if provided)
+ */
+function getGlobalSettings(ss) {
+    const sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
+    const settings = { message: '', isActive: false };
+
+    if (!sheet) return settings;
+
+    const data = sheet.getDataRange().getValues();
+    // Expected Structure:
+    // Row 2: Announcement Message | [Message]
+    // Row 3: Announcement Active  | TRUE/FALSE
+    // Row 4: Announcement Start   | [Date]
+    // Row 5: Announcement End     | [Date]
+
+    // Simple lookup map
+    const map = {};
+    data.forEach(row => {
+        if (row[0]) map[row[0].toString().trim()] = row[1];
+    });
+
+    const rawMessage = map['Announcement Message'];
+    const rawActive = map['Announcement Active'];
+    const rawStart = map['Announcement Start'];
+    const rawEnd = map['Announcement End'];
+
+    // Robust Active Check (Boolean true or String "TRUE"/"true")
+    let isActive = false;
+    if (rawActive === true) isActive = true;
+    if (typeof rawActive === 'string' && rawActive.toUpperCase() === 'TRUE') isActive = true;
+
+    if (isActive) {
+        // Validate Date Range if present
+        const now = new Date();
+        let inRange = true; // Default to true if no dates provided
+
+        // Check if dates are valid objects or non-empty strings
+        const hasStart = rawStart && (rawStart instanceof Date || rawStart.toString().trim() !== '');
+        const hasEnd = rawEnd && (rawEnd instanceof Date || rawEnd.toString().trim() !== '');
+
+        if (hasStart && hasEnd) {
+            const start = new Date(rawStart);
+            const end = new Date(rawEnd);
+            // If invalid dates (e.g. text), ignore them or fail safe?
+            // Let's assume if provided, they must be valid.
+            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                if (now < start || now > end) {
+                    inRange = false;
+                }
+            }
+        }
+
+        if (inRange) {
+            settings.message = rawMessage;
+            settings.isActive = true;
+        }
+    }
+
+    return settings;
+}
+
+function sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom) {
+    const recipient = payload.email;
+    const subject = `Booking Confirmed: ${payload.event} for ${payload.room}`;
+    const bookingCode = newId.substring(0, 12).toUpperCase();
+    const dateStr = Utilities.formatDate(newStart, SCRIPT_TIMEZONE, "MMMM d, yyyy");
+    const timeStr = `${Utilities.formatDate(newStart, SCRIPT_TIMEZONE, "h:mm a")} - ${Utilities.formatDate(newEnd, SCRIPT_TIMEZONE, "h:mm a")}`;
+    const surveyLink = SURVEY_FORM_URL.replace('${bookingCode}', bookingCode);
+
+    const fmt = "yyyyMMdd'T'HHmmss";
+    const gStart = Utilities.formatDate(newStart, SCRIPT_TIMEZONE, fmt);
+    const gEnd = Utilities.formatDate(newEnd, SCRIPT_TIMEZONE, fmt);
+    const gTitle = encodeURIComponent(`CCF Booking: ${payload.event}`);
+    const gLoc = encodeURIComponent(`CCF Manila - ${payload.room}`);
+    const gDetails = encodeURIComponent(`Ref: ${bookingCode}\nParticipants: ${payload.participants}\nNotes: ${payload.notes || 'None'}`);
+    const gCalLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gTitle}&dates=${gStart}/${gEnd}&details=${gDetails}&location=${gLoc}&ctz=${SCRIPT_TIMEZONE}`;
+
+    let greeting = `<h2 style="color: #333;">Hi ${payload.first_name},</h2>`;
+    if (requestedRoom && payload.room !== requestedRoom) {
+        greeting += `<p>To optimize room usage, your booking for <strong>${requestedRoom}</strong> has been moved to the <strong>${payload.room}</strong>. Your booking is confirmed for the following details:</p>`;
+    } else {
+        greeting += `<p>Your booking for <strong>${payload.room}</strong> is confirmed! Please review the details below.</p>`;
+    }
+
+    const htmlBody = `
+    <div style="font-family: Arial, sans-serif; font-size: 16px; line-height: 1.6;">
+      ${greeting}
+      <div style="background-color: #f4f4f4; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">Booking Summary</h3>
+        <p><strong>Booking Code:</strong> <span style="font-family: 'Courier New', monospace; font-size: 18px; color: #000;">${bookingCode}</span></p>
+        <hr style="border: 0; border-top: 1px solid #ddd;">
+        <p><strong>Room:</strong> ${payload.room}</p>
+        <p><strong>Name:</strong> ${payload.first_name} ${payload.last_name}</p>
+        <p><strong>Event:</strong> ${payload.event}</p>
+        <p><strong>Date:</strong> ${dateStr}</p>
+        <p><strong>Time:</strong> ${timeStr}</p>
+        <p><strong>Participants:</strong> ${payload.participants}</p>
+        ${payload.notes ? `<p><strong>Notes:</strong> ${payload.notes}</p>` : ''}
+
+        <div style="margin-top: 25px; text-align: left;">
+           <a href="${gCalLink}" style="background-color: #004d60; color: white; padding: 12px 18px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px;">📅 Add to Google Calendar</a>
+        </div>
+      </div>
+      
+      <div style="background-color: #e6fffa; border: 1px solid #b2f5ea; border-radius: 8px; padding: 15px; margin-top: 20px;">
+        <h3 style="color: #047857; margin-top: 0;">We value your feedback!</h3>
+        <p style="color: #065f46; font-size: 14px;">Help us improve our booking system. Please take a moment to answer our survey or report any issues.</p>
+        <a href="${surveyLink}" style="background-color: #047857; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; font-weight: bold;">Complete Survey</a>
+      </div>
+      <p style="margin-top: 30px; color: #888; font-size: 12px;">Thank you for using the CCF Manila Booking System.</p>
+    </div>
+  `;
+
+    MailApp.sendEmail({
+        to: recipient,
+        subject: subject,
+        htmlBody: htmlBody,
+        name: EMAIL_SENDER_NAME
+    });
+}
+
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+function handleMoveBooking(payload) {
+    if (payload.adminPin !== ADMIN_PIN) {
+        return { success: false, message: "Invalid Admin PIN." };
+    }
+    var bookingId = payload.bookingId;
+    var newRoom = payload.newRoom;
+    var newStartIso = payload.start_iso;
+    var newEndIso = payload.end_iso;
+    var reason = payload.reason;
+    var newDate = Utilities.formatDate(new Date(newStartIso), 'Asia/Manila', 'yyyy-MM-dd');
+
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Bookings");
+    var data = sheet.getDataRange().getValues();
+    var rowIndex = -1;
+    var bookingRow = null;
+
+    for (var i = 1; i < data.length; i++) {
+        if (data[i][0] === bookingId) {
+            rowIndex = i + 1;
+            bookingRow = data[i];
+            break;
+        }
+    }
+
+    if (rowIndex === -1) {
+        return { success: false, message: "Booking not found." };
+    }
+
+    var userFirstName = bookingRow[4];
+    var userEmail = bookingRow[6];
+    var eventName = bookingRow[9];
+
+    sheet.getRange(rowIndex, 2).setValue(newDate);
+    sheet.getRange(rowIndex, 3).setValue(newStartIso);
+    sheet.getRange(rowIndex, 4).setValue(newEndIso);
+    sheet.getRange(rowIndex, 11).setValue(newRoom);
+
+    var currentNotes = bookingRow[14] || "";
+    var noteUpdate = " [Admin Moved: " + reason + "]";
+    sheet.getRange(rowIndex, 15).setValue(currentNotes + noteUpdate);
+
+    sendMoveNotificationEmail(userEmail, userFirstName, eventName, newRoom, newStartIso, newEndIso, reason);
+
+    logActivity('Move', bookingId, payload.adminPin, payload);
+    return { success: true, message: "Booking moved successfully." };
+}
+
+function sendMoveNotificationEmail(email, name, event, room, startIso, endIso, reason) {
+    var startDate = new Date(startIso);
+    var endDate = new Date(endIso);
+    var timeFormat = "h:mm a";
+    var dateFormat = "MMM d, yyyy (EEE)";
+
+    var dateStr = Utilities.formatDate(startDate, 'Asia/Manila', dateFormat);
+    var startTimeStr = Utilities.formatDate(startDate, 'Asia/Manila', timeFormat);
+    var endTimeStr = Utilities.formatDate(endDate, 'Asia/Manila', timeFormat);
+    var subject = "Update: Your Booking Schedule Has Changed - CCF Manila";
+
+    var body = "Hi " + name + ",\n\n" +
+        "Please be advised that your booking for '" + event + "' has been moved by an Administrator.\n\n" +
+        "NEW DETAILS:\n" +
+        "Date: " + dateStr + "\n" +
+        "Time: " + startTimeStr + " - " + endTimeStr + "\n" +
+        "Room: " + room + "\n\n" +
+        "Reason: " + reason + "\n\n" +
+        "Please contact the admin office if you have any questions.\n\n" +
+        "God Bless,\nCCF Manila Admin";
+
+    var htmlBody = "<div style='font-family: sans-serif; color: #333;'>" +
+        "<h2 style='color: #004d60;'>Booking Update</h2>" +
+        "<p>Hi <strong>" + name + "</strong>,</p>" +
+        "<p>Please be advised that your booking for <strong>" + event + "</strong> has been moved.</p>" +
+        "<div style='background: #f8fafc; padding: 15px; border-left: 4px solid #004d60; margin: 20px 0;'>" +
+        "<p style='margin: 5px 0;'><strong>New Date:</strong> " + dateStr + "</p>" +
+        "<p style='margin: 5px 0;'><strong>New Time:</strong> " + startTimeStr + " - " + endTimeStr + "</p>" +
+        "<p style='margin: 5px 0;'><strong>New Room:</strong> " + room + "</p>" +
+        "<p style='margin: 5px 0;'><strong>Reason:</strong> " + reason + "</p>" +
+        "</div>" +
+        "<p>Please contact the admin office if you have any questions.</p>" +
+        "<p>God Bless,<br>CCF Manila Admin</p>" +
+        "</div>";
+
+    MailApp.sendEmail({
+        to: email,
+        subject: subject,
+        body: body,
+        htmlBody: htmlBody
+    });
+}
+
+/**
+ * NEW: Fetch bookings for a specific user email
+ * Returns only future, confirmed bookings.
+ * Filters out sensitive data.
+ */
+function handleFetchUserBookings(payload) {
+    const userEmail = payload.email;
+    if (!userEmail) return { success: false, message: "Email is required." };
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+
+    const idx = {
+        id: headers.indexOf('id'),
+        start: headers.indexOf('start_iso'),
+        end: headers.indexOf('end_iso'),
+        status: headers.indexOf('status'),
+        email: headers.indexOf('email'),
+        event: headers.indexOf('event'),
+        room: headers.indexOf('room')
+    };
+
+    // Check required columns
+    if (Object.values(idx).some(i => i === -1)) {
+        return { success: false, message: "Server Error: Missing columns." };
+    }
+
+    const now = new Date();
+    const safeBookings = [];
+
+    data.forEach(row => {
+        const status = row[idx.status];
+        const rowEmail = row[idx.email];
+
+        // 1. Check Status
+        if (status !== 'confirmed') return;
+
+        // 2. Check Email (Case Insensitive)
+        if (!rowEmail || rowEmail.toString().toLowerCase() !== userEmail.toLowerCase()) return;
+
+        // 3. Check Future Date
+        let startIso = row[idx.start];
+        let endIso = row[idx.end];
+        let startDate = (startIso instanceof Date) ? startIso : new Date(startIso);
+
+        if (startDate <= now) return;
+
+        // Format for response
+        if (startIso instanceof Date) startIso = Utilities.formatDate(startIso, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+        if (endIso instanceof Date) endIso = Utilities.formatDate(endIso, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+
+        safeBookings.push({
+            id: row[idx.id], // Useful for referencing (maybe cancellation later)
+            date: Utilities.formatDate(startDate, SCRIPT_TIMEZONE, "MMM d, yyyy"), // Friendly date
+            start_time: Utilities.formatDate(startDate, SCRIPT_TIMEZONE, "h:mm a"),
+            end_time: (endIso instanceof Date || typeof endIso === 'string') ? Utilities.formatDate(new Date(endIso), SCRIPT_TIMEZONE, "h:mm a") : '',
+            event: row[idx.event],
+            room: row[idx.room]
+        });
+    });
+
+    return { success: true, bookings: safeBookings };
+}

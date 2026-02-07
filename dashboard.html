@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,25 +9,27 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@600;700&family=Montserrat:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-          theme: {
-            extend: {
-              fontFamily: {
-                'heading': ['"EB Garamond"', 'serif'],
-                'body': ['"Montserrat"', 'sans-serif'],
-              },
-              colors: {
-                'ccf-blue': { DEFAULT: '#004d60', 'dark': '#003e4d' },
-                'ccf-red': { DEFAULT: '#e00000', 'dark': '#b80000' },
-                'ccf-cream': '#f8fafc',
-              }
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'heading': ['"EB Garamond"', 'serif'],
+                        'body': ['"Montserrat"', 'sans-serif'],
+                    },
+                    colors: {
+                        'ccf-blue': { DEFAULT: '#004d60', 'dark': '#003e4d' },
+                        'ccf-red': { DEFAULT: '#e00000', 'dark': '#b80000' },
+                        'ccf-cream': '#f8fafc',
+                    }
+                }
             }
-          }
         }
     </script>
 
@@ -35,11 +38,23 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
 
     <style>
-        tbody tr:hover { background-color: #f1f5f9; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-        
+        tbody tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
         /* D3 Tooltip Styles */
         #d3-tooltip {
             position: absolute;
@@ -52,11 +67,12 @@
             pointer-events: none;
             opacity: 0;
             z-index: 100;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             max-width: 250px;
         }
     </style>
 </head>
+
 <body class="bg-ccf-cream font-body text-gray-800">
 
     <!-- Tooltip Container -->
@@ -65,7 +81,7 @@
     <!-- HEADER WITH FILTERS -->
     <header class="bg-white text-black p-4 shadow-sm sticky top-0 z-50">
         <div class="container mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-4">
-            
+
             <!-- Left: Logo & Back Button -->
             <div class="flex items-center w-full md:w-auto">
                 <div class="mb-0 mr-4">
@@ -80,17 +96,26 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-                
+
                 <!-- 1. ROOM FILTER -->
                 <div class="relative group">
-                    <button id="room-filter-btn" class="flex items-center justify-between w-48 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-ccf-blue">
+                    <button id="room-filter-btn"
+                        class="flex items-center justify-between w-48 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-ccf-blue">
                         <span id="room-filter-label">All Rooms</span>
-                        <svg class="w-5 h-5 ml-2 -mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                        <svg class="w-5 h-5 ml-2 -mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                            fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                clip-rule="evenodd" />
+                        </svg>
                     </button>
-                    <div id="room-filter-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                    <div id="room-filter-menu"
+                        class="hidden absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
                         <div class="p-2 border-b border-gray-100">
                             <label class="flex items-center px-2 py-1 hover:bg-gray-100 rounded cursor-pointer">
-                                <input type="checkbox" id="select-all-rooms" class="form-checkbox h-4 w-4 text-ccf-blue rounded border-gray-300 focus:ring-ccf-blue" checked>
+                                <input type="checkbox" id="select-all-rooms"
+                                    class="form-checkbox h-4 w-4 text-ccf-blue rounded border-gray-300 focus:ring-ccf-blue"
+                                    checked>
                                 <span class="ml-2 text-sm font-semibold text-gray-700">Select All</span>
                             </label>
                         </div>
@@ -100,51 +125,87 @@
 
                 <!-- 2. DATE FILTER -->
                 <div class="relative">
-                    <input type="date" id="date-filter" class="px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ccf-blue text-gray-700">
-                    <button id="clear-date-btn" class="hidden absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500" title="Clear Date">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    <input type="date" id="date-filter"
+                        class="px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ccf-blue text-gray-700">
+                    <button id="clear-date-btn"
+                        class="hidden absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                        title="Clear Date">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                clip-rule="evenodd" />
+                        </svg>
                     </button>
                 </div>
 
                 <!-- REFRESH BUTTON -->
-                <button onclick="fetchData()" class="px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark text-sm font-medium transition-colors shadow-sm flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                <button onclick="fetchData()"
+                    class="px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark text-sm font-medium transition-colors shadow-sm flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
                     Refresh
                 </button>
             </div>
         </div>
         <div class="container mx-auto max-w-7xl mt-2 text-right">
-             <span id="status-indicator" class="text-xs font-medium text-gray-500">Waiting for update...</span>
+            <span id="status-indicator" class="text-xs font-medium text-gray-500">Waiting for update...</span>
         </div>
     </header>
 
     <main class="container mx-auto p-6 max-w-7xl">
-        
+
         <!-- SECTION 1: COUNTERS -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="p-4 bg-blue-50 rounded-full text-ccf-blue mr-4">
-                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    </svg>
                 </div>
-                <div><p class="text-sm font-medium text-gray-500">Filtered Bookings</p><h3 class="text-3xl font-bold font-heading text-gray-800" id="total-bookings-count">--</h3></div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Filtered Bookings</p>
+                    <h3 class="text-3xl font-bold font-heading text-gray-800" id="total-bookings-count">--</h3>
+                </div>
             </div>
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="p-4 bg-teal-50 rounded-full text-teal-600 mr-4">
-                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
                 </div>
-                <div><p class="text-sm font-medium text-gray-500">Main Hall</p><h3 class="text-3xl font-bold font-heading text-gray-800" id="main-hall-count">--</h3></div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Main Hall</p>
+                    <h3 class="text-3xl font-bold font-heading text-gray-800" id="main-hall-count">--</h3>
+                </div>
             </div>
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="p-4 bg-orange-50 rounded-full text-orange-500 mr-4">
-                   <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
                 </div>
-                <div><p class="text-sm font-medium text-gray-500">Mezzanine (All)</p><h3 class="text-3xl font-bold font-heading text-gray-800" id="mezzanine-count">--</h3></div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Mezzanine (All)</p>
+                    <h3 class="text-3xl font-bold font-heading text-gray-800" id="mezzanine-count">--</h3>
+                </div>
             </div>
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="p-4 bg-red-50 rounded-full text-ccf-red mr-4">
-                   <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                 </div>
-                <div><p class="text-sm font-medium text-gray-500">Bookings (Selected Date)</p><h3 class="text-3xl font-bold font-heading text-gray-800" id="date-specific-count">--</h3></div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Bookings (Selected Date)</p>
+                    <h3 class="text-3xl font-bold font-heading text-gray-800" id="date-specific-count">--</h3>
+                </div>
             </div>
         </div>
 
@@ -156,7 +217,7 @@
             </div>
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Booking Distribution (Event Type)</h3>
-                 <div class="relative h-[300px] w-full flex justify-center" id="d3-event-pie-chart"></div>
+                <div class="relative h-[300px] w-full flex justify-center" id="d3-event-pie-chart"></div>
             </div>
         </div>
 
@@ -164,13 +225,83 @@
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
             <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Room Schedule (Time View)</h3>
             <div class="relative w-full overflow-x-auto" id="d3-gantt-chart"></div>
-            <p class="text-xs text-gray-500 mt-2">* Overlapping bookings in Main Hall are displayed on separate tracks.</p>
+            <p class="text-xs text-gray-500 mt-2">* Overlapping bookings in Main Hall are displayed on separate tracks.
+            </p>
         </div>
 
         <!-- SECTION 4: ROOM DETAILED TABLES -->
         <div id="room-tables-container" class="space-y-8 pb-10">
             <!-- Tables will be injected here by JS -->
         </div>
+
+        <!-- SECTION 5: BLOCKED DATES MANAGEMENT -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8 mt-12 border-t-4 border-t-ccf-red">
+            <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Blocked Dates Management</h3>
+            <p class="text-sm text-gray-500 mb-6">Manually block specific dates to prevent users from booking.</p>
+
+            <!-- Block Date Form -->
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+                <form id="block-date-form" class="flex flex-col md:flex-row gap-4 items-end">
+                    <div class="w-full md:w-1/4">
+                        <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Date</label>
+                        <input type="date" name="block_date" required
+                            class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                    </div>
+                    <div class="w-full md:w-1/4">
+                        <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Room</label>
+                        <select name="block_room" id="block-room-select"
+                            class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                            <option value="All Rooms">All Rooms</option>
+                            <!-- Options will be populated by JS -->
+                        </select>
+                    </div>
+                    <div class="w-full md:w-1/3">
+                        <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Reason</label>
+                        <input type="text" name="block_reason" placeholder="e.g. Maintenance, Holiday, Church Event"
+                            required
+                            class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                    </div>
+                    <div class="w-full md:w-1/6">
+                        <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Admin
+                            PIN</label>
+                        <input type="password" name="admin_pin" placeholder="PIN" required
+                            class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                    </div>
+                    <button type="submit"
+                        class="bg-ccf-red text-white px-6 py-2 rounded font-bold hover:bg-red-700 transition text-sm shadow-sm flex items-center gap-2 whitespace-nowrap">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
+                            </path>
+                        </svg>
+                        Block Date
+                    </button>
+                </form>
+            </div>
+
+            <!-- Blocked Dates Table -->
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                Room</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                Reason</th>
+                            <th class="px-6 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="blocked-dates-table-body" class="divide-y divide-gray-200 bg-white">
+                        <tr>
+                            <td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500 italic">No blocked dates
+                                found.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
     </main>
 
@@ -188,10 +319,11 @@
         const DateTime = luxon.DateTime; // Define globally
 
         let allBookings = [];
+        let blockedDates = []; // NEW
         let selectedRooms = [];
         let selectedDate = null;
 
-        // D3 Color Palette
+        // ... (Colors kept as is, not re-declaring) ...
         const COLORS = {
             blue: '#004d60',
             red: '#e00000',
@@ -213,20 +345,78 @@
         document.addEventListener('DOMContentLoaded', () => {
             initializeFilters();
             createTableSkeletons();
+            initBlockedDates(); // NEW
             fetchData();
-            
+
             window.addEventListener('resize', () => {
                 if (allBookings.length > 0) applyFilters();
             });
         });
 
+        // ... (parseDate kept as is) ...
+        function parseDate(dateInput) {
+            if (!dateInput) return DateTime.invalid('missing data');
+            if (typeof dateInput === 'string' && dateInput.endsWith('Z')) {
+                dateInput = dateInput.slice(0, -1);
+            }
+            let dt = DateTime.fromISO(dateInput, { zone: APP_CONFIG.TIMEZONE });
+            if (dt.isValid) return dt;
+            dt = DateTime.fromSQL(dateInput, { zone: APP_CONFIG.TIMEZONE });
+            if (dt.isValid) return dt;
+            const jsDate = new Date(dateInput);
+            if (!isNaN(jsDate)) {
+                return DateTime.fromJSDate(jsDate, { zone: APP_CONFIG.TIMEZONE });
+            }
+            return DateTime.invalid('unsupported format');
+        }
+
+        // ... (Filter/UI setup kept as is) ...
+        function createTableSkeletons() {
+            const container = document.getElementById('room-tables-container');
+            const rooms = ['Main Hall', 'Jonah', 'Joseph', 'Moses'];
+            const roomColors = { 'Main Hall': 'teal', 'Jonah': 'orange', 'Joseph': 'blue', 'Moses': 'indigo' };
+
+            container.innerHTML = '';
+
+            rooms.forEach(room => {
+                const color = roomColors[room] || 'gray';
+                const roomId = room.replace(/\s+/g, '-');
+
+                const html = `
+                <div id="container-${roomId}" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-${color}-50">
+                        <h3 class="text-xl font-bold font-heading text-ccf-blue">${room}</h3>
+                        <span class="text-xs font-semibold text-${color}-700 bg-white px-2 py-1 rounded border border-${color}-200" id="count-${roomId}">0 Bookings</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Code</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Event</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date & Time</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Booked By</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Pax</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="tbody-${roomId}">
+                                <tr><td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+
         // --- HELPER: ROBUST DATE PARSER (Crucial Fix) ---
         function parseDate(dateInput) {
             if (!dateInput) return DateTime.invalid('missing data');
-            
+
             // Handle "Fake UTC" strings by stripping 'Z'
             if (typeof dateInput === 'string' && dateInput.endsWith('Z')) {
-                dateInput = dateInput.slice(0, -1); 
+                dateInput = dateInput.slice(0, -1);
             }
 
             // 1. Try ISO
@@ -252,12 +442,12 @@
             const rooms = ['Main Hall', 'Jonah', 'Joseph', 'Moses'];
             const roomColors = { 'Main Hall': 'teal', 'Jonah': 'orange', 'Joseph': 'blue', 'Moses': 'indigo' };
 
-            container.innerHTML = ''; 
+            container.innerHTML = '';
 
             rooms.forEach(room => {
                 const color = roomColors[room] || 'gray';
-                const roomId = room.replace(/\s+/g, '-'); 
-                
+                const roomId = room.replace(/\s+/g, '-');
+
                 const html = `
                 <div id="container-${roomId}" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-${color}-50">
@@ -320,7 +510,7 @@
 
             const dateInput = document.getElementById('date-filter');
             const clearDateBtn = document.getElementById('clear-date-btn');
-            
+
             const todayISO = DateTime.now().setZone(APP_CONFIG.TIMEZONE).toISODate();
             dateInput.value = todayISO;
             selectedDate = todayISO;
@@ -357,13 +547,15 @@
 
             const callbackName = `dashboard_callback_${Date.now()}`;
             const script = document.createElement('script');
-            
+
             window[callbackName] = (response) => {
                 if (response.success) {
                     statusEl.textContent = 'Last updated: ' + DateTime.now().toFormat('h:mm:ss a');
                     statusEl.className = 'text-xs font-medium text-green-600';
                     allBookings = response.data;
+                    blockedDates = response.blocked_dates || [];
                     applyFilters();
+                    renderBlockedDates();
                 } else {
                     statusEl.textContent = 'Error fetching data';
                     statusEl.className = 'text-xs font-medium text-red-600';
@@ -380,14 +572,14 @@
 
         function applyFilters() {
             if (!allBookings) return;
-            
+
             const filteredBookings = allBookings.filter(b => {
                 if (!selectedRooms.includes(b.room)) return false;
                 if (selectedDate) {
                     // Use Robust Parser for Filter Logic
                     const bStart = parseDate(b.start_iso);
                     if (!bStart.isValid) return false;
-                    
+
                     const bDate = bStart.toISODate();
                     if (bDate !== selectedDate) return false;
                 }
@@ -405,7 +597,7 @@
 
             bookings.forEach(b => {
                 if (b.room === 'Main Hall') countMain++; else countMezz++;
-                
+
                 const bStart = parseDate(b.start_iso);
                 if (bStart.isValid && bStart.toISODate() === today) countToday++;
 
@@ -416,7 +608,7 @@
             document.getElementById('total-bookings-count').textContent = bookings.length;
             document.getElementById('main-hall-count').textContent = countMain;
             document.getElementById('mezzanine-count').textContent = countMezz;
-            
+
             const dateLabel = document.getElementById('date-specific-count').previousElementSibling;
             if (selectedDate) {
                 dateLabel.textContent = `Bookings on ${DateTime.fromISO(selectedDate).toFormat('MMM d')}`;
@@ -429,11 +621,11 @@
             renderD3BarChart(roomCounts);
             renderD3DonutChart(eventCounts);
             renderD3GanttChart(bookings);
-            
+
             bookings.sort((a, b) => {
-                 const dA = parseDate(a.start_iso);
-                 const dB = parseDate(b.start_iso);
-                 return dA - dB;
+                const dA = parseDate(a.start_iso);
+                const dB = parseDate(b.start_iso);
+                return dA - dB;
             });
             renderRoomTables(bookings);
         }
@@ -454,17 +646,17 @@
 
         function renderD3BarChart(dataObj) {
             const container = document.getElementById('d3-room-bar-chart');
-            container.innerHTML = ''; 
+            container.innerHTML = '';
             const width = container.clientWidth;
             const height = 300;
-            const margin = {top: 20, right: 20, bottom: 30, left: 40};
+            const margin = { top: 20, right: 20, bottom: 30, left: 40 };
 
             const svg = d3.select(container).append("svg")
                 .attr("width", width)
                 .attr("height", height)
                 .attr("viewBox", [0, 0, width, height]);
 
-            const rooms = Object.keys(APP_CONFIG.ROOM_CONFIG); 
+            const rooms = Object.keys(APP_CONFIG.ROOM_CONFIG);
             const data = rooms.map(room => ({ room: room, value: dataObj[room] || 0 }));
 
             const x = d3.scaleBand()
@@ -518,8 +710,8 @@
                 .attr("height", height)
                 .attr("viewBox", [-width / 2, -height / 2, width, height]);
 
-            const data = Object.entries(dataObj).map(([key, value]) => ({name: key, value: value}));
-            
+            const data = Object.entries(dataObj).map(([key, value]) => ({ name: key, value: value }));
+
             const color = d3.scaleOrdinal()
                 .domain(data.map(d => d.name))
                 .range([COLORS.blue, COLORS.red, COLORS.teal, COLORS.orange, COLORS.gray, COLORS.yellow, COLORS.purple]);
@@ -533,11 +725,11 @@
                 .join("path")
                 .attr("fill", d => color(d.data.name))
                 .attr("d", arc)
-                .on("mouseover", function(event, d) {
+                .on("mouseover", function (event, d) {
                     d3.select(this).transition().duration(200).attr("d", hoverArc);
                     showTooltip(`<strong>${d.data.name}</strong><br>Count: ${d.data.value}`, event);
                 })
-                .on("mouseout", function() {
+                .on("mouseout", function () {
                     d3.select(this).transition().duration(200).attr("d", arc);
                     hideTooltip();
                 });
@@ -547,30 +739,30 @@
             const container = document.getElementById('d3-gantt-chart');
             container.innerHTML = '';
             const width = Math.max(container.clientWidth, 800);
-            const margin = {top: 20, right: 30, bottom: 40, left: 100};
-            
+            const margin = { top: 20, right: 30, bottom: 40, left: 100 };
+
             const rooms = Object.keys(APP_CONFIG.ROOM_CONFIG);
-            
+
             const roomBookings = {};
             rooms.forEach(r => roomBookings[r] = []);
             bookings.forEach(b => { if (rooms.includes(b.room)) roomBookings[b.room].push(b); });
 
-            let allChartLabels = []; 
+            let allChartLabels = [];
             let dataPoints = [];
 
             rooms.forEach(roomName => {
                 const roomData = roomBookings[roomName];
-                
+
                 // Sort using parser
                 roomData.sort((a, b) => parseDate(a.start_iso) - parseDate(b.start_iso));
-                
-                const tracks = []; 
+
+                const tracks = [];
                 let baseTrackIndex = allChartLabels.length;
 
                 roomData.forEach(b => {
                     const start = parseDate(b.start_iso);
                     const end = parseDate(b.end_iso);
-                    
+
                     if (!start.isValid || !end.isValid) return;
 
                     const startDec = start.hour + (start.minute / 60);
@@ -592,7 +784,7 @@
 
                     dataPoints.push({ yIndex: globalYIndex, startDec, endDec, room: roomName, data: b });
                 });
-                
+
                 if (roomData.length === 0) allChartLabels.push(roomName);
             });
 
@@ -604,7 +796,7 @@
                 .attr("height", height);
 
             const x = d3.scaleLinear()
-                .domain([6, 23]) 
+                .domain([6, 23])
                 .range([margin.left, width - margin.right]);
 
             const y = d3.scaleBand()
@@ -614,7 +806,7 @@
 
             svg.append("g")
                 .attr("transform", `translate(0,${height - margin.bottom})`)
-                .call(d3.axisBottom(x).ticks(17).tickFormat(d => d > 12 ? `${d-12}pm` : `${d}am`))
+                .call(d3.axisBottom(x).ticks(17).tickFormat(d => d > 12 ? `${d - 12}pm` : `${d}am`))
                 .attr("color", "#9ca3af");
 
             svg.append("g")
@@ -698,6 +890,95 @@
                 }
             });
         }
+
+        // --- BLOCKED DATES LOGIC ---
+        function initBlockedDates() {
+            const form = document.getElementById('block-date-form');
+            if (form) {
+                form.addEventListener('submit', handleBlockDateSubmit);
+
+                // Populate Room Select
+                const select = document.getElementById('block-room-select');
+                const rooms = Object.keys(APP_CONFIG.ROOM_CONFIG);
+                rooms.forEach(room => {
+                    const opt = document.createElement('option');
+                    opt.value = room;
+                    opt.textContent = room;
+                    select.appendChild(opt);
+                });
+            }
+        }
+
+        function renderBlockedDates() {
+            const tbody = document.getElementById('blocked-dates-table-body');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+            if (!blockedDates || blockedDates.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500 italic">No blocked dates found.</td></tr>';
+                return;
+            }
+
+            // Sort by date descending
+            const sorted = [...blockedDates].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sorted.forEach(block => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${DateTime.fromISO(block.date).toFormat('MMM d, yyyy (ccc)')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${block.room}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${block.reason}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <span class="text-xs text-gray-400 cursor-help" title="To unblock, please edit the Google Sheet manually.">Deletion Manual</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleBlockDateSubmit(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Blocking...';
+            btn.disabled = true;
+
+            const formData = new FormData(e.target);
+            const payload = {
+                date: formData.get('block_date'),
+                room: formData.get('block_room'),
+                reason: formData.get('block_reason'),
+                adminPin: formData.get('admin_pin')
+            };
+
+            const callbackName = `block_date_${Date.now()}`;
+            const script = document.createElement('script');
+
+            window[callbackName] = (response) => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                delete window[callbackName];
+                document.body.removeChild(script);
+
+                if (response.success) {
+                    alert("Date blocked successfully!");
+                    e.target.reset();
+                    fetchData(); // Refresh data
+                } else {
+                    alert("Error: " + response.message);
+                }
+            };
+
+            const url = `${APP_CONFIG.APPS_SCRIPT_URL}?action=block_date&callback=${callbackName}&payload=${encodeURIComponent(JSON.stringify(payload))}`;
+            script.src = url;
+            script.onerror = () => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert("Network error.");
+            };
+            document.body.appendChild(script);
+        }
     </script>
 </body>
+
 </html>
