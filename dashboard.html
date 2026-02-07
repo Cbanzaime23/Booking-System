@@ -159,7 +159,8 @@
 
         <!-- SECTION 1: COUNTERS -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+            <div
+                class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue flex items-center">
                 <div class="p-4 bg-blue-50 rounded-full text-ccf-blue mr-4">
                     <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path
@@ -171,7 +172,8 @@
                     <h3 class="text-3xl font-bold font-heading text-gray-800" id="total-bookings-count">--</h3>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+            <div
+                class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-teal-600 flex items-center">
                 <div class="p-4 bg-teal-50 rounded-full text-teal-600 mr-4">
                     <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path
@@ -183,7 +185,8 @@
                     <h3 class="text-3xl font-bold font-heading text-gray-800" id="main-hall-count">--</h3>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+            <div
+                class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-orange-500 flex items-center">
                 <div class="p-4 bg-orange-50 rounded-full text-orange-500 mr-4">
                     <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path
@@ -195,7 +198,8 @@
                     <h3 class="text-3xl font-bold font-heading text-gray-800" id="mezzanine-count">--</h3>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+            <div
+                class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-red flex items-center">
                 <div class="p-4 bg-red-50 rounded-full text-ccf-red mr-4">
                     <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path
@@ -211,18 +215,18 @@
 
         <!-- SECTION 2: CHARTS -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue">
                 <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Bookings by Room Type</h3>
                 <div class="relative h-[300px] w-full" id="d3-room-bar-chart"></div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue">
                 <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Booking Distribution (Event Type)</h3>
                 <div class="relative h-[300px] w-full flex justify-center" id="d3-event-pie-chart"></div>
             </div>
         </div>
 
         <!-- SECTION 3: NEW GANTT CHART -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue mb-8">
             <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Room Schedule (Time View)</h3>
             <div class="relative w-full overflow-x-auto" id="d3-gantt-chart"></div>
             <p class="text-xs text-gray-500 mt-2">* Overlapping bookings in Main Hall are displayed on separate tracks.
@@ -448,8 +452,15 @@
                 const color = roomColors[room] || 'gray';
                 const roomId = room.replace(/\s+/g, '-');
 
+                // NEW: Logic for Top Border Color Mapping
+                let borderClass = 'border-t-gray-200'; // Default
+                if (room === 'Main Hall') borderClass = 'border-t-teal-600';
+                else if (room === 'Jonah') borderClass = 'border-t-orange-500';
+                else if (room === 'Joseph') borderClass = 'border-t-blue-600';
+                else if (room === 'Moses') borderClass = 'border-t-indigo-600';
+
                 const html = `
-                <div id="container-${roomId}" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div id="container-${roomId}" class="bg-white rounded-xl shadow-sm border border-gray-100 border-t-4 ${borderClass} overflow-hidden">
                     <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-${color}-50">
                         <h3 class="text-xl font-bold font-heading text-ccf-blue">${room}</h3>
                         <span class="text-xs font-semibold text-${color}-700 bg-white px-2 py-1 rounded border border-${color}-200" id="count-${roomId}">0 Bookings</span>

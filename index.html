@@ -805,32 +805,42 @@
         </div>
     </dialog>
 
-    <div id="toast-container" class="fixed bottom-5 right-5 space-y-3 z-[100]"></div>
+    <dialog id="admin-login-modal" class="p-0 rounded-lg shadow-xl max-w-sm w-full">
+        <div class="p-6">
+            <h3 class="text-2xl font-bold mb-4 font-heading text-ccf-blue">Admin Login</h3>
+            <p class="mb-4 text-sm text-gray-600">Please enter the Admin PIN to access the dashboard.</p>
+            <form id="admin-login-form" method="dialog">
+                <div class="mb-6">
+                    <label for="admin-login-pin" class="sr-only">Admin PIN</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <input type="password" id="admin-login-pin" name="pin" required
+                            class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-ccf-blue focus:border-ccf-blue sm:text-sm"
+                            placeholder="Enter PIN">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition-colors"
+                        onclick="document.getElementById('admin-login-modal').close()">Cancel</button>
+                    <button type="submit"
+                        class="px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark font-medium transition-colors">Login</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
 
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
     <script src="config.js?v=1.4"></script>
     <script src="script.js?v=1.4"></script>
-
-    <script>
-        document.getElementById('go-to-dashboard-btn').addEventListener('click', () => {
-            // 1. Prompt for PIN
-            const input = prompt("Please enter the Admin PIN to access the dashboard:");
-
-            // 2. Check PIN (Must match your server-side PIN)
-            const ADMIN_PIN = "CCFManila@2025";
-
-            if (input === ADMIN_PIN) {
-                // 3. Save a "Session Token" so the dashboard knows we are authorized
-                sessionStorage.setItem('ccf_admin_logged_in', 'true');
-
-                // 4. Redirect
-                window.location.href = 'dashboard.html';
-            } else if (input !== null) {
-                // Only show alert if they didn't hit Cancel
-                alert("Incorrect PIN. Access Denied.");
-            }
-        });
-    </script>
 </body>
 
 </html>

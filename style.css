@@ -1,11 +1,11 @@
 /*
  * === CCF BRANDING STYLES ===
  */
- :root {
-  --ccf-blue: #004d60;
-  --ccf-red: #e00000;
-  --ccf-red-dark: #b80000;
-  --ccf-dark-gray: #333;
+:root {
+    --ccf-blue: #004d60;
+    --ccf-red: #e00000;
+    --ccf-red-dark: #b80000;
+    --ccf-dark-gray: #333;
 }
 
 /* Apply base fonts and colors */
@@ -18,6 +18,7 @@ body {
 dialog {
     border: none;
 }
+
 dialog::backdrop {
     background-color: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(2px);
@@ -34,11 +35,15 @@ dialog::backdrop {
 
 /* Style for the time label text */
 .time-label {
-    font-size: 0.75rem; /* 12px */
-    color: #6b7280; /* gray-500 */
+    font-size: 0.75rem;
+    /* 12px */
+    color: #6b7280;
+    /* gray-500 */
 }
+
 .status-label {
-    font-size: 0.875rem; /* 14px */
+    font-size: 0.875rem;
+    /* 14px */
     font-weight: 500;
 }
 
@@ -46,26 +51,36 @@ dialog::backdrop {
 .time-slot.available .time-label {
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--ccf-blue); /* Use CCF Blue */
+    color: var(--ccf-blue);
+    /* Use CCF Blue */
 }
+
 .time-slot.available:hover {
-    background-color: #f4f8f9; /* Lighter CCF Blue */
+    background-color: #f4f8f9;
+    /* Lighter CCF Blue */
     cursor: pointer;
 }
 
 /* Partial Slot */
 .time-slot.partial {
-    background-color: #fef9c3; /* yellow-100 */
-    color: #a16207; /* yellow-700 */
+    background-color: #fef9c3;
+    /* yellow-100 */
+    color: #a16207;
+    /* yellow-700 */
     font-weight: 500;
 }
+
 .time-slot.partial:hover {
-    background-color: #fef08a; /* yellow-200 */
+    background-color: #fef08a;
+    /* yellow-200 */
     cursor: pointer;
 }
+
 .time-slot.partial .time-label {
-    color: #ca8a04; /* yellow-600 */
+    color: #ca8a04;
+    /* yellow-600 */
 }
+
 .time-slot.partial span {
     font-size: 0.8rem;
     line-height: 1.1;
@@ -73,19 +88,24 @@ dialog::backdrop {
 
 /* Full Slot */
 .time-slot.full {
-    background-color: #fee2e2; /* red-100 */
-    color: #991b1b; /* red-800 */
+    background-color: #fee2e2;
+    /* red-100 */
+    color: #991b1b;
+    /* red-800 */
     font-weight: 600;
     cursor: not-allowed;
 }
+
 .time-slot.full .time-label {
-    color: #dc2626; /* red-600 */
+    color: #dc2626;
+    /* red-600 */
     text-decoration: line-through;
 }
 
 /* Past Slot */
 .time-slot.past .time-label {
-    color: #9ca3af; /* gray-400 */
+    color: #9ca3af;
+    /* gray-400 */
     text-decoration: line-through;
 }
 
@@ -96,15 +116,22 @@ dialog::backdrop {
 /* Loader (uses new red color) */
 .loader-spinner {
     border: 4px solid #f3f3f3;
-    border-top: 4px solid var(--ccf-red); /* Use CCF Red */
+    border-top: 4px solid var(--ccf-red);
+    /* Use CCF Red */
     border-radius: 50%;
     width: 40px;
     height: 40px;
     animation: spin 1s linear infinite;
 }
+
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Loading Modal Backdrop */
@@ -113,6 +140,7 @@ dialog::backdrop {
     border: none;
     box-shadow: none;
 }
+
 #loading-modal::backdrop {
     background-color: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(3px);
@@ -120,44 +148,75 @@ dialog::backdrop {
 
 
 /* TOAST NOTIFICATION FIX */
-#toast-container {
+/* TOAST NOTIFICATION - PHYSICAL APPEND STRATEGY */
+.toast {
     position: fixed;
     bottom: 24px;
     right: 24px;
-    /* Use Max Z-Index to ensure it sits on top of <dialog> and backdrops */
-    z-index: 2147483647; 
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    pointer-events: none; /* Allows clicks to pass through the empty container space */
-}
+    z-index: 999999;
+    /* Ensure it stays on top of the modal it is appended to */
 
-.toast {
-    pointer-events: auto; /* Re-enable clicks on the specific toast message */
-    min-width: 300px;
-    max-width: 450px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    opacity: 0;
-    transform: translateX(100%);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Styling */
     display: flex;
     align-items: center;
-    border-radius: 6px;
-    padding: 16px;
+    gap: 12px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    background: white;
+    /* Fallback */
     color: white;
+    font-weight: 500;
     font-size: 0.95rem;
-    line-height: 1.4;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+
+    /* Animation */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: auto;
+
+    /* Constraint */
+    max-width: 400px;
+    min-width: 300px;
+}
+
+/* 
+   When toast is inside a dialog (Physical Append), 
+   position it absolutely relative to the dialog 
+   at the TOP RIGHT to avoid clipping/scroll issues at the bottom.
+*/
+.toast.toast-in-dialog {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    bottom: auto;
+    /* Override bottom */
+    width: auto;
+    max-width: 90%;
+    z-index: 999999;
 }
 
 .toast.show {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
 }
 
 /* Toast Variants */
-.toast-success { background-color: #059669; } /* Emerald 600 */
-.toast-error { background-color: #DC2626; }   /* Red 600 */
-.toast-info { background-color: #0284c7; }    /* Sky 600 */
+.toast-success {
+    background-color: #059669;
+}
+
+/* Emerald 600 */
+.toast-error {
+    background-color: #DC2626;
+}
+
+/* Red 600 */
+.toast-info {
+    background-color: #0284c7;
+}
+
+
 
 
 
@@ -173,19 +232,26 @@ dialog::backdrop {
 #cancel-booking-list label {
     display: block;
     padding: 0.75rem;
-    border: 1px solid #e5e7eb; /* gray-200 */
+    border: 1px solid #e5e7eb;
+    /* gray-200 */
     border-radius: 0.375rem;
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s;
 }
+
 #cancel-booking-list label:hover {
-    background-color: #f9fafb; /* gray-50 */
+    background-color: #f9fafb;
+    /* gray-50 */
 }
-#cancel-booking-list input[type="radio"]:checked + span {
+
+#cancel-booking-list input[type="radio"]:checked+span {
     font-weight: 600;
     color: var(--ccf-blue);
 }
+
 #cancel-booking-list label.selected {
-    background-color: #f0f7f8; /* ccf-blue-light */
-    border-color: #b3cdd2; /* ccf-blue-light */
+    background-color: #f0f7f8;
+    /* ccf-blue-light */
+    border-color: #b3cdd2;
+    /* ccf-blue-light */
 }

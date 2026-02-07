@@ -354,6 +354,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (e.target === myBookingsModal) myBookingsModal.close();
             });
         }
+
+
+        // --- ADMIN LOGIN EVENTS ---
+        const goToDashboardBtn = document.getElementById('go-to-dashboard-btn');
+        if (goToDashboardBtn) {
+            goToDashboardBtn.addEventListener('click', openAdminLoginModal);
+        }
+
+        const adminLoginForm = document.getElementById('admin-login-form');
+        if (adminLoginForm) {
+            adminLoginForm.addEventListener('submit', handleAdminLoginSubmit);
+        }
     }
 
     async function render() {
@@ -382,8 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const dayColumn = document.createElement('div');
             dayColumn.className = 'border-r border-b border-slate-200';
             const dayHeader = document.createElement('div');
-            dayHeader.className = 'text-center p-2 border-b border-slate-200 calendar-sticky-header z-20';
-            dayHeader.innerHTML = `<span class="font-semibold text-sm md:text-base">${day.toFormat('ccc')}</span><br><span class="text-xs md:text-sm text-slate-500">${day.toFormat('d')}</span>`;
+            dayHeader.className = 'text-center p-2 border-b-4 border-ccf-blue bg-slate-50 calendar-sticky-header z-20 shadow-sm';
+            dayHeader.innerHTML = `<span class="font-bold text-ccf-blue text-sm md:text-base uppercase tracking-wider">${day.toFormat('ccc')}</span><br><span class="text-xs md:text-sm text-gray-600 font-bold">${day.toFormat('d')}</span>`;
             dayColumn.appendChild(dayHeader);
             const hours = APP_CONFIG.BUSINESS_HOURS[day.weekday % 7];
             if (hours && hours.start) {
@@ -511,7 +523,10 @@ document.addEventListener('DOMContentLoaded', () => {
             rules: roomRules
         };
 
-        // --- START NEW VALIDATION LOGIC ---
+        // --- VALIDATION LOGIC REORDERED FOR TOAST Z-INDEX ---
+        // Store warning message to show AFTER modal opens
+        let warningMessage = null;
+
         // 1. Calculate the difference in days from NOW
         const now = DateTime.now().setZone(APP_CONFIG.TIMEZONE).startOf('day');
         const targetDate = state.selectedSlot.startTime.setZone(APP_CONFIG.TIMEZONE).startOf('day');
@@ -522,22 +537,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. Check Restriction (Soft check to allow Admin override)
         if (diffInDays > MAX_ADVANCE_DAYS) {
-            showToast(`Note: Dates beyond ${MAX_ADVANCE_DAYS} days are restricted to Admins.`, 'info');
-            // We do NOT return here, allowing the modal to open so Admins can proceed.
+            warningMessage = `Note: Dates beyond ${MAX_ADVANCE_DAYS} days are restricted to Admins.`;
         }
-        // --- END NEW VALIDATION LOGIC ---
 
-
-        // --- 2. Min Notice Check (24 Hours) ---
-        // Uses exact time comparison for immediate notice
+        // 4. Min Notice Check (24 Hours)
         const nowExact = DateTime.now().setZone(APP_CONFIG.TIMEZONE);
         const slotStartExact = state.selectedSlot.startTime.setZone(APP_CONFIG.TIMEZONE);
         const diffInHours = slotStartExact.diff(nowExact, 'hours').hours;
         const MIN_NOTICE_HOURS = 24;
 
-        // Check if within 24 hours (and not in the past)
         if (diffInHours < MIN_NOTICE_HOURS && diffInHours > 0) {
-            showToast(`Note: Bookings within ${MIN_NOTICE_HOURS} hours are restricted to Admins.`, 'info');
+            warningMessage = `Note: Bookings within ${MIN_NOTICE_HOURS} hours are restricted to Admins.`;
         }
         // --------------------------------------------
 
@@ -551,14 +561,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Toggle Book Button
             bookButton.style.display = (remainingGroups <= 0 || remainingPax < roomRules.MIN_BOOKING_SIZE) ? 'none' : 'inline-block';
 
-            // Toggle Duplicate Button (Always visible logic, just hidden by class default, so we remove hidden)
-            // Reusing the same "flex-1" classes might be tricky if Book is hidden.
-            // Simplified:
+            // Toggle Duplicate Button
             if (duplicateButton) duplicateButton.classList.remove('hidden');
 
             choiceModal.showModal();
+
+            // Show toast AFTER modal is open (Top Layer Stack)
+            if (warningMessage) showToast(warningMessage, 'info');
+
         } else if (slot.classList.contains('available')) {
             openBookingModalForSelectedSlot();
+
+            // Show toast AFTER modal is open (Top Layer Stack)
+            if (warningMessage) showToast(warningMessage, 'info');
         }
     }
 
@@ -1327,14 +1342,95 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function showToast(message, type = "success") {
-        const container = document.getElementById('toast-container');
+    function showToast_OLD(message, type = "success") {
+        // Create toast element
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        toast.innerHTML = `<span>${type === 'success' ? '✔' : '✖'}</span><p>${message}</p>`;
-        container.appendChild(toast);
-        setTimeout(() => { toast.remove(); }, 6000);
+        const icon = type === 'success' ? '✔' : (type === 'error' ? '✖' : 'ℹ');
+        toast.innerHTML = `<span>${icon}</span><p>${message}</p>`;
+
+        // STRATEGY: Popover API (Best) -> Embedded Banner (Fallback) -> Body (Default)
+        const openDialog = document.querySelector('dialog[open]');
+
+        // Feature detection for Popover
+        let usedPopover = false;
+        if ('showPopover' in toast) {
+            try {
+                // 1. Modern Approach: Popover API (Top Layer)
+                toast.setAttribute('popover', 'manual');
+                document.body.appendChild(toast);
+                toast.showPopover();
+                usedPopover = true;
+            } catch (e) {
+                console.warn('Popover API failed, using fallback');
+                // Cleanup if partially applied
+                if (toast.isConnected) toast.remove();
+            }
+        }
+
+        if (!usedPopover) {
+            // 2. Robust Fallback: Inject as a static banner INSIDE the modal
+            // This prevents z-index/clipping issues by making it part of the layout
+            toast.classList.add('toast-embedded');
+            const contentContainer = openDialog ? openDialog.querySelector('div') : null; // Usually the first div is the padding container
+
+            if (openDialog && contentContainer) {
+                contentContainer.prepend(toast);
+            } else {
+                // Last resort: Body append (only if no dialog to attach to)
+                document.body.appendChild(toast);
+            }
+        }
+
+        // Trigger entrance animation
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        // Auto-dismiss after 6 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                try { if (toast.matches(':popover-open')) toast.hidePopover(); } catch (e) { }
+                toast.remove();
+            }, 300);
+        }, 6000);
     }
+    function showToast(message, type = "success") {
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+
+        // Icon based on type
+        const icon = type === 'success' ? '✔' : (type === 'error' ? '✖' : 'ℹ');
+        toast.innerHTML = `<span>${icon}</span><p>${message}</p>`;
+
+        // PHYSICAL APPEND STRATEGY
+        // Attach directly to the active dialog if one exists.
+        // This leverages the browser's own stacking for that dialog.
+        const openDialog = document.querySelector('dialog[open]');
+
+        if (openDialog) {
+            toast.classList.add('toast-in-dialog');
+            openDialog.appendChild(toast);
+        } else {
+            document.body.appendChild(toast);
+        }
+
+        // Trigger entrance animation
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        // Auto-dismiss after 6 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }, 6000);
+    }
+
     /**
      * Generates Google Calendar Link and ICS Download Button
      * and renders them into the DOM container.
@@ -1402,6 +1498,37 @@ document.addEventListener('DOMContentLoaded', () => {
      * Creates and manages the floating alert messages.
      * Place this at the bottom of script.js
      */
+    // --- ADMIN LOGIN MODAL LOGIC ---
+    function openAdminLoginModal() {
+        const modal = document.getElementById('admin-login-modal');
+        const form = document.getElementById('admin-login-form');
+        const pinInput = document.getElementById('admin-login-pin');
+
+        if (modal && form) {
+            form.reset();
+            modal.showModal();
+            if (pinInput) pinInput.focus();
+        }
+    }
+
+    function handleAdminLoginSubmit(e) {
+        e.preventDefault(); // Prevent default dialog submission
+        const pinInput = document.getElementById('admin-login-pin');
+        const input = pinInput.value;
+        const ADMIN_PIN = "CCFManila@2025";
+
+        if (input === ADMIN_PIN) {
+            // Save Session Token
+            sessionStorage.setItem('ccf_admin_logged_in', 'true');
+            // Redirect
+            window.location.href = 'dashboard.html';
+        } else {
+            showToast("Incorrect PIN. Access Denied.", "error");
+            pinInput.value = '';
+            pinInput.focus();
+        }
+    }
+
     // --- TOAST NOTIFICATION ---
     function showToast(message, type = 'info') {
         let container = document.getElementById('toast-container');
