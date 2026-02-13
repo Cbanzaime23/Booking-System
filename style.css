@@ -47,17 +47,45 @@ dialog::backdrop {
     font-weight: 500;
 }
 
+/* Mobile: shrink labels to fit narrow 7-column grid */
+@media (max-width: 767px) {
+    .time-label {
+        font-size: 0.5rem;
+        /* 8px */
+    }
+
+    .status-label {
+        font-size: 0.5rem;
+        /* 8px */
+    }
+
+    .time-slot.partial span {
+        font-size: 0.5rem;
+        /* 8px */
+        line-height: 1;
+    }
+
+    .time-slot.available .time-label {
+        font-size: 0.5rem;
+    }
+}
+
 /* Available Slot */
+.time-slot.available {
+    background-color: #e6f5f0;
+    /* Soft mint-teal green, brand-aligned with CCF blue */
+}
+
 .time-slot.available .time-label {
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--ccf-blue);
-    /* Use CCF Blue */
+    color: #0d7a5f;
+    /* Teal-green that complements CCF blue */
 }
 
 .time-slot.available:hover {
-    background-color: #f4f8f9;
-    /* Lighter CCF Blue */
+    background-color: #ccebe0;
+    /* Slightly deeper teal-green on hover */
     cursor: pointer;
 }
 

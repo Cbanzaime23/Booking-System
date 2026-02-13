@@ -68,8 +68,14 @@ function doGet(e) {
                 case 'block_date': // NEW Action
                     result = handleBlockDate(payload);
                     break;
-                case 'fetch_user_bookings': // NEW Action for "My Bookings"
+                case 'fetch_user_bookings': // "My Bookings" lookup
                     result = handleFetchUserBookings(payload);
+                    break;
+                case 'export_user_data': // GDPR: Right to Access / Data Portability
+                    result = handleExportUserData(payload);
+                    break;
+                case 'delete_user_data': // GDPR: Right to Erasure
+                    result = handleDeleteUserData(payload);
                     break;
                 default:
                     throw new Error("Invalid action specified.");
@@ -468,7 +474,9 @@ function appendBookingRow(sheet, id, payload, startDate, endDate) {
         payload.leader_first_name || '', payload.leader_last_name || '',
         payload.event, payload.room, payload.participants, 'confirmed',
         new Date(), payload.notes || '',
-        payload.terms_accepted ? "TRUE" : "FALSE"
+        payload.terms_accepted ? "TRUE" : "FALSE",
+        payload.privacy_accepted ? "TRUE" : "FALSE",
+        payload.consent_timestamp || ''
     ];
     sheet.appendRow(newRow);
 }
@@ -854,4 +862,291 @@ function handleFetchUserBookings(payload) {
     });
 
     return { success: true, bookings: safeBookings };
+}
+
+// =============================================================================
+// GDPR SUBJECT RIGHTS — Export & Delete User Data
+// =============================================================================
+
+/**
+ * GDPR Right to Access / Data Portability
+ * Returns ALL booking data associated with the given email.
+ */
+function handleExportUserData(payload) {
+    const userEmail = payload.email;
+    if (!userEmail) return { success: false, message: 'Email is required.' };
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) return { success: false, message: 'Bookings sheet not found.' };
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+
+    // Build column index map
+    const idx = {};
+    headers.forEach((h, i) => { idx[String(h).trim().toLowerCase()] = i; });
+
+    const emailCol = idx['email'];
+    if (emailCol === undefined) return { success: false, message: 'Server error: email column not found.' };
+
+    const userBookings = [];
+
+    data.forEach(row => {
+        const rowEmail = row[emailCol];
+        if (!rowEmail || rowEmail.toString().toLowerCase() !== userEmail.toLowerCase()) return;
+
+        // Build a clean export object from each row
+        const booking = {};
+        headers.forEach((header, i) => {
+            let value = row[i];
+            // Format dates for readability
+            if (value instanceof Date) {
+                value = Utilities.formatDate(value, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss");
+            }
+            booking[header] = value;
+        });
+        userBookings.push(booking);
+    });
+
+    // Log the data export request
+    logActivity('GDPR_EXPORT', 'N/A', 'USER', {
+        email: userEmail,
+        records_exported: userBookings.length,
+        exported_at: new Date().toISOString()
+    });
+
+    if (userBookings.length === 0) {
+        return { success: false, message: 'No bookings found for this email address.' };
+    }
+
+    return { success: true, data: userBookings };
+}
+
+/**
+ * GDPR Right to Erasure (Right to be Forgotten)
+ * Anonymizes ALL bookings associated with the given email.
+ * Future confirmed bookings are also cancelled.
+ */
+function handleDeleteUserData(payload) {
+    const userEmail = payload.email;
+    if (!userEmail) return { success: false, message: 'Email is required.' };
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) return { success: false, message: 'Bookings sheet not found.' };
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+
+    // Build column index map
+    const idx = {};
+    headers.forEach((h, i) => { idx[String(h).trim().toLowerCase()] = i; });
+
+    const emailCol = idx['email'];
+    const firstNameCol = idx['first_name'];
+    const lastNameCol = idx['last_name'];
+    const leaderFirstCol = idx['leader_first_name'];
+    const leaderLastCol = idx['leader_last_name'];
+    const notesCol = idx['notes'];
+    const statusCol = idx['status'];
+    const startCol = idx['start_iso'];
+    const idCol = idx['id'];
+
+    if (emailCol === undefined || firstNameCol === undefined) {
+        return { success: false, message: 'Server error: required columns not found.' };
+    }
+
+    const now = new Date();
+    let anonymizedCount = 0;
+
+    for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+        const row = data[rowIndex];
+        const rowEmail = row[emailCol];
+
+        if (!rowEmail || rowEmail.toString().toLowerCase() !== userEmail.toLowerCase()) continue;
+
+        const sheetRow = rowIndex + 1; // 1-indexed for Sheet API
+
+        // Cancel future bookings
+        if (statusCol !== undefined && startCol !== undefined) {
+            let startDate = row[startCol];
+            if (!(startDate instanceof Date)) startDate = new Date(startDate);
+            if (!isNaN(startDate.getTime()) && startDate > now && row[statusCol] === 'confirmed') {
+                sheet.getRange(sheetRow, statusCol + 1).setValue('cancelled_gdpr');
+            }
+        }
+
+        // Anonymize personal data
+        if (firstNameCol !== undefined) sheet.getRange(sheetRow, firstNameCol + 1).setValue('Anonymized');
+        if (lastNameCol !== undefined) sheet.getRange(sheetRow, lastNameCol + 1).setValue('User');
+        if (emailCol !== undefined) sheet.getRange(sheetRow, emailCol + 1).setValue('redacted@anonymized.local');
+        if (leaderFirstCol !== undefined) sheet.getRange(sheetRow, leaderFirstCol + 1).setValue('');
+        if (leaderLastCol !== undefined) sheet.getRange(sheetRow, leaderLastCol + 1).setValue('');
+        if (notesCol !== undefined) sheet.getRange(sheetRow, notesCol + 1).setValue('');
+
+        anonymizedCount++;
+
+        // Log each anonymization
+        const bookingId = (idCol !== undefined) ? row[idCol] : 'unknown';
+        logActivity('GDPR_ERASURE', bookingId, 'USER', {
+            reason: 'User-initiated data deletion request',
+            original_email: userEmail,
+            anonymized_at: new Date().toISOString()
+        });
+    }
+
+    if (anonymizedCount === 0) {
+        return { success: false, message: 'No bookings found for this email address.' };
+    }
+
+    return { success: true, count: anonymizedCount, message: `Successfully anonymized ${anonymizedCount} booking(s).` };
+}
+
+// =============================================================================
+// GDPR DATA RETENTION — Automated Personal Data Anonymization
+// =============================================================================
+// Run `setupRetentionTrigger()` once from the Script Editor to schedule daily cleanup.
+// This anonymizes personal data from bookings older than RETENTION_DAYS.
+// Statistical data (room, event, date, participants) is preserved for reporting.
+// =============================================================================
+
+const RETENTION_DAYS = 365;
+
+/**
+ * Main retention function: finds bookings older than RETENTION_DAYS
+ * and replaces personal data with anonymized values.
+ * Safe to run multiple times — already-anonymized rows are skipped.
+ */
+function anonymizeExpiredBookings() {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) return;
+
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return; // Only headers, nothing to process
+
+    const headers = data[0];
+
+    // Build column index map
+    const idx = {};
+    headers.forEach((h, i) => { idx[String(h).trim().toLowerCase()] = i; });
+
+    // Required column indices
+    const dateCol = idx['date'];
+    const firstNameCol = idx['first_name'];
+    const lastNameCol = idx['last_name'];
+    const emailCol = idx['email'];
+    const leaderFirstCol = idx['leader_first_name'];
+    const leaderLastCol = idx['leader_last_name'];
+    const notesCol = idx['notes'];
+    const idCol = idx['id'];
+
+    // Validate we have the columns we need
+    if (dateCol === undefined || firstNameCol === undefined || emailCol === undefined) {
+        Logger.log('RETENTION ERROR: Missing required columns (date, first_name, or email).');
+        return;
+    }
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
+
+    let anonymizedCount = 0;
+
+    // Process each row (skip header)
+    for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+        const row = data[rowIndex];
+
+        // Skip already-anonymized rows
+        if (row[firstNameCol] === 'Anonymized' && row[lastNameCol] === 'User') {
+            continue;
+        }
+
+        // Parse the booking date
+        let bookingDate;
+        const rawDate = row[dateCol];
+        if (rawDate instanceof Date) {
+            bookingDate = rawDate;
+        } else if (typeof rawDate === 'string' && rawDate.trim()) {
+            bookingDate = new Date(rawDate);
+        } else {
+            continue; // Skip rows with no date
+        }
+
+        // Check if booking is expired
+        if (isNaN(bookingDate.getTime()) || bookingDate >= cutoffDate) {
+            continue; // Not expired or invalid date
+        }
+
+        // --- Anonymize personal data ---
+        const sheetRow = rowIndex + 1; // 1-indexed for Sheet API
+
+        // First Name → "Anonymized"
+        if (firstNameCol !== undefined) {
+            sheet.getRange(sheetRow, firstNameCol + 1).setValue('Anonymized');
+        }
+        // Last Name → "User"
+        if (lastNameCol !== undefined) {
+            sheet.getRange(sheetRow, lastNameCol + 1).setValue('User');
+        }
+        // Email → redacted
+        if (emailCol !== undefined) {
+            sheet.getRange(sheetRow, emailCol + 1).setValue('redacted@anonymized.local');
+        }
+        // Leader First Name → cleared
+        if (leaderFirstCol !== undefined) {
+            sheet.getRange(sheetRow, leaderFirstCol + 1).setValue('');
+        }
+        // Leader Last Name → cleared
+        if (leaderLastCol !== undefined) {
+            sheet.getRange(sheetRow, leaderLastCol + 1).setValue('');
+        }
+        // Notes → cleared (may contain personal info)
+        if (notesCol !== undefined) {
+            sheet.getRange(sheetRow, notesCol + 1).setValue('');
+        }
+
+        anonymizedCount++;
+
+        // Log the anonymization
+        const bookingId = (idCol !== undefined) ? row[idCol] : 'unknown';
+        logActivity('GDPR_ANONYMIZE', bookingId, 'SYSTEM', {
+            reason: `Booking older than ${RETENTION_DAYS} days`,
+            booking_date: Utilities.formatDate(bookingDate, SCRIPT_TIMEZONE, 'yyyy-MM-dd'),
+            anonymized_at: new Date().toISOString()
+        });
+    }
+
+    Logger.log(`GDPR Retention: Anonymized ${anonymizedCount} expired booking(s).`);
+}
+
+/**
+ * Run this ONCE from the Script Editor to set up the daily retention trigger.
+ * It creates a time-driven trigger that runs anonymizeExpiredBookings() every day at 2 AM.
+ */
+function setupRetentionTrigger() {
+    // Remove any existing retention triggers first to avoid duplicates
+    removeRetentionTrigger();
+
+    ScriptApp.newTrigger('anonymizeExpiredBookings')
+        .timeBased()
+        .everyDays(1)
+        .atHour(2)       // Run at 2 AM server time
+        .create();
+
+    Logger.log('GDPR Retention trigger created: anonymizeExpiredBookings will run daily at 2 AM.');
+}
+
+/**
+ * Removes the retention trigger (if it exists).
+ * Useful for disabling the automated cleanup.
+ */
+function removeRetentionTrigger() {
+    const triggers = ScriptApp.getProjectTriggers();
+    triggers.forEach(trigger => {
+        if (trigger.getHandlerFunction() === 'anonymizeExpiredBookings') {
+            ScriptApp.deleteTrigger(trigger);
+            Logger.log('Removed existing retention trigger.');
+        }
+    });
 }

@@ -2,27 +2,22 @@
 // Rename this file to config.js and fill in your details.
 window.APP_CONFIG = {
   /**
-   * The ID of your Google Sheet.
-   * Found in the URL of your sheet: https://docs.google.com/spreadsheets/d/THIS_IS_THE_ID/edit
+   * SECURITY: SPREADSHEET_ID and API_KEY have been removed from the frontend.
+   * All data access now routes exclusively through the Apps Script gateway below.
+   * This prevents unauthorized direct access to the Google Sheet.
    */
-  SPREADSHEET_ID: '13SROZHNchpiGKpgSc6bpxbuf2Fhw0AMIAcQyC48BKkM',
 
   /**
-   * Your Google Sheets API Key for read-only access.
-   * Make sure to restrict this key to your website's domain in the Google Cloud Console.
+   * The URL of your deployed Google Apps Script Web App.
+   * This is the ONLY gateway to your data — all reads and writes go through here.
    */
-  API_KEY: 'AIzaSyBWeYEPI6xBe-J4U2j7UE3hedOqcUXcU0I',
-
-  /**
-   * The URL of your deployed Google Apps Script Web App for writing bookings.
-   */
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwy4RnzuNzQmSgqV5StFNhQcqQMAXxsOEc2WKn3X79FxQs9yZRLoeKi6fzxZvpy53U/exec',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyycgzAZs7v-hBENv7zeDgkGFP8GmK1irnfWPG0ihETcwJmff064uYxqvQskdXlE7ok/exec',
 
   // --- Optional Configurations ---
 
   /**
    * The primary timezone for the business. Bookings will be displayed in the user's local time,
-   * but this helps anchor the business hours. Uses IANA timezone names.
+   * but this helps anchor the business hours. Uses IANA timezone names.  
    * Example: 'America/New_York', 'Europe/London', 'Asia/Manila'
    */
   TIMEZONE: 'Asia/Manila',

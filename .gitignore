@@ -1,0 +1,12 @@
+# Google Drive shortcut files (cause Git errors)
+*.gdoc
+*.gsheet
+*.gslides
+*.gform
+*.gdraw
+*.gmap
+
+# OS generated files
+.DS_Store
+desktop.ini
+Thumbs.db

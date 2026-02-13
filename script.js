@@ -39,7 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 
-    const calendarView = document.querySelector('#calendar-view .grid');
+    // Select the calendar grids by ID
+    const calendarDayHeaders = document.getElementById('calendar-day-headers');
+    const calendarView = document.getElementById('calendar-slots-grid');
     const loader = document.getElementById('loader');
     const roomSelector = document.getElementById('room-selector');
 
@@ -66,6 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const myBookingsResults = document.getElementById('my-bookings-results');
     const myBookingsEmpty = document.getElementById('my-bookings-empty');
     const myBookingsLoading = document.getElementById('my-bookings-loading');
+
+    // GDPR Data Rights UI
+    const gdprRightsSection = document.getElementById('gdpr-rights-section');
+    let gdprLookupEmail = null; // Tracks the email used for the last My Bookings lookup
 
     // --- CORE APP FUNCTIONS ---
 
@@ -258,6 +264,18 @@ document.addEventListener('DOMContentLoaded', () => {
             termsCloseBtn.addEventListener('click', () => termsModal.close());
         }
 
+        // Privacy Policy Modal Logic
+        const privacyModal = document.getElementById('privacy-modal');
+        const privacyLinkBtn = document.getElementById('privacy-link-btn');
+        const privacyCloseBtn = document.getElementById('privacy-close-btn');
+
+        if (privacyLinkBtn && privacyModal) {
+            privacyLinkBtn.addEventListener('click', () => privacyModal.showModal());
+        }
+        if (privacyCloseBtn && privacyModal) {
+            privacyCloseBtn.addEventListener('click', () => privacyModal.close());
+        }
+
         // Conflict Modal Listeners
         const conflictModal = document.getElementById('conflict-modal');
         document.getElementById('conflict-cancel-btn').addEventListener('click', () => conflictModal.close());
@@ -339,6 +357,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 myBookingsResults.querySelectorAll('.booking-item').forEach(e => e.remove());
                 myBookingsEmpty.classList.add('hidden');
                 myBookingsLoading.classList.add('hidden');
+                // Reset GDPR section
+                if (gdprRightsSection) gdprRightsSection.classList.add('hidden');
+                gdprLookupEmail = null;
             });
         }
 
@@ -355,6 +376,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // GDPR Data Rights Event Listeners
+        document.getElementById('download-my-data-btn')?.addEventListener('click', handleDownloadMyData);
+        document.getElementById('delete-my-data-btn')?.addEventListener('click', handleDeleteMyData);
+        document.getElementById('gdpr-privacy-link')?.addEventListener('click', () => {
+            document.getElementById('privacy-modal')?.showModal();
+        });
 
         // --- ADMIN LOGIN EVENTS ---
         const goToDashboardBtn = document.getElementById('go-to-dashboard-btn');
@@ -385,18 +412,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CALENDAR RENDERING ---
 
     function renderCalendarShell() {
+        // Clear both the header row and the time-slot grid
+        calendarDayHeaders.innerHTML = '';
         calendarView.innerHTML = '';
+
         const startOfWeek = state.currentDate.startOf('week');
         const endOfWeek = state.currentDate.endOf('week');
         calendarControls.currentWeekTitle.textContent = `${startOfWeek.toFormat('LLL d')} - ${endOfWeek.toFormat('LLL d, yyyy')}`;
+
         for (let i = 0; i < 7; i++) {
             const day = startOfWeek.plus({ days: i });
+
+            // 1. Build the day header cell (goes into the SEPARATE sticky header row)
+            const dayHeader = document.createElement('div');
+            const isToday = day.hasSame(DateTime.local().setZone(APP_CONFIG.TIMEZONE), 'day');
+            if (isToday) {
+                dayHeader.className = 'text-center p-2 border-b-4 border-r border-ccf-blue bg-ccf-blue';
+                dayHeader.innerHTML = `<span class="font-bold text-white text-sm md:text-base uppercase tracking-wider">${day.toFormat('ccc')}</span><br><span class="text-xs md:text-sm text-blue-200 font-bold">${day.toFormat('d')}</span>`;
+            } else {
+                dayHeader.className = 'text-center p-2 border-b-4 border-r border-ccf-blue bg-slate-50';
+                dayHeader.innerHTML = `<span class="font-bold text-ccf-blue text-sm md:text-base uppercase tracking-wider">${day.toFormat('ccc')}</span><br><span class="text-xs md:text-sm text-gray-600 font-bold">${day.toFormat('d')}</span>`;
+            }
+            calendarDayHeaders.appendChild(dayHeader);
+
+            // 2. Build the day column with ONLY time slots (goes into the content grid)
             const dayColumn = document.createElement('div');
             dayColumn.className = 'border-r border-b border-slate-200';
-            const dayHeader = document.createElement('div');
-            dayHeader.className = 'text-center p-2 border-b-4 border-ccf-blue bg-slate-50 calendar-sticky-header z-20 shadow-sm';
-            dayHeader.innerHTML = `<span class="font-bold text-ccf-blue text-sm md:text-base uppercase tracking-wider">${day.toFormat('ccc')}</span><br><span class="text-xs md:text-sm text-gray-600 font-bold">${day.toFormat('d')}</span>`;
-            dayColumn.appendChild(dayHeader);
+
             const hours = APP_CONFIG.BUSINESS_HOURS[day.weekday % 7];
             if (hours && hours.start) {
                 const dayStart = day.set({ hour: parseInt(hours.start.split(':')[0]), minute: parseInt(hours.start.split(':')[1]) });
@@ -418,11 +460,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const slot = document.createElement('div');
         const isPast = time < DateTime.local().setZone(APP_CONFIG.TIMEZONE);
         // MOBILE OPTIMIZATION: text-xs on mobile, text-sm on desktop
-        slot.className = 'time-slot p-2 text-center text-xs md:text-sm border-t border-slate-100 h-14 flex items-center justify-center';
+        slot.className = 'time-slot p-1 md:p-2 text-center text-[10px] md:text-sm border-t border-slate-100 h-10 md:h-14 flex items-center justify-center';
         slot.dataset.startIso = time.toISO();
         if (isPast) {
-            slot.classList.add('past', 'bg-slate-100', 'text-slate-400', 'cursor-not-allowed');
-            slot.innerHTML = `<div class="time-label">${time.toFormat('h:mm a')}</div>`;
+            slot.classList.add('past', 'bg-slate-100', 'cursor-not-allowed');
+            slot.innerHTML = `<div class="time-label" style="color:#cbd5e1;">${time.toFormat('h:mm a')}</div>`;
         }
         return slot;
     }
@@ -431,8 +473,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const roomRules = APP_CONFIG.ROOM_CONFIG[state.selectedRoom];
         const roomBookings = state.allBookings.filter(b => b.room === state.selectedRoom);
         document.querySelectorAll('.time-slot').forEach(slotEl => {
-            // REMOVED: if (slotEl.classList.contains('past')) return; 
-            // We want to render bookings even if they are in the past.
+            // Skip past slots entirely — they stay as plain gray cells
+            if (slotEl.classList.contains('past')) return;
 
             const slotStart = DateTime.fromISO(slotEl.dataset.startIso);
             const slotEnd = slotStart.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
@@ -447,8 +489,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (blockedInfo) {
-                slotEl.className = 'time-slot p-2 text-center text-xs md:text-sm border-t border-slate-100 h-14 flex flex-col items-center justify-center bg-gray-200 text-gray-500 cursor-not-allowed';
-                slotEl.innerHTML = `<div class="time-label">${slotStart.toFormat('h:mm a')}</div><div class="text-xs font-bold text-gray-600 mt-1">Closed: ${blockedInfo.reason}</div>`;
+                slotEl.className = 'time-slot p-1 md:p-2 text-center text-[10px] md:text-sm border-t border-slate-100 h-10 md:h-14 flex flex-col items-center justify-center bg-gray-200 text-gray-500 cursor-not-allowed';
+                const isMobile = window.innerWidth < 768;
+                const blockedLabel = isMobile ? blockedInfo.reason : `Closed: ${blockedInfo.reason}`;
+                slotEl.innerHTML = `<div class="time-label">${slotStart.toFormat('h:mm a')}</div><div class="status-label font-bold text-gray-600">${blockedLabel}</div>`;
                 delete slotEl.dataset.bookingId;
                 delete slotEl.dataset.bookingName;
                 slotEl.classList.add('past'); // Ensure blocked dates are treated as non-clickable
@@ -486,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Reset classes but preserve 'past' styling if needed
-            slotEl.className = 'time-slot p-2 text-center text-xs md:text-sm border-t border-slate-100 h-14 flex flex-col items-center justify-center';
+            slotEl.className = 'time-slot p-1 md:p-2 text-center text-[10px] md:text-sm border-t border-slate-100 h-10 md:h-14 flex flex-col items-center justify-center';
             if (isPast) {
                 slotEl.classList.add('past', 'bg-slate-100', 'text-slate-400', 'cursor-not-allowed');
             }
@@ -502,7 +546,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (totalParticipants > 0) {
                 const remainingPax = roomRules.MAX_TOTAL_PARTICIPANTS - totalParticipants;
                 slotEl.classList.add('partial');
-                statusLabelHTML = `<div class="status-label">${remainingPax} spots left</div>`;
+                const isMobile = window.innerWidth < 768;
+                const spotsText = isMobile ? `${remainingPax} left` : `${remainingPax} spots left`;
+                statusLabelHTML = `<div class="status-label">${spotsText}</div>`;
             } else {
                 slotEl.classList.add('available');
             }
@@ -600,12 +646,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Example: "Mon, Nov 10, 9:00 AM" (using current time of Nov 8, 2025)
         const formattedDate = startTime.toFormat('ccc, MMM d, h:mm a');
 
-        // 2. Set the room name title (if you kept the original ID, use that here)
-        // Assuming you use the new ID 'modal-room-title'
-        const roomTitleElement = document.getElementById('modal-room-title');
-        if (roomTitleElement) {
-            roomTitleElement.textContent = `Book ${state.selectedRoom}`;
-        }
+
 
         // 3. Populate the dedicated date/time element (This targets the highlighted area)
         const dateInfoElement = document.getElementById('modal-date-info');
@@ -1075,15 +1116,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const roomRules = state.selectedSlot.rules;
         const formData = new FormData(bookingForm);
-        const firstName = formData.get('first_name').trim();
-        const lastName = formData.get('last_name').trim();
-        const email = formData.get('email').trim();
-        const leaderFirstName = formData.get('leader_first_name').trim();
-        const leaderLastName = formData.get('leader_last_name').trim();
-        const event = formData.get('event').trim();
+
+        // SECURITY: Sanitize all text inputs to prevent XSS
+        const sanitize = (str) => str ? str.trim().replace(/<[^>]*>/g, '') : '';
+
+        const firstName = sanitize(formData.get('first_name'));
+        const lastName = sanitize(formData.get('last_name'));
+        const email = sanitize(formData.get('email'));
+        const leaderFirstName = sanitize(formData.get('leader_first_name'));
+        const leaderLastName = sanitize(formData.get('leader_last_name'));
+        const event = sanitize(formData.get('event'));
         const participants = parseInt(formData.get('participants'), 10);
         const endTimeStr = formData.get('end-time');
-        const notes = formData.get('notes').trim();
+        const notes = sanitize(formData.get('notes'));
         const adminPin = formData.get('admin-pin').trim();
         const recurrence = formData.get('recurrence');
 
@@ -1186,8 +1231,10 @@ document.addEventListener('DOMContentLoaded', () => {
             start_iso: startTime.toISO(),
             end_iso: endTime.toISO(),
             adminPin: adminPin,
-            recurrence: isAdmin ? recurrence : 'none', // Only send recurrence if admin
-            terms_accepted: true // Checkbox is required in HTML, so this is implicitly true on submit
+            recurrence: isAdmin ? recurrence : 'none',
+            terms_accepted: true,
+            privacy_accepted: true,
+            consent_timestamp: DateTime.local().setZone(APP_CONFIG.TIMEZONE).toISO() // GDPR: log when consent was given
         };
 
         document.getElementById('summary-room').textContent = state.selectedRoom;
@@ -1309,24 +1356,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- DATA & UTILITIES ---
-
-    async function fetchAllBookings() {
-        const range = `${'Bookings'}!A:O`;
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${APP_CONFIG.SPREADSHEET_ID}/values/${range}?key=${APP_CONFIG.API_KEY}`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to fetch from Google Sheets API.');
-        const data = await response.json();
-        const rows = data.values || [];
-        const headers = rows[0];
-
-        state.allBookings = rows.slice(1).map(row => {
-            const booking = {};
-            if (headers) {
-                headers.forEach((header, index) => { booking[header] = row[index]; });
-            }
-            return booking;
-        }).filter(b => b.status === 'confirmed');
-    }
+    // NOTE: Legacy direct Google Sheets API access removed for security.
+    // All data access now routes exclusively through Apps Script (APPS_SCRIPT_URL).
 
     function changeWeek(direction) {
         state.currentDate = state.currentDate.plus({ weeks: direction });
@@ -1571,9 +1602,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = new FormData(e.target).get('lookup_email');
         if (!email) return;
 
+        // Store email for GDPR data rights requests
+        gdprLookupEmail = email.trim();
+
         myBookingsResults.querySelectorAll('.booking-item').forEach(e => e.remove());
         myBookingsEmpty.classList.add('hidden');
         myBookingsLoading.classList.remove('hidden');
+        if (gdprRightsSection) gdprRightsSection.classList.add('hidden');
 
         const submitBtn = e.target.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
@@ -1606,6 +1641,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         myBookingsResults.appendChild(item);
                     });
                 }
+
+                // Show GDPR rights section after any lookup (whether bookings found or not)
+                if (gdprRightsSection) gdprRightsSection.classList.remove('hidden');
             })
             .catch(err => {
                 myBookingsLoading.classList.add('hidden');
@@ -1613,6 +1651,110 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.textContent = 'Find';
                 alert(err.message);
             });
+    }
+
+    // --- GDPR: Download My Data ---
+    function handleDownloadMyData() {
+        if (!gdprLookupEmail) return showToast('Please look up your email first.', 'error');
+
+        const btn = document.getElementById('download-my-data-btn');
+        btn.disabled = true;
+        btn.textContent = 'Preparing...';
+
+        const url = `${APP_CONFIG.APPS_SCRIPT_URL}?action=export_user_data&payload=${encodeURIComponent(JSON.stringify({ email: gdprLookupEmail }))}`;
+
+        const callbackName = `export_data_cb_${Date.now()}`;
+        const script = document.createElement('script');
+
+        window[callbackName] = (response) => {
+            delete window[callbackName];
+            if (script.parentNode) document.body.removeChild(script);
+            btn.disabled = false;
+            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Download My Data`;
+
+            if (response.success && response.data) {
+                // Create downloadable JSON file
+                const exportData = {
+                    exported_at: new Date().toISOString(),
+                    email: gdprLookupEmail,
+                    bookings: response.data
+                };
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const downloadUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `my-booking-data-${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(downloadUrl);
+                showToast('Your data has been downloaded.', 'success');
+            } else {
+                showToast(response.message || 'No data found for this email.', 'error');
+            }
+        };
+
+        script.src = `${url}&callback=${callbackName}`;
+        script.onerror = () => {
+            btn.disabled = false;
+            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Download My Data`;
+            showToast('Connection failed. Please try again.', 'error');
+        };
+        document.body.appendChild(script);
+    }
+
+    // --- GDPR: Delete My Data ---
+    function handleDeleteMyData() {
+        if (!gdprLookupEmail) return showToast('Please look up your email first.', 'error');
+
+        const confirmed = confirm(
+            `⚠️ Are you sure you want to delete all your personal data?\n\n` +
+            `This will anonymize ALL bookings associated with:\n${gdprLookupEmail}\n\n` +
+            `• Your name, email, and leader details will be permanently removed.\n` +
+            `• Active future bookings will be cancelled.\n` +
+            `• This action cannot be undone.\n\n` +
+            `Click OK to proceed.`
+        );
+
+        if (!confirmed) return;
+
+        const btn = document.getElementById('delete-my-data-btn');
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+
+        const url = `${APP_CONFIG.APPS_SCRIPT_URL}?action=delete_user_data&payload=${encodeURIComponent(JSON.stringify({ email: gdprLookupEmail }))}`;
+
+        const callbackName = `delete_data_cb_${Date.now()}`;
+        const script = document.createElement('script');
+
+        window[callbackName] = (response) => {
+            delete window[callbackName];
+            if (script.parentNode) document.body.removeChild(script);
+            btn.disabled = false;
+            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg> Delete My Data`;
+
+            if (response.success) {
+                showToast(`Your personal data has been anonymized. ${response.count || 0} booking(s) processed.`, 'success');
+                // Reset the modal
+                myBookingsResults.querySelectorAll('.booking-item').forEach(e => e.remove());
+                myBookingsEmpty.classList.add('hidden');
+                gdprRightsSection.classList.add('hidden');
+                gdprLookupEmail = null;
+                myBookingsForm.reset();
+                // Refresh calendar data
+                fetchAllBookings().then(renderBookingsForSelectedRoom);
+            } else {
+                showToast(response.message || 'Failed to process deletion request.', 'error');
+            }
+        };
+
+        script.src = `${url}&callback=${callbackName}`;
+        script.onerror = () => {
+            btn.disabled = false;
+            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg> Delete My Data`;
+            showToast('Connection failed. Please try again.', 'error');
+        };
+        document.body.appendChild(script);
     }
 
     async function fetchUserBookings(email) {
@@ -1649,8 +1791,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return new Promise((resolve, reject) => {
             const callbackName = `fetch_all_callback_${Date.now()}`;
             const script = document.createElement('script');
+            let timeoutId = null;
+
+            const cleanup = () => {
+                clearTimeout(timeoutId);
+                if (script.parentNode) document.body.removeChild(script);
+                delete window[callbackName];
+            };
+
+            // Timeout Handling
+            timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error("Request timed out. Please check your internet connection or the configuration."));
+            }, 30000); // 30 seconds
 
             window[callbackName] = (response) => {
+                cleanup(); // clear timeout and remove script
                 if (response.success) {
                     // 1. Process Bookings
                     state.allBookings = (response.data || []).map(b => ({
@@ -1701,14 +1857,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Fetch failed:", response.message);
                     reject(new Error(response.message || "Failed to fetch bookings"));
                 }
-                delete window[callbackName];
-                document.body.removeChild(script);
             };
 
             script.src = `${url}&callback=${callbackName}`;
             script.onerror = () => {
+                cleanup();
                 console.error("Script injection failed.");
-                reject(new Error("Network error"));
+                reject(new Error("Network connection failed."));
             };
             document.body.appendChild(script);
         });
