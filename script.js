@@ -420,10 +420,57 @@ document.addEventListener('DOMContentLoaded', () => {
         const endOfWeek = state.currentDate.endOf('week');
         calendarControls.currentWeekTitle.textContent = `${startOfWeek.toFormat('LLL d')} - ${endOfWeek.toFormat('LLL d, yyyy')}`;
 
+        // Create Legend Header (empty top-left cell)
+        const legendHeader = document.createElement('div');
+        legendHeader.className = 'p-2 border-b-4 border-r border-ccf-blue bg-white';
+        // Using bg-white to match header background or gray-50? Existing headers use bg-slate-50 or ccf-blue (for today). 
+        // Let's use bg-slate-50 to match inactive days.
+        legendHeader.className = 'text-center p-2 border-b-4 border-r border-ccf-blue bg-slate-50 flex items-center justify-center';
+        legendHeader.innerHTML = '<span class="text-xs font-bold text-gray-400">AM/PM</span>';
+        calendarDayHeaders.appendChild(legendHeader);
+
+        // Create Legend Column (AM/PM vertical blocks)
+        const legendColumn = document.createElement('div');
+        legendColumn.className = 'flex flex-col border-r border-b border-slate-200';
+
+        let amSlots = 0, pmSlots = 0;
+        const refHours = APP_CONFIG.BUSINESS_HOURS[0]; // Assuming uniform schedule
+        if (refHours && refHours.start) {
+            // Calculate using simple integer math or temp dates
+            const [sH, sM] = refHours.start.split(':').map(Number);
+            const [eH, eM] = refHours.end.split(':').map(Number);
+
+            // Use arbitrary date for calculation
+            let curr = DateTime.now().set({ hour: sH, minute: sM, second: 0, millisecond: 0 });
+            const end = curr.set({ hour: eH, minute: eM });
+
+            while (curr < end) {
+                if (curr.hour < 12) amSlots++; else pmSlots++;
+                curr = curr.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
+            }
+        }
+
+        if (amSlots > 0) {
+            const amDiv = document.createElement('div');
+            amDiv.style.flex = amSlots;
+            // Center content, allow text to be large
+            amDiv.className = 'flex items-center justify-center border-b-4 border-gray-300 bg-slate-50 text-gray-400 font-bold text-xl';
+            amDiv.innerText = 'AM';
+            legendColumn.appendChild(amDiv);
+        }
+        if (pmSlots > 0) {
+            const pmDiv = document.createElement('div');
+            pmDiv.style.flex = pmSlots;
+            pmDiv.className = 'flex items-center justify-center bg-slate-50 text-gray-400 font-bold text-xl';
+            pmDiv.innerText = 'PM';
+            legendColumn.appendChild(pmDiv);
+        }
+        calendarView.appendChild(legendColumn);
+
         for (let i = 0; i < 7; i++) {
             const day = startOfWeek.plus({ days: i });
 
-            // 1. Build the day header cell (goes into the SEPARATE sticky header row)
+            // 1. Build the day header cell
             const dayHeader = document.createElement('div');
             const isToday = day.hasSame(DateTime.local().setZone(APP_CONFIG.TIMEZONE), 'day');
             if (isToday) {
@@ -459,12 +506,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function createTimeSlot(time) {
         const slot = document.createElement('div');
         const isPast = time < DateTime.local().setZone(APP_CONFIG.TIMEZONE);
+        const isNoon = time.hour === 12 && time.minute === 0;
+        const borderClass = isNoon ? 'border-t-4 border-gray-300' : 'border-t border-slate-100';
+
         // MOBILE OPTIMIZATION: text-xs on mobile, text-sm on desktop
-        slot.className = 'time-slot p-1 md:p-2 text-center text-[10px] md:text-sm border-t border-slate-100 h-10 md:h-14 flex items-center justify-center';
+        slot.className = `time-slot p-1 md:p-2 text-center text-[10px] md:text-sm ${borderClass} h-10 md:h-14 flex items-center justify-center`;
         slot.dataset.startIso = time.toISO();
         if (isPast) {
             slot.classList.add('past', 'bg-slate-100', 'cursor-not-allowed');
-            slot.innerHTML = `<div class="time-label" style="color:#cbd5e1;">${time.toFormat('h:mm a')}</div>`;
+            slot.innerHTML = `<div class="time-label" style="color:#cbd5e1;">${time.toFormat('h:mm')}</div>`;
         }
         return slot;
     }
@@ -478,6 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const slotStart = DateTime.fromISO(slotEl.dataset.startIso);
             const slotEnd = slotStart.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES });
+            const borderClass = (slotStart.hour === 12 && slotStart.minute === 0) ? 'border-t-4 border-gray-300' : 'border-t border-slate-100';
             const isPast = slotEl.classList.contains('past');
 
             // --- NEW: BLOCKED DATE CHECK ---
@@ -489,10 +540,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (blockedInfo) {
-                slotEl.className = 'time-slot p-1 md:p-2 text-center text-[10px] md:text-sm border-t border-slate-100 h-10 md:h-14 flex flex-col items-center justify-center bg-gray-200 text-gray-500 cursor-not-allowed';
+                slotEl.className = `time-slot p-1 md:p-2 text-center text-[10px] md:text-sm ${borderClass} h-10 md:h-14 flex flex-col items-center justify-center bg-gray-200 text-gray-500 cursor-not-allowed`;
                 const isMobile = window.innerWidth < 768;
                 const blockedLabel = isMobile ? blockedInfo.reason : `Closed: ${blockedInfo.reason}`;
-                slotEl.innerHTML = `<div class="time-label">${slotStart.toFormat('h:mm a')}</div><div class="status-label font-bold text-gray-600">${blockedLabel}</div>`;
+                slotEl.innerHTML = `<div class="time-label">${slotStart.toFormat('h:mm')}</div><div class="status-label font-bold text-gray-600">${blockedLabel}</div>`;
                 delete slotEl.dataset.bookingId;
                 delete slotEl.dataset.bookingName;
                 slotEl.classList.add('past'); // Ensure blocked dates are treated as non-clickable
@@ -530,12 +581,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Reset classes but preserve 'past' styling if needed
-            slotEl.className = 'time-slot p-1 md:p-2 text-center text-[10px] md:text-sm border-t border-slate-100 h-10 md:h-14 flex flex-col items-center justify-center';
+            slotEl.className = `time-slot p-1 md:p-2 text-center text-[10px] md:text-sm ${borderClass} h-10 md:h-14 flex flex-col items-center justify-center`;
             if (isPast) {
                 slotEl.classList.add('past', 'bg-slate-100', 'text-slate-400', 'cursor-not-allowed');
             }
 
-            const timeLabelHTML = `<div class="time-label">${slotStart.toFormat('h:mm a')}</div>`;
+            const timeLabelHTML = `<div class="time-label">${slotStart.toFormat('h:mm')}</div>`;
             let statusLabelHTML = '';
 
             if (totalParticipants >= roomRules.MAX_TOTAL_PARTICIPANTS || totalGroups >= roomRules.MAX_CONCURRENT_GROUPS) {
@@ -552,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 slotEl.classList.add('available');
             }
-            slotEl.innerHTML = (statusLabelHTML) ? `${timeLabelHTML}${statusLabelHTML}` : `<div class="time-label">${slotStart.toFormat('h:mm a')}</div>`;
+            slotEl.innerHTML = (statusLabelHTML) ? `${timeLabelHTML}${statusLabelHTML}` : `<div class="time-label">${slotStart.toFormat('h:mm')}</div>`;
         });
     }
 

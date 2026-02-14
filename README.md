@@ -19,23 +19,18 @@ A comprehensive, serverless room reservation web application designed for **CCF 
 
 ---
 
-## 🚀 Features
+## 🚀 Top 10 High-Level Features
 
-### For General Users
-- **Real-Time Availability:** View up-to-date room schedules via an interactive weekly calendar.
-- **Multi-Room Support:** Toggle between different facilities (e.g., Main Hall, Annex, Rooms).
-- **Smart Booking:** Intuitive form with validation for participants and time slots.
-- **Instant Notifications:** Automated email confirmations upon successful booking.
-- **Mobile Responsive:** Fully optimized layout for desktop, tablet, and mobile devices.
-
-### For Administrators
-- **Secure Access:** PIN-protected admin capabilities.
-- **Recurrent Bookings:** Schedule repeating events (Weekly, Monthly, Quarterly) in one go.
-- **Schedule Management:**
-    - **Move Bookings:** Drag-and-drop style functionality to reschedule events with conflict detection.
-    - **Conflict Handling:** Smart system warnings when double-booking or moving events into occupied slots.
-    - **Cancel/Override:** Ability to cancel any booking and override participant limits.
-- **Dashboard:** Dedicated view for high-level schedule management.
+1.  **Optimization of Main Hall Usage**: Smart "waterfall" logic automatically checks Main Hall availability when users select overflow rooms, maximizing efficient space management.
+2.  **GDPR Compliance & Data Privacy**: A dedicated "My Bookings" portal allows users to securely view, download (Export), or permanently delete their personal data.
+3.  **Advanced Admin Dashboard**: A restricted, PIN-protected view featuring D3.js Gantt charts, mobile-optimized metric cards, and data tables for high-level oversight.
+4.  **Role-Based Access Control (RBAC)**: Distinguishes between **Users** (7-day booking window, strict limits) and **Admins** (6-month window, capacity overrides, PIN access).
+5.  **Recurrent Booking Engine**: Allows Admins to schedule complex visiting patterns (e.g., "Every Friday", "First Monday of the Month") in a single action.
+6.  **Smart Conflict Detection**: Automatically detects double-bookings during creation or rescheduling ("Move") and warns the user with actionable options.
+7.  **Visual Calendar Clarity**: A color-coded weekly view featuring a new **Left Sidebar Legend**, distinct **AM/PM dividers**, and simplified time labels for instant scanning.
+8.  **Mobile-First Design**: The interface adapts seamlessly to phones and tablets, with vertically stacking cards and collapsible grids for on-the-go management.
+9.  **Automated Email Notifications**: Instantly sends branded confirmation emails to the booker via Google MailApp upon successful submission.
+10. **Multi-Room Configuration**: Supports distinct rules (Capacity, participant limits) for different spaces like "Main Hall" vs. "Annex" without requiring separate tools.
 
 ---
 
@@ -47,12 +42,13 @@ A comprehensive, serverless room reservation web application designed for **CCF 
 * **Libraries:**
     * `Luxon.js` (Date & Time manipulation)
     * `Google Fonts` (Typography)
+    * `Lucide` (Icons via SVG)
 
 ---
 
 ## 🔄 System Architecture
 
-The following flowchart illustrates the complete User and Admin journey, including **Booking**, **Cancellation**, and **Rescheduling (Move)** workflows.
+The following flowchart illustrates the complete User and Admin journey, including **Booking**, **Cancellation**, **Rescheduling (Move)**, and **GDPR** workflows.
 
 ```mermaid
 graph TD
@@ -71,6 +67,7 @@ graph TD
         Step1[1. Open App URL]:::actor
         Step7[7. Click Time Slot]:::actor
         Step9_Dec{9. Action Choice?}:::actor
+        StepGDPR_Btn[Click 'My Bookings']:::actor
         
         %% Create Flow
         Step12[12. Fill Booking Form]:::actor
@@ -84,6 +81,9 @@ graph TD
         StepM1[M1. Input New Schedule]:::actor
         StepM3{M3. Proceed w/ Conflict?}:::actor
         StepM4[M4. Confirm Move Summary]:::actor
+        
+        %% GDPR Flow
+        StepGDPR_Action{Action?}:::actor
     end
 
     subgraph Frontend_UI [Frontend Logic]
@@ -108,6 +108,10 @@ graph TD
         StepM_Sum[Show Summary Modal]:::frontend
         StepM_Send[Send 'Move' Request]:::frontend
         
+        %% GDPR Logic
+        StepGDPR_Modal[Show My Bookings Modal]:::frontend
+        StepGDPR_Req[Send Export/Delete Request]:::frontend
+        
         %% Common
         Step36{Success?}:::frontend
         Step37[Show Success Modal]:::frontend
@@ -127,6 +131,10 @@ graph TD
         %% Move Path
         StepBackend_Move[Move: Update Date/Time/Room]:::backend
         
+        %% GDPR Path
+        StepBackend_Export[Export: Fetch User Data]:::backend
+        StepBackend_Delete[Delete: Remove/Anonymize User Data]:::backend
+        
         %% Common
         Step32[Build Email Notification]:::backend
         Step34[Return JSON Response]:::backend
@@ -142,6 +150,7 @@ graph TD
     Start --> Step1
     Step1 --> Step2
     Step2 --> Step7
+    Step2 --> StepGDPR_Btn
     Step7 --> Step8
     
     Step8 -- "Empty" --> Step10
@@ -163,6 +172,13 @@ graph TD
     StepC1 --> StepC2
     StepC2 --> StepC_Send
     StepC_Send --> Step24
+    
+    %% -- GDPR BRANCH --
+    StepGDPR_Btn --> StepGDPR_Modal
+    StepGDPR_Modal --> StepGDPR_Action
+    StepGDPR_Action -- "Download" --> StepGDPR_Req
+    StepGDPR_Action -- "Delete" --> StepGDPR_Req
+    StepGDPR_Req --> Step24
 
     %% -- MOVE BRANCH (Admin) --
     Step9_Dec -- "Move (Admin)" --> StepM_UI
@@ -183,16 +199,20 @@ graph TD
     Step24 -- "Action: Create" --> Step27
     Step24 -- "Action: Cancel" --> StepBackend_Cancel
     Step24 -- "Action: Move" --> StepBackend_Move
+    Step24 -- "Action: Export" --> StepBackend_Export
+    Step24 -- "Action: Delete" --> StepBackend_Delete
 
     %% -- DB & NOTIFICATIONS --
     Step27 --> Step31
     StepBackend_Cancel --> Step31
     StepBackend_Move --> Step31
+    StepBackend_Export --> Step31
+    StepBackend_Delete --> Step31
     
     Step31 --> Step32
     Step32 --> Step33
     Step33 --> Step34
-
+    
     %% -- RESPONSE --
     Step34 --> Step36
     Step36 -- Yes --> Step37

@@ -162,11 +162,12 @@
 
             <section id="calendar-view" class="bg-white rounded-lg shadow-sm border border-gray-200 relative">
                 <!-- Sticky Day Headers Row (populated by JS, lives OUTSIDE the grid so sticky works) -->
-                <div id="calendar-day-headers"
-                    class="grid grid-cols-7 border-t border-l border-gray-200 calendar-sticky-header">
+                <div id="calendar-day-headers" class="grid border-t border-l border-gray-200 calendar-sticky-header"
+                    style="grid-template-columns: 50px repeat(7, 1fr);">
                 </div>
                 <!-- Time Slots Grid (scrolls under the sticky header row) -->
-                <div id="calendar-slots-grid" class="grid grid-cols-7 border-l border-gray-200">
+                <div id="calendar-slots-grid" class="grid border-l border-gray-200"
+                    style="grid-template-columns: 50px repeat(7, 1fr);">
                 </div>
                 <div id="loader" class="hidden absolute inset-0 bg-white/70 flex justify-center items-center z-40">
                     <div class="loader-spinner"></div>

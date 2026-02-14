@@ -685,11 +685,11 @@ function sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom) 
       </div>
       
       <div style="background-color: #e6fffa; border: 1px solid #b2f5ea; border-radius: 8px; padding: 15px; margin-top: 20px;">
-        <h3 style="color: #047857; margin-top: 0;">We value your feedback!</h3>
-        <p style="color: #065f46; font-size: 14px;">Help us improve our booking system. Please take a moment to answer our survey or report any issues.</p>
-        <a href="${surveyLink}" style="background-color: #047857; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; font-weight: bold;">Complete Survey</a>
+        <h3 style="color: #047857; margin-top: 0;">Need Help or Have Questions?</h3>
+        <p style="color: #065f46; font-size: 14px;">For Queries, Feature Requests, or Help Needs, please submit them via our Survey Google Form.</p>
+        <a href="${surveyLink}" style="background-color: #047857; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; font-weight: bold;">Submit Feedback / Query</a>
       </div>
-      <p style="margin-top: 30px; color: #888; font-size: 12px;">Thank you for using the CCF Manila Booking System.</p>
+      <p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email confirmation.<br>Thank you for using the CCF Manila Booking System.</p>
     </div>
   `;
 
@@ -749,17 +749,19 @@ function handleMoveBooking(payload) {
     var noteUpdate = " [Admin Moved: " + reason + "]";
     sheet.getRange(rowIndex, 15).setValue(currentNotes + noteUpdate);
 
-    sendMoveNotificationEmail(userEmail, userFirstName, eventName, newRoom, newStartIso, newEndIso, reason);
+    sendMoveNotificationEmail(userEmail, userFirstName, eventName, newRoom, newStartIso, newEndIso, reason, bookingId);
 
     logActivity('Move', bookingId, payload.adminPin, payload);
     return { success: true, message: "Booking moved successfully." };
 }
 
-function sendMoveNotificationEmail(email, name, event, room, startIso, endIso, reason) {
+function sendMoveNotificationEmail(email, name, event, room, startIso, endIso, reason, bookingId) {
     var startDate = new Date(startIso);
     var endDate = new Date(endIso);
     var timeFormat = "h:mm a";
     var dateFormat = "MMM d, yyyy (EEE)";
+    var bookingCode = (bookingId || "").substring(0, 12).toUpperCase();
+    var surveyLink = SURVEY_FORM_URL.replace('${bookingCode}', bookingCode);
 
     var dateStr = Utilities.formatDate(startDate, 'Asia/Manila', dateFormat);
     var startTimeStr = Utilities.formatDate(startDate, 'Asia/Manila', timeFormat);
@@ -773,7 +775,8 @@ function sendMoveNotificationEmail(email, name, event, room, startIso, endIso, r
         "Time: " + startTimeStr + " - " + endTimeStr + "\n" +
         "Room: " + room + "\n\n" +
         "Reason: " + reason + "\n\n" +
-        "Please contact the admin office if you have any questions.\n\n" +
+        "For Queries, Feature Requests, or Help, please submit them via our Survey Google Form: " + surveyLink + "\n\n" +
+        "This is an automated no-reply email confirmation.\n\n" +
         "God Bless,\nCCF Manila Admin";
 
     var htmlBody = "<div style='font-family: sans-serif; color: #333;'>" +
@@ -786,7 +789,14 @@ function sendMoveNotificationEmail(email, name, event, room, startIso, endIso, r
         "<p style='margin: 5px 0;'><strong>New Room:</strong> " + room + "</p>" +
         "<p style='margin: 5px 0;'><strong>Reason:</strong> " + reason + "</p>" +
         "</div>" +
-        "<p>Please contact the admin office if you have any questions.</p>" +
+
+        "<div style='background-color: #e6fffa; border: 1px solid #b2f5ea; border-radius: 8px; padding: 15px; margin-top: 20px;'>" +
+        "<h3 style='color: #047857; margin-top: 0;'>Need Help or Have Questions?</h3>" +
+        "<p style='color: #065f46; font-size: 14px;'>For Queries, Feature Requests, or Help Needs, please submit them via our Survey Google Form.</p>" +
+        "<a href='" + surveyLink + "' style='background-color: #047857; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; font-weight: bold;'>Submit Feedback / Query</a>" +
+        "</div>" +
+
+        "<p style='margin-top: 30px; font-size: 12px; color: #888;'>This is an automated no-reply email confirmation.</p>" +
         "<p>God Bless,<br>CCF Manila Admin</p>" +
         "</div>";
 

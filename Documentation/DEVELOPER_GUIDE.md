@@ -32,17 +32,23 @@ script.js: The core logic for the Booking Calendar. Handles fetching, rendering,
 
 config.js: Stores environment variables (API Keys, Sheet IDs) and Business Rules (ROOM_CONFIG).
 
+.gitignore: Excludes Google Drive shortcut files (*.gdoc, *.gsheet) from Git tracking.
+
 Backend (Google Apps Script)
 
 Code.gs: The server-side code.
 
-doGet(e): Routes requests (create, cancel, fetch_all).
+doGet(e): Routes requests (create, cancel, fetch_all, export_user_data, delete_user_data).
 
 handleCreateBooking(payload): Main booking logic (Prioritization, Validation, Email).
 
 handleRecurrentBooking(...): Handles looping logic for repeating events.
 
 handleFetchAllBookings(): Returns clean JSON data for the dashboard.
+
+handleExportUserData(): Fetches all bookings associated with a specific email.
+
+handleDeleteUserData(): Anonymizes personal data for a specific email.
 
 3. Key Features & Logic Implementation
 
@@ -79,6 +85,14 @@ D. Gantt Chart Visualization
 Logic Location: dashboard.html -> renderD3GanttChart
 
 Mechanism: Uses D3.js. It calculates "tracks" for overlapping bookings. If Booking B starts before Booking A ends, Booking B is pushed to a new Y-axis row (Track 2). This prevents visual overlapping.
+
+E. GDPR Compliance
+
+Logic Location: index.html (My Bookings Modal) -> Code.gs
+
+Mechanism: Users can request a copy of their data or deletion.
+- **Export:** Returns a JSON list of all bookings where the user's email matches.
+- **Delete:** Updates the `status` column to "DELETED_USER" and clears PII fields (Name, Email, Phone) in the Google Sheet, preserving statistical data (Room, Time) but removing personal info.
 
 4. Setup & Deployment
 

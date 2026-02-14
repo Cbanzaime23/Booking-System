@@ -62,9 +62,14 @@ Available: White background, Blue time text.
 
 Partially Booked: Yellow background (bg-yellow-100), "X spots left" text.
 
-Full: Red background (bg-red-100), "Full" text with strikethrough.
+Full: Red background (bg-red-100), "Full" text.
 
-Past: Gray background, strikethrough text, non-clickable.
+Past: Gray background, non-clickable.
+
+Visual Hierarchy:
+*   **Sidebar Legend:** A 50px-wide sticky sidebar explicitly marks AM and PM sections.
+*   **Time Labels:** Simplified "h:mm" format (AM/PM removed) to reduce clutter.
+*   **Divider:** A thick gray border (`border-t-4`) separates the AM and PM blocks for clear visual scanning.
 
 Modals
 
@@ -83,19 +88,14 @@ Footer: Right-aligned action buttons.
 The application is "Mobile-First" but optimized for Desktop.
 
 Mobile:
-
-Header content stacks vertically (Logo on top of Title).
-
-Grids collapse to 1 column.
-
-Tables enable horizontal scrolling (overflow-x-auto).
-
-Charts force a minimum width to allow scrolling instead of squishing.
+*   Header content stacks vertically (Logo on top of Title).
+*   Dashboard Metric Cards stack vertically for readability.
+*   Grids collapse to 1 column.
+*   Tables enable horizontal scrolling (overflow-x-auto).
+*   Charts force a minimum width to allow scrolling instead of squishing.
 
 Desktop:
-
-Header content aligns horizontally.
-
-Dashboard grid expands to 4 columns for cards.
-
-Charts display side-by-side.
+*   Header content aligns horizontally.
+*   Dashboard grid expands to 4 columns for cards.
+*   Charts display side-by-side.
+*   Metric Cards use Lucide-style SVG icons for a professional look.
