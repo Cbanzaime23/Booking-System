@@ -884,7 +884,9 @@ function handleFetchUserBookings(payload) {
  */
 function handleExportUserData(payload) {
     const userEmail = payload.email;
+    const bookingCode = (payload.bookingCode || '').toUpperCase();
     if (!userEmail) return { success: false, message: 'Email is required.' };
+    if (!bookingCode || bookingCode.length < 6) return { success: false, message: 'Booking Code is required for verification.' };
 
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName(SHEET_NAME);
@@ -898,7 +900,17 @@ function handleExportUserData(payload) {
     headers.forEach((h, i) => { idx[String(h).trim().toLowerCase()] = i; });
 
     const emailCol = idx['email'];
+    const idCol = idx['id'];
     if (emailCol === undefined) return { success: false, message: 'Server error: email column not found.' };
+    if (idCol === undefined) return { success: false, message: 'Server error: id column not found.' };
+
+    // Verify booking code belongs to this email
+    const codeMatch = data.some(row => {
+        const rowEmail = row[emailCol];
+        const rowId = (row[idCol] || '').toString().substring(0, 12).toUpperCase();
+        return rowEmail && rowEmail.toString().toLowerCase() === userEmail.toLowerCase() && rowId === bookingCode;
+    });
+    if (!codeMatch) return { success: false, message: 'Invalid Booking Code. Please enter the correct code from your most recent confirmation email.' };
 
     const userBookings = [];
 
@@ -920,7 +932,7 @@ function handleExportUserData(payload) {
     });
 
     // Log the data export request
-    logActivity('GDPR_EXPORT', 'N/A', 'USER', {
+    logActivity('GDPR_EXPORT', bookingCode, 'USER', {
         email: userEmail,
         records_exported: userBookings.length,
         exported_at: new Date().toISOString()
@@ -929,6 +941,9 @@ function handleExportUserData(payload) {
     if (userBookings.length === 0) {
         return { success: false, message: 'No bookings found for this email address.' };
     }
+
+    // Send confirmation email with exported data summary
+    sendGdprExportEmail(userEmail, userBookings);
 
     return { success: true, data: userBookings };
 }
@@ -940,12 +955,31 @@ function handleExportUserData(payload) {
  */
 function handleDeleteUserData(payload) {
     const userEmail = payload.email;
+    const bookingCode = (payload.bookingCode || '').toUpperCase();
     if (!userEmail) return { success: false, message: 'Email is required.' };
+    if (!bookingCode || bookingCode.length < 6) return { success: false, message: 'Booking Code is required for verification.' };
 
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) return { success: false, message: 'Bookings sheet not found.' };
 
+    // First pass: verify booking code
+    const verifyData = sheet.getDataRange().getValues();
+    const verifyHeaders = verifyData[0];
+    const vIdx = {};
+    verifyHeaders.forEach((h, i) => { vIdx[String(h).trim().toLowerCase()] = i; });
+    const vEmailCol = vIdx['email'];
+    const vIdCol = vIdx['id'];
+    if (vEmailCol === undefined || vIdCol === undefined) return { success: false, message: 'Server error: required columns not found.' };
+
+    const codeMatch = verifyData.slice(1).some(row => {
+        const rowEmail = row[vEmailCol];
+        const rowId = (row[vIdCol] || '').toString().substring(0, 12).toUpperCase();
+        return rowEmail && rowEmail.toString().toLowerCase() === userEmail.toLowerCase() && rowId === bookingCode;
+    });
+    if (!codeMatch) return { success: false, message: 'Invalid Booking Code. Please enter the correct code from your most recent confirmation email.' };
+
+    // Second pass: process deletion using the same sheet
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
 
@@ -969,6 +1003,7 @@ function handleDeleteUserData(payload) {
 
     const now = new Date();
     let anonymizedCount = 0;
+    const deletedBookingsSummary = []; // Capture details BEFORE anonymization
 
     for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
         const row = data[rowIndex];
@@ -977,6 +1012,24 @@ function handleDeleteUserData(payload) {
         if (!rowEmail || rowEmail.toString().toLowerCase() !== userEmail.toLowerCase()) continue;
 
         const sheetRow = rowIndex + 1; // 1-indexed for Sheet API
+
+        // Capture booking details BEFORE anonymization for the email
+        const dateCol = idx['date'];
+        const eventCol = idx['event'];
+        const roomCol = idx['room'];
+        const paxCol = idx['participants'];
+        let bookingDate = row[startCol];
+        if (bookingDate instanceof Date) {
+            bookingDate = Utilities.formatDate(bookingDate, SCRIPT_TIMEZONE, "MMM d, yyyy h:mm a");
+        }
+        deletedBookingsSummary.push({
+            id: ((idCol !== undefined) ? row[idCol] : 'N/A').toString().substring(0, 12).toUpperCase(),
+            date: bookingDate || 'N/A',
+            event: (eventCol !== undefined) ? row[eventCol] : 'N/A',
+            room: (roomCol !== undefined) ? row[roomCol] : 'N/A',
+            participants: (paxCol !== undefined) ? row[paxCol] : 'N/A',
+            status: (statusCol !== undefined) ? row[statusCol] : 'N/A'
+        });
 
         // Cancel future bookings
         if (statusCol !== undefined && startCol !== undefined) {
@@ -1010,7 +1063,149 @@ function handleDeleteUserData(payload) {
         return { success: false, message: 'No bookings found for this email address.' };
     }
 
+    // Send confirmation email with deletion summary
+    sendGdprDeletionEmail(userEmail, deletedBookingsSummary, anonymizedCount);
+
     return { success: true, count: anonymizedCount, message: `Successfully anonymized ${anonymizedCount} booking(s).` };
+}
+
+// =============================================================================
+// GDPR EMAIL CONFIRMATIONS — Export & Deletion Receipts
+// =============================================================================
+
+/**
+ * Sends a confirmation email after a successful data export.
+ * Lists all bookings that were included in the download.
+ */
+function sendGdprExportEmail(email, bookings) {
+    const subject = 'Your Data Export Confirmation - CCF Manila Booking System';
+    const dateNow = Utilities.formatDate(new Date(), SCRIPT_TIMEZONE, "MMMM d, yyyy 'at' h:mm a");
+
+    let bookingRows = '';
+    bookings.forEach(b => {
+        const id = (b.id || '').toString().substring(0, 12).toUpperCase();
+        const date = b.date || 'N/A';
+        const event = b.event || 'N/A';
+        const room = b.room || 'N/A';
+        const status = b.status || 'N/A';
+        bookingRows += `
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; font-family: 'Courier New', monospace; font-size: 12px;">${id}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${date}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${event}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${room}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${status}</td>
+        </tr>`;
+    });
+
+    const htmlBody = `
+    <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #333; max-width: 700px;">
+      <h2 style="color: #004d60;">📥 Data Export Confirmation</h2>
+      <p>Your personal data export was completed on <strong>${dateNow}</strong>.</p>
+      <p>The following <strong>${bookings.length} booking(s)</strong> were included in your download:</p>
+
+      <div style="overflow-x: auto; margin: 20px 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="background-color: #004d60; color: white;">
+              <th style="padding: 10px 12px; text-align: left;">Code</th>
+              <th style="padding: 10px 12px; text-align: left;">Date</th>
+              <th style="padding: 10px 12px; text-align: left;">Event</th>
+              <th style="padding: 10px 12px; text-align: left;">Room</th>
+              <th style="padding: 10px 12px; text-align: left;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bookingRows}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 15px; margin-top: 20px;">
+        <p style="margin: 0; font-size: 13px; color: #92400e;">
+          <strong>🔒 Security Notice:</strong> This file contains your personal information. Please store it securely and do not share it with unauthorized individuals.
+        </p>
+      </div>
+
+      <p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email confirmation.<br>Thank you for using the CCF Manila Booking System.</p>
+    </div>`;
+
+    MailApp.sendEmail({
+        to: email,
+        subject: subject,
+        htmlBody: htmlBody,
+        name: EMAIL_SENDER_NAME
+    });
+}
+
+/**
+ * Sends a confirmation email after a successful data deletion.
+ * Lists all bookings that were anonymized as a final receipt.
+ */
+function sendGdprDeletionEmail(email, deletedBookings, count) {
+    const subject = '⚠️ Data Deletion Confirmation - CCF Manila Booking System';
+    const dateNow = Utilities.formatDate(new Date(), SCRIPT_TIMEZONE, "MMMM d, yyyy 'at' h:mm a");
+
+    let bookingRows = '';
+    deletedBookings.forEach(b => {
+        bookingRows += `
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; font-family: 'Courier New', monospace; font-size: 12px;">${b.id}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${b.date}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${b.event}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${b.room}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${b.status}</td>
+        </tr>`;
+    });
+
+    const htmlBody = `
+    <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #333; max-width: 700px;">
+      <h2 style="color: #b91c1c;">🗑️ Data Deletion Confirmation</h2>
+      <p>Your personal data deletion request was processed on <strong>${dateNow}</strong>.</p>
+
+      <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <p style="margin: 0; font-weight: bold; color: #991b1b;">What was removed:</p>
+        <ul style="margin: 10px 0; padding-left: 20px; color: #991b1b;">
+          <li>Your name, email, and leader details have been permanently anonymized.</li>
+          <li>Any future confirmed bookings have been cancelled.</li>
+          <li>Notes and personal information have been cleared.</li>
+        </ul>
+        <p style="margin: 0; font-size: 13px; color: #991b1b;"><strong>${count} booking(s)</strong> were affected.</p>
+      </div>
+
+      <p><strong>Bookings that were anonymized:</strong></p>
+      <div style="overflow-x: auto; margin: 10px 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="background-color: #991b1b; color: white;">
+              <th style="padding: 10px 12px; text-align: left;">Code</th>
+              <th style="padding: 10px 12px; text-align: left;">Date</th>
+              <th style="padding: 10px 12px; text-align: left;">Event</th>
+              <th style="padding: 10px 12px; text-align: left;">Room</th>
+              <th style="padding: 10px 12px; text-align: left;">Previous Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bookingRows}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 15px; margin-top: 20px;">
+        <p style="margin: 0; font-size: 13px; color: #92400e;">
+          <strong>⚠️ Important:</strong> This action is permanent and cannot be undone. Statistical data (room, event type, date) has been retained for system reporting, but all personal identifiers have been removed. This email serves as your final receipt.
+        </p>
+      </div>
+
+      <p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email confirmation.<br>Thank you for using the CCF Manila Booking System.</p>
+    </div>`;
+
+    MailApp.sendEmail({
+        to: email,
+        subject: subject,
+        htmlBody: htmlBody,
+        name: EMAIL_SENDER_NAME
+    });
 }
 
 // =============================================================================

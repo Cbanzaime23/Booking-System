@@ -79,6 +79,110 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             max-width: 250px;
         }
+
+        /* ==========================================
+           MOBILE-FIRST: Card Layout for Tables
+           ========================================== */
+        @media (max-width: 767px) {
+
+            /* Hide desktop table headers on mobile */
+            .responsive-table thead {
+                display: none;
+            }
+
+            .responsive-table tbody tr {
+                display: block;
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                margin-bottom: 10px;
+                padding: 12px 14px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            }
+
+            .responsive-table tbody tr:hover {
+                background: white;
+            }
+
+            .responsive-table tbody td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 4px 0 !important;
+                border: none !important;
+                font-size: 13px;
+                white-space: normal !important;
+            }
+
+            .responsive-table tbody td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                font-size: 11px;
+                color: #6b7280;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                min-width: 80px;
+                flex-shrink: 0;
+            }
+
+            /* Empty state row stays full-width */
+            .responsive-table tbody td[colspan] {
+                display: block;
+                text-align: center;
+            }
+
+            .responsive-table tbody td[colspan]::before {
+                display: none;
+            }
+
+            /* Blocked dates card layout */
+            .blocked-table thead {
+                display: none;
+            }
+
+            .blocked-table tbody tr {
+                display: block;
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                margin-bottom: 10px;
+                padding: 12px 14px;
+            }
+
+            .blocked-table tbody td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 4px 0 !important;
+                border: none !important;
+                font-size: 13px;
+            }
+
+            .blocked-table tbody td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                font-size: 11px;
+                color: #6b7280;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                min-width: 70px;
+                flex-shrink: 0;
+            }
+
+            .blocked-table tbody td[colspan] {
+                display: block;
+                text-align: center;
+            }
+
+            .blocked-table tbody td[colspan]::before {
+                display: none;
+            }
+
+            /* Gantt compressed on mobile */
+            #d3-gantt-chart svg {
+                min-width: 100% !important;
+            }
+        }
     </style>
 </head>
 
@@ -87,29 +191,41 @@
     <!-- Tooltip Container -->
     <div id="d3-tooltip"></div>
 
-    <!-- HEADER WITH FILTERS -->
-    <header class="bg-white text-black p-4 shadow-sm sticky top-0 z-50">
-        <div class="container mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-4">
-
-            <!-- Left: Logo & Back Button -->
-            <div class="flex items-center w-full md:w-auto">
-                <div class="mb-0 mr-4">
-                    <img src="./ccf-full-logo-black.png" alt="CCF Logo" class="h-10 w-auto">
-                </div>
-                <div>
-                    <h1 class="text-xl md:text-2xl font-bold font-heading text-ccf-blue">Admin Dashboard</h1>
-                    <a href="index.html" class="text-xs text-gray-500 hover:text-ccf-blue flex items-center mt-1">
-                        &larr; Back to Booking Form
-                    </a>
-                </div>
+    <!-- HEADER — matches Booking Form layout -->
+    <header id="main-header"
+        class="bg-white text-black p-4 shadow-md flex flex-col md:flex-row items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center justify-center md:justify-start w-full md:w-auto mb-2 md:mb-0">
+            <div class="mr-4">
+                <img src="./ccf-full-logo-black.png" alt="CCF Logo" class="h-12 w-auto">
             </div>
+            <h1 class="text-2xl md:text-3xl font-bold text-center md:text-left font-heading text-ccf-blue">Admin
+                Dashboard</h1>
+        </div>
 
-            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+        <div class="flex gap-4">
+            <a href="index.html"
+                class="text-sm font-medium text-gray-500 hover:text-ccf-blue transition-colors flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Booking Form
+            </a>
+        </div>
+    </header>
+
+    <!-- FILTER CONTROLS BAR — separate sticky bar below header -->
+    <div id="dashboard-controls" class="sticky z-40 bg-white border-b border-gray-200 py-2 px-4 shadow-sm"
+        style="top: var(--controls-top, 72px);">
+        <div class="container mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-2">
+
+            <!-- Left: Filters -->
+            <div class="flex flex-wrap items-center gap-2 md:gap-3">
 
                 <!-- 1. ROOM FILTER -->
                 <div class="relative group">
                     <button id="room-filter-btn"
-                        class="flex items-center justify-between w-48 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-ccf-blue">
+                        class="flex items-center justify-between w-36 md:w-48 px-3 md:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-ccf-blue">
                         <span id="room-filter-label">All Rooms</span>
                         <svg class="w-5 h-5 ml-2 -mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
                             fill="currentColor">
@@ -119,7 +235,7 @@
                         </svg>
                     </button>
                     <div id="room-filter-menu"
-                        class="hidden absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                        class="hidden absolute left-0 md:right-0 md:left-auto mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
                         <div class="p-2 border-b border-gray-100">
                             <label class="flex items-center px-2 py-1 hover:bg-gray-100 rounded cursor-pointer">
                                 <input type="checkbox" id="select-all-rooms"
@@ -135,7 +251,7 @@
                 <!-- 2. DATE FILTER -->
                 <div class="relative">
                     <input type="date" id="date-filter"
-                        class="px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ccf-blue text-gray-700">
+                        class="px-3 md:px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ccf-blue text-gray-700">
                     <button id="clear-date-btn"
                         class="hidden absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
                         title="Clear Date">
@@ -146,11 +262,15 @@
                         </svg>
                     </button>
                 </div>
+            </div>
 
-                <!-- REFRESH BUTTON -->
+            <!-- Right: Refresh + Status -->
+            <div class="flex items-center gap-3">
+                <span id="status-indicator" class="text-xs font-medium text-gray-500 hidden md:inline">Waiting for
+                    update...</span>
                 <button onclick="fetchData()"
-                    class="px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark text-sm font-medium transition-colors shadow-sm flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
+                    class="px-3 md:px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark text-sm font-medium transition-colors shadow-sm flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 md:mr-2" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -159,12 +279,13 @@
                 </button>
             </div>
         </div>
-        <div class="container mx-auto max-w-7xl mt-2 text-right">
-            <span id="status-indicator" class="text-xs font-medium text-gray-500">Waiting for update...</span>
+        <!-- Mobile status indicator -->
+        <div class="md:hidden mt-1 text-right">
+            <span id="status-indicator-mobile" class="text-xs font-medium text-gray-500">Waiting for update...</span>
         </div>
-    </header>
+    </div>
 
-    <main class="container mx-auto p-6 max-w-7xl">
+    <main class="container mx-auto p-3 md:p-6 max-w-7xl">
 
         <!-- SECTION 1: COUNTERS -->
         <div class="grid grid-cols-4 gap-2 md:gap-6 mb-6 md:mb-8">
@@ -233,33 +354,41 @@
         </div>
 
         <!-- SECTION 2: CHARTS -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue">
-                <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Bookings by Room Type</h3>
-                <div class="relative h-[300px] w-full" id="d3-room-bar-chart"></div>
+        <div class="grid grid-cols-2 gap-2 md:gap-6 mb-4 md:mb-8">
+            <div
+                class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue">
+                <h3 class="text-xs md:text-xl font-bold font-heading text-ccf-blue mb-1 md:mb-4 leading-tight">Bookings
+                    by Room Type</h3>
+                <div class="relative h-[160px] md:h-[300px] w-full" id="d3-room-bar-chart"></div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue">
-                <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Booking Distribution (Event Type)</h3>
-                <div class="relative h-[300px] w-full flex justify-center" id="d3-event-pie-chart"></div>
+            <div
+                class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue">
+                <h3 class="text-xs md:text-xl font-bold font-heading text-ccf-blue mb-1 md:mb-4 leading-tight">Booking
+                    Distribution (Event Type)</h3>
+                <div class="relative h-[160px] md:h-[300px] w-full flex justify-center" id="d3-event-pie-chart"></div>
             </div>
         </div>
 
         <!-- SECTION 3: NEW GANTT CHART -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue mb-8">
-            <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Room Schedule (Time View)</h3>
-            <div class="relative w-full overflow-x-auto" id="d3-gantt-chart"></div>
+        <div
+            class="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue mb-4 md:mb-8">
+            <h3 class="text-base md:text-xl font-bold font-heading text-ccf-blue mb-2 md:mb-4">Room Schedule (Time View)
+            </h3>
+            <div class="relative w-full overflow-x-auto -mx-1 md:mx-0" id="d3-gantt-chart"></div>
             <p class="text-xs text-gray-500 mt-2">* Overlapping bookings in Main Hall are displayed on separate tracks.
             </p>
         </div>
 
         <!-- SECTION 4: ROOM DETAILED TABLES -->
-        <div id="room-tables-container" class="space-y-8 pb-10">
+        <div id="room-tables-container" class="space-y-4 md:space-y-8 pb-6 md:pb-10">
             <!-- Tables will be injected here by JS -->
         </div>
 
         <!-- SECTION 5: BLOCKED DATES MANAGEMENT -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8 mt-12 border-t-4 border-t-ccf-red">
-            <h3 class="text-xl font-bold font-heading text-ccf-blue mb-4">Blocked Dates Management</h3>
+        <div
+            class="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 mb-4 md:mb-8 mt-6 md:mt-12 border-t-4 border-t-ccf-red">
+            <h3 class="text-base md:text-xl font-bold font-heading text-ccf-blue mb-2 md:mb-4">Blocked Dates Management
+            </h3>
             <p class="text-sm text-gray-500 mb-6">Manually block specific dates to prevent users from booking.</p>
 
             <!-- Block Date Form -->
@@ -303,8 +432,8 @@
             </div>
 
             <!-- Blocked Dates Table -->
-            <div class="overflow-x-auto rounded-lg border border-gray-200">
-                <table class="min-w-full divide-y divide-gray-200">
+            <div class="overflow-x-auto rounded-lg border border-gray-200 md:border">
+                <table class="min-w-full divide-y divide-gray-200 blocked-table">
                     <thead class="bg-gray-100">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
@@ -366,12 +495,23 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Calculate header height for sticky controls positioning
+            function updateControlsTop() {
+                const header = document.getElementById('main-header');
+                if (header) {
+                    const h = header.offsetHeight;
+                    document.getElementById('dashboard-controls').style.top = h + 'px';
+                }
+            }
+            updateControlsTop();
+
             initializeFilters();
             createTableSkeletons();
             initBlockedDates(); // NEW
             fetchData();
 
             window.addEventListener('resize', () => {
+                updateControlsTop();
                 if (allBookings.length > 0) applyFilters();
             });
         });
@@ -479,13 +619,13 @@
                 else if (room === 'Moses') borderClass = 'border-t-indigo-600';
 
                 const html = `
-                <div id="container-${roomId}" class="bg-white rounded-xl shadow-sm border border-gray-100 border-t-4 ${borderClass} overflow-hidden">
-                    <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-${color}-50">
-                        <h3 class="text-xl font-bold font-heading text-ccf-blue">${room}</h3>
+                <div id="container-${roomId}" class="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 ${borderClass} overflow-hidden">
+                    <div class="p-3 md:p-6 border-b border-gray-100 flex justify-between items-center bg-${color}-50">
+                        <h3 class="text-base md:text-xl font-bold font-heading text-ccf-blue">${room}</h3>
                         <span class="text-xs font-semibold text-${color}-700 bg-white px-2 py-1 rounded border border-${color}-200" id="count-${roomId}">0 Bookings</span>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
+                        <table class="min-w-full divide-y divide-gray-200 responsive-table">
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Code</th>
@@ -570,25 +710,32 @@
             applyFilters();
         }
 
+        function updateStatus(text, colorClass) {
+            const desktop = document.getElementById('status-indicator');
+            const mobile = document.getElementById('status-indicator-mobile');
+            [desktop, mobile].forEach(el => {
+                if (el) {
+                    el.textContent = text;
+                    el.className = 'text-xs font-medium ' + colorClass;
+                }
+            });
+        }
+
         function fetchData() {
-            const statusEl = document.getElementById('status-indicator');
-            statusEl.textContent = 'Fetching data...';
-            statusEl.className = 'text-xs font-medium text-orange-600';
+            updateStatus('Fetching data...', 'text-orange-600');
 
             const callbackName = `dashboard_callback_${Date.now()}`;
             const script = document.createElement('script');
 
             window[callbackName] = (response) => {
                 if (response.success) {
-                    statusEl.textContent = 'Last updated: ' + DateTime.now().toFormat('h:mm:ss a');
-                    statusEl.className = 'text-xs font-medium text-green-600';
+                    updateStatus('Last updated: ' + DateTime.now().toFormat('h:mm:ss a'), 'text-green-600');
                     allBookings = response.data;
                     blockedDates = response.blocked_dates || [];
                     applyFilters();
                     renderBlockedDates();
                 } else {
-                    statusEl.textContent = 'Error fetching data';
-                    statusEl.className = 'text-xs font-medium text-red-600';
+                    updateStatus('Error fetching data', 'text-red-600');
                     console.error("Fetch error:", response.message);
                 }
                 delete window[callbackName];
@@ -596,7 +743,7 @@
             };
 
             script.src = `${APP_CONFIG.APPS_SCRIPT_URL}?action=fetch_all&callback=${callbackName}&payload={}`;
-            script.onerror = () => { statusEl.textContent = 'Connection failed'; statusEl.className = 'text-xs font-medium text-red-600'; };
+            script.onerror = () => { updateStatus('Connection failed', 'text-red-600'); };
             document.body.appendChild(script);
         }
 
@@ -678,8 +825,11 @@
             const container = document.getElementById('d3-room-bar-chart');
             container.innerHTML = '';
             const width = container.clientWidth;
-            const height = 300;
-            const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+            const height = container.clientHeight || 300;
+            const isMobile = window.innerWidth < 768;
+            const margin = isMobile
+                ? { top: 20, right: 5, bottom: 25, left: 5 }
+                : { top: 25, right: 20, bottom: 30, left: 10 };
 
             const svg = d3.select(container).append("svg")
                 .attr("width", width)
@@ -692,13 +842,14 @@
             const x = d3.scaleBand()
                 .domain(rooms)
                 .range([margin.left, width - margin.right])
-                .padding(0.4);
+                .padding(isMobile ? 0.3 : 0.4);
 
             const y = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.value) > 0 ? d3.max(data, d => d.value) + 1 : 5])
                 .nice()
                 .range([height - margin.bottom, margin.top]);
 
+            // Bars
             svg.append("g")
                 .attr("fill", COLORS.blue)
                 .selectAll("rect")
@@ -713,26 +864,39 @@
                 .on("mousemove", (event) => showTooltip(null, event))
                 .on("mouseout", hideTooltip);
 
+            // Value labels on top of bars
+            svg.append("g")
+                .selectAll("text")
+                .data(data)
+                .join("text")
+                .attr("x", d => x(d.room) + x.bandwidth() / 2)
+                .attr("y", d => y(d.value) - 4)
+                .attr("text-anchor", "middle")
+                .attr("font-family", "Montserrat")
+                .attr("font-size", isMobile ? "10px" : "13px")
+                .attr("font-weight", "700")
+                .attr("fill", COLORS.blue)
+                .text(d => d.value);
+
+            // X axis (room names)
             svg.append("g")
                 .attr("transform", `translate(0,${height - margin.bottom})`)
                 .call(d3.axisBottom(x).tickSize(0))
                 .call(g => g.select(".domain").remove())
                 .selectAll("text")
                 .attr("font-family", "Montserrat")
-                .attr("font-size", "11px");
-
-            svg.append("g")
-                .attr("transform", `translate(${margin.left},0)`)
-                .call(d3.axisLeft(y).ticks(5))
-                .call(g => g.select(".domain").remove())
-                .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1).attr("x2", width - margin.left - margin.right));
+                .attr("font-size", isMobile ? "9px" : "11px")
+                .attr("transform", isMobile ? "rotate(-30)" : null)
+                .style("text-anchor", isMobile ? "end" : "middle");
         }
 
         function renderD3DonutChart(dataObj) {
             const container = document.getElementById('d3-event-pie-chart');
             container.innerHTML = '';
-            const width = 300;
-            const height = 300;
+            const isMobile = window.innerWidth < 768;
+            const size = isMobile ? Math.min(container.clientWidth, container.clientHeight, 150) : 300;
+            const width = size;
+            const height = size;
             const radius = Math.min(width, height) / 2;
 
             const svg = d3.select(container).append("svg")
@@ -768,8 +932,11 @@
         function renderD3GanttChart(bookings) {
             const container = document.getElementById('d3-gantt-chart');
             container.innerHTML = '';
-            const width = Math.max(container.clientWidth, 800);
-            const margin = { top: 20, right: 30, bottom: 40, left: 100 };
+            const isMobile = window.innerWidth < 768;
+            const width = isMobile ? Math.max(container.clientWidth, 500) : Math.max(container.clientWidth, 800);
+            const margin = isMobile
+                ? { top: 15, right: 15, bottom: 30, left: 70 }
+                : { top: 20, right: 30, bottom: 40, left: 100 };
 
             const rooms = Object.keys(APP_CONFIG.ROOM_CONFIG);
 
@@ -818,7 +985,7 @@
                 if (roomData.length === 0) allChartLabels.push(roomName);
             });
 
-            const rowHeight = 40;
+            const rowHeight = isMobile ? 30 : 40;
             const height = (allChartLabels.length * rowHeight) + margin.top + margin.bottom;
 
             const svg = d3.select(container).append("svg")
@@ -848,7 +1015,7 @@
                 .attr("dy", "0.32em")
                 .attr("text-anchor", "end")
                 .text(d => d)
-                .attr("font-size", "12px")
+                .attr("font-size", isMobile ? "10px" : "12px")
                 .attr("font-family", "Montserrat")
                 .attr("font-weight", "500")
                 .attr("fill", "#4b5563");
@@ -902,16 +1069,16 @@
 
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap text-xs font-mono font-medium text-ccf-blue">${bookingCode}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">${b.event}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            <td data-label="Code" class="px-6 py-4 whitespace-nowrap text-xs font-mono font-medium text-ccf-blue">${bookingCode}</td>
+                            <td data-label="Event" class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">${b.event}</td>
+                            <td data-label="Schedule" class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                 <div class="flex flex-col">
                                     <span class="font-medium">${start.isValid ? start.toFormat('MMM d, yyyy') : 'Invalid Date'}</span>
                                     <span class="text-xs text-gray-500">${start.isValid ? start.toFormat('h:mm a') : '?'} - ${end.isValid ? end.toFormat('h:mm a') : '?'}</span>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${b.name}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                            <td data-label="Booked By" class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${b.name}</td>
+                            <td data-label="Pax" class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                                 <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">${b.pax}</span>
                             </td>
                         `;
@@ -955,10 +1122,10 @@
             sorted.forEach(block => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${DateTime.fromISO(block.date).toFormat('MMM d, yyyy (ccc)')}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${block.room}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500">${block.reason}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td data-label="Date" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${DateTime.fromISO(block.date).toFormat('MMM d, yyyy (ccc)')}</td>
+                    <td data-label="Room" class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${block.room}</td>
+                    <td data-label="Reason" class="px-6 py-4 text-sm text-gray-500">${block.reason}</td>
+                    <td data-label="Action" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <span class="text-xs text-gray-400 cursor-help" title="To unblock, please edit the Google Sheet manually.">Deletion Manual</span>
                     </td>
                 `;

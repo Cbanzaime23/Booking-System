@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: "Ministry Event - Women 2 Women", setsMaxCapacity: true },
             { name: "Ministry Event - MOVEMENT", setsMaxCapacity: true },
             { name: "Ministry Event - ACROSS Family Ministry", setsMaxCapacity: true },
+            { name: "Ministry Event - NXTGEN", setsMaxCapacity: true },
             { name: "Sunday Service", setsMaxCapacity: true }
         ]
     };
@@ -191,6 +192,21 @@ document.addEventListener('DOMContentLoaded', () => {
             roomSelector.appendChild(option);
         });
         state.selectedRoom = roomNames[0];
+        updateRoomCapacityBadge(roomNames[0]);
+    }
+
+    function updateRoomCapacityBadge(roomName) {
+        const badge = document.getElementById('room-max-groups');
+        if (badge && APP_CONFIG.ROOM_CONFIG[roomName]) {
+            badge.textContent = APP_CONFIG.ROOM_CONFIG[roomName].MAX_CONCURRENT_GROUPS;
+        }
+        // Show/hide optimization notice for non-Main-Hall rooms (non-admin only)
+        const notice = document.getElementById('room-optimization-notice');
+        if (notice) {
+            const isAdmin = document.getElementById('admin-toggle')?.checked || false;
+            const showNotice = roomName !== 'Main Hall' && !isAdmin;
+            notice.classList.toggle('hidden', !showNotice);
+        }
     }
 
     function setupEventListeners() {
@@ -202,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         roomSelector.addEventListener('change', (e) => {
             state.selectedRoom = e.target.value;
+            updateRoomCapacityBadge(e.target.value);
             render();
         });
 
@@ -316,6 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (state.selectedSlot) {
                 updateParticipantRules(state.selectedSlot.rules, isAdmin);
             }
+
+            // Re-evaluate room optimization notice (hide for admin)
+            updateRoomCapacityBadge(state.selectedRoom);
         });
 
         // --- NEW LISTENER FOR EVENT DROPDOWN ---
@@ -1708,11 +1728,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleDownloadMyData() {
         if (!gdprLookupEmail) return showToast('Please look up your email first.', 'error');
 
+        const bookingCodeInput = document.getElementById('gdpr-booking-code');
+        const bookingCode = (bookingCodeInput?.value || '').trim().toUpperCase();
+        if (!bookingCode || bookingCode.length < 6) {
+            showToast('Please enter your most recent Booking Code to verify your identity.', 'error');
+            bookingCodeInput?.focus();
+            return;
+        }
+
         const btn = document.getElementById('download-my-data-btn');
         btn.disabled = true;
         btn.textContent = 'Preparing...';
 
-        const url = `${APP_CONFIG.APPS_SCRIPT_URL}?action=export_user_data&payload=${encodeURIComponent(JSON.stringify({ email: gdprLookupEmail }))}`;
+        const url = `${APP_CONFIG.APPS_SCRIPT_URL}?action=export_user_data&payload=${encodeURIComponent(JSON.stringify({ email: gdprLookupEmail, bookingCode: bookingCode }))}`;
 
         const callbackName = `export_data_cb_${Date.now()}`;
         const script = document.createElement('script');
@@ -1758,6 +1786,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleDeleteMyData() {
         if (!gdprLookupEmail) return showToast('Please look up your email first.', 'error');
 
+        const bookingCodeInput = document.getElementById('gdpr-booking-code');
+        const bookingCode = (bookingCodeInput?.value || '').trim().toUpperCase();
+        if (!bookingCode || bookingCode.length < 6) {
+            showToast('Please enter your most recent Booking Code to verify your identity.', 'error');
+            bookingCodeInput?.focus();
+            return;
+        }
+
         const confirmed = confirm(
             `⚠️ Are you sure you want to delete all your personal data?\n\n` +
             `This will anonymize ALL bookings associated with:\n${gdprLookupEmail}\n\n` +
@@ -1773,7 +1809,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         btn.textContent = 'Processing...';
 
-        const url = `${APP_CONFIG.APPS_SCRIPT_URL}?action=delete_user_data&payload=${encodeURIComponent(JSON.stringify({ email: gdprLookupEmail }))}`;
+        const url = `${APP_CONFIG.APPS_SCRIPT_URL}?action=delete_user_data&payload=${encodeURIComponent(JSON.stringify({ email: gdprLookupEmail, bookingCode: bookingCode }))}`;
 
         const callbackName = `delete_data_cb_${Date.now()}`;
         const script = document.createElement('script');

@@ -11,7 +11,7 @@ window.APP_CONFIG = {
    * The URL of your deployed Google Apps Script Web App.
    * This is the ONLY gateway to your data — all reads and writes go through here.
    */
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxoUKPlShX6YUBlT-6cnns3btesPIFhESSj_ov7FKvcNjEJI-N7VYX2PtMBWWj0d7c/exec',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbx2tNhgc70NTdnFZjMPjNnw49Hbloeta5xeYZ92MisMqTxliNcrdBY5EfZ7DJB8XWPy/exec',
 
   // --- Optional Configurations ---
 
