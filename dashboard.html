@@ -191,271 +191,318 @@
     <!-- Tooltip Container -->
     <div id="d3-tooltip"></div>
 
-    <!-- HEADER — matches Booking Form layout -->
-    <header id="main-header"
-        class="bg-white text-black p-4 shadow-md flex flex-col md:flex-row items-center justify-between sticky top-0 z-50">
-        <div class="flex items-center justify-center md:justify-start w-full md:w-auto mb-2 md:mb-0">
-            <div class="mr-4">
-                <img src="./ccf-full-logo-black.png" alt="CCF Logo" class="h-12 w-auto">
+    <div class="container mx-auto p-4 max-w-7xl">
+
+        <!-- HEADER — matches Booking Form layout -->
+        <header id="main-header"
+            class="bg-white text-black p-4 shadow-md flex flex-col md:flex-row items-center justify-between sticky top-0 z-50">
+            <div class="flex items-center justify-center md:justify-start w-full md:w-auto mb-2 md:mb-0">
+                <div class="mr-4">
+                    <img src="./ccf-full-logo-black.png" alt="CCF Logo" class="h-12 w-auto">
+                </div>
+                <h1 class="text-2xl md:text-3xl font-bold text-center md:text-left font-heading text-ccf-blue">Admin
+                    Dashboard</h1>
             </div>
-            <h1 class="text-2xl md:text-3xl font-bold text-center md:text-left font-heading text-ccf-blue">Admin
-                Dashboard</h1>
-        </div>
 
-        <div class="flex gap-4">
-            <a href="index.html"
-                class="text-sm font-medium text-gray-500 hover:text-ccf-blue transition-colors flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-                Back to Booking Form
-            </a>
-        </div>
-    </header>
+            <div class="flex gap-4">
+                <a href="index.html"
+                    class="text-sm font-medium text-gray-500 hover:text-ccf-blue transition-colors flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back to Booking Form
+                </a>
+            </div>
+        </header>
 
-    <!-- FILTER CONTROLS BAR — separate sticky bar below header -->
-    <div id="dashboard-controls" class="sticky z-40 bg-white border-b border-gray-200 py-2 px-4 shadow-sm"
-        style="top: var(--controls-top, 72px);">
-        <div class="container mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-2">
+        <!-- FILTER CONTROLS BAR — separate sticky bar below header -->
+        <div id="dashboard-controls" class="sticky z-40 bg-white border-b border-gray-200 py-2 px-4 shadow-sm"
+            style="top: var(--controls-top, 72px);">
+            <div class="flex flex-wrap items-center justify-between gap-2">
 
-            <!-- Left: Filters -->
-            <div class="flex flex-wrap items-center gap-2 md:gap-3">
+                <!-- Left: Filters -->
+                <div class="flex flex-wrap items-center gap-2 md:gap-3">
 
-                <!-- 1. ROOM FILTER -->
-                <div class="relative group">
-                    <button id="room-filter-btn"
-                        class="flex items-center justify-between w-36 md:w-48 px-3 md:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-ccf-blue">
-                        <span id="room-filter-label">All Rooms</span>
-                        <svg class="w-5 h-5 ml-2 -mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-                            fill="currentColor">
-                            <path fill-rule="evenodd"
-                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                clip-rule="evenodd" />
-                        </svg>
-                    </button>
-                    <div id="room-filter-menu"
-                        class="hidden absolute left-0 md:right-0 md:left-auto mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
-                        <div class="p-2 border-b border-gray-100">
-                            <label class="flex items-center px-2 py-1 hover:bg-gray-100 rounded cursor-pointer">
-                                <input type="checkbox" id="select-all-rooms"
-                                    class="form-checkbox h-4 w-4 text-ccf-blue rounded border-gray-300 focus:ring-ccf-blue"
-                                    checked>
-                                <span class="ml-2 text-sm font-semibold text-gray-700">Select All</span>
-                            </label>
+                    <!-- 1. ROOM FILTER -->
+                    <div class="relative group">
+                        <button id="room-filter-btn"
+                            class="flex items-center justify-between w-36 md:w-48 px-3 md:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-ccf-blue">
+                            <span id="room-filter-label">All Rooms</span>
+                            <svg class="w-5 h-5 ml-2 -mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div id="room-filter-menu"
+                            class="hidden absolute left-0 md:right-0 md:left-auto mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                            <div class="p-2 border-b border-gray-100">
+                                <label class="flex items-center px-2 py-1 hover:bg-gray-100 rounded cursor-pointer">
+                                    <input type="checkbox" id="select-all-rooms"
+                                        class="form-checkbox h-4 w-4 text-ccf-blue rounded border-gray-300 focus:ring-ccf-blue"
+                                        checked>
+                                    <span class="ml-2 text-sm font-semibold text-gray-700">Select All</span>
+                                </label>
+                            </div>
+                            <div class="py-1 max-h-60 overflow-y-auto custom-scrollbar" id="room-list-container"></div>
                         </div>
-                        <div class="py-1 max-h-60 overflow-y-auto custom-scrollbar" id="room-list-container"></div>
+                    </div>
+
+                    <!-- 2. DATE FILTER -->
+                    <div class="relative">
+                        <input type="date" id="date-filter"
+                            class="px-3 md:px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ccf-blue text-gray-700">
+                        <button id="clear-date-btn"
+                            class="hidden absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                            title="Clear Date">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
-                <!-- 2. DATE FILTER -->
-                <div class="relative">
-                    <input type="date" id="date-filter"
-                        class="px-3 md:px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ccf-blue text-gray-700">
-                    <button id="clear-date-btn"
-                        class="hidden absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
-                        title="Clear Date">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd"
-                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                clip-rule="evenodd" />
+                <!-- Right: Refresh + Status -->
+                <div class="flex items-center gap-3">
+                    <span id="status-indicator" class="text-xs font-medium text-gray-500 hidden md:inline">Waiting for
+                        update...</span>
+                    <button onclick="fetchData()"
+                        class="px-3 md:px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark text-sm font-medium transition-colors shadow-sm flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 md:mr-2" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
+                        Refresh
                     </button>
                 </div>
             </div>
-
-            <!-- Right: Refresh + Status -->
-            <div class="flex items-center gap-3">
-                <span id="status-indicator" class="text-xs font-medium text-gray-500 hidden md:inline">Waiting for
+            <!-- Mobile status indicator -->
+            <div class="md:hidden mt-1 text-right">
+                <span id="status-indicator-mobile" class="text-xs font-medium text-gray-500">Waiting for
                     update...</span>
-                <button onclick="fetchData()"
-                    class="px-3 md:px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark text-sm font-medium transition-colors shadow-sm flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 md:mr-2" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Refresh
-                </button>
             </div>
         </div>
-        <!-- Mobile status indicator -->
-        <div class="md:hidden mt-1 text-right">
-            <span id="status-indicator-mobile" class="text-xs font-medium text-gray-500">Waiting for update...</span>
+
+        <main class="pt-3 md:pt-6">
+
+            <!-- SECTION 1: COUNTERS -->
+            <div class="grid grid-cols-4 gap-2 md:gap-6 mb-6 md:mb-8">
+                <!-- Card 1: Filtered Bookings -->
+                <div
+                    class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue flex flex-col md:flex-row items-center md:items-center text-center md:text-left">
+                    <div class="p-2 md:p-4 bg-blue-50 rounded-full text-ccf-blue mb-1 md:mb-0 md:mr-4">
+                        <svg class="h-5 w-5 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Filtered Bookings</p>
+                        <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="total-bookings-count">
+                            --
+                        </h3>
+                    </div>
+                </div>
+                <!-- Card 2: Main Hall -->
+                <div
+                    class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-teal-600 flex flex-col md:flex-row items-center md:items-center text-center md:text-left">
+                    <div class="p-2 md:p-4 bg-teal-50 rounded-full text-teal-600 mb-1 md:mb-0 md:mr-4">
+                        <svg class="h-5 w-5 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 22v-8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8M3 22h18M6 22v-8M10 22v-8M14 22v-8M18 22v-8M3 12V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 6l9-4 9 4" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Main Hall</p>
+                        <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="main-hall-count">--
+                        </h3>
+                    </div>
+                </div>
+                <!-- Card 3: Mezzanine -->
+                <div
+                    class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-orange-500 flex flex-col md:flex-row items-center md:items-center text-center md:text-left">
+                    <div class="p-2 md:p-4 bg-orange-50 rounded-full text-orange-500 mb-1 md:mb-0 md:mr-4">
+                        <svg class="h-5 w-5 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" x-description="User Group"
+                                d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Mezzanine</p>
+                        <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="mezzanine-count">--
+                        </h3>
+                    </div>
+                </div>
+                <!-- Card 4: Selected Date -->
+                <div
+                    class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-red flex flex-col md:flex-row items-center md:items-center text-center md:text-left">
+                    <div class="p-2 md:p-4 bg-red-50 rounded-full text-ccf-red mb-1 md:mb-0 md:mr-4">
+                        <svg class="h-5 w-5 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M8 2v4M16 2v4M20 21H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2zM3 10h18" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">By Date</p>
+                        <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="date-specific-count">--
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: CHARTS -->
+            <div class="grid grid-cols-2 gap-2 md:gap-6 mb-4 md:mb-8">
+                <div
+                    class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue">
+                    <h3 class="text-xs md:text-xl font-bold font-heading text-ccf-blue mb-1 md:mb-4 leading-tight">
+                        Bookings
+                        by Room Type</h3>
+                    <div class="relative h-[160px] md:h-[300px] w-full" id="d3-room-bar-chart"></div>
+                </div>
+                <div
+                    class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue">
+                    <h3 class="text-xs md:text-xl font-bold font-heading text-ccf-blue mb-1 md:mb-4 leading-tight">
+                        Booking
+                        Distribution (Event Type)</h3>
+                    <div class="relative h-[160px] md:h-[300px] w-full flex justify-center" id="d3-event-pie-chart">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: NEW GANTT CHART -->
+            <div
+                class="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue mb-4 md:mb-8">
+                <h3 class="text-base md:text-xl font-bold font-heading text-ccf-blue mb-2 md:mb-4">Room Schedule (Time
+                    View)
+                </h3>
+                <div class="relative w-full overflow-x-auto -mx-1 md:mx-0" id="d3-gantt-chart"></div>
+                <p class="text-xs text-gray-500 mt-2">* Overlapping bookings in Main Hall are displayed on separate
+                    tracks.
+                </p>
+            </div>
+
+            <!-- SECTION 4: ROOM DETAILED TABLES -->
+            <div id="room-tables-container" class="space-y-4 md:space-y-8 pb-6 md:pb-10">
+                <!-- Tables will be injected here by JS -->
+            </div>
+
+            <!-- SECTION 5: BLOCKED DATES MANAGEMENT -->
+            <div
+                class="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 mb-4 md:mb-8 mt-6 md:mt-12 border-t-4 border-t-ccf-red">
+                <h3 class="text-base md:text-xl font-bold font-heading text-ccf-blue mb-2 md:mb-4">Blocked Dates
+                    Management
+                </h3>
+                <p class="text-sm text-gray-500 mb-6">Manually block specific dates to prevent users from booking.</p>
+
+                <!-- Block Date Form -->
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+                    <form id="block-date-form" class="flex flex-col md:flex-row gap-4 items-end">
+                        <div class="w-full md:w-1/4">
+                            <label
+                                class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Date</label>
+                            <input type="date" name="block_date" required
+                                class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                        </div>
+                        <div class="w-full md:w-1/4">
+                            <label
+                                class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Room</label>
+                            <select name="block_room" id="block-room-select"
+                                class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                                <option value="All Rooms">All Rooms</option>
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
+                        <div class="w-full md:w-1/3">
+                            <label
+                                class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Reason</label>
+                            <input type="text" name="block_reason" placeholder="e.g. Maintenance, Holiday, Church Event"
+                                required
+                                class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                        </div>
+                        <div class="w-full md:w-1/6">
+                            <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Admin
+                                PIN</label>
+                            <input type="password" name="admin_pin" placeholder="PIN" required
+                                class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                        </div>
+                        <button type="submit"
+                            class="bg-ccf-red text-white px-6 py-2 rounded font-bold hover:bg-red-700 transition text-sm shadow-sm flex items-center gap-2 whitespace-nowrap">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
+                                </path>
+                            </svg>
+                            Block Date
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Blocked Dates Table -->
+                <div class="overflow-x-auto rounded-lg border border-gray-200 md:border">
+                    <table class="min-w-full divide-y divide-gray-200 blocked-table">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                    Date</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                    Room</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                    Reason</th>
+                                <th
+                                    class="px-6 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                    Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blocked-dates-table-body" class="divide-y divide-gray-200 bg-white">
+                            <tr>
+                                <td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500 italic">No blocked
+                                    dates
+                                    found.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+        </main>
+    </div> <!-- close container wrapper -->
+
+    <!-- RESULT MODAL — replaces browser alert() for blocked date operations -->
+    <div id="result-modal-backdrop"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] hidden items-center justify-center p-4"
+        style="display:none;">
+        <div id="result-modal"
+            class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-auto overflow-hidden transform transition-all">
+            <!-- Header -->
+            <div id="result-modal-header" class="px-6 pt-6 pb-4 flex items-start gap-4">
+                <div id="result-modal-icon"
+                    class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-2xl"></div>
+                <div>
+                    <h3 id="result-modal-title" class="text-lg font-bold text-gray-900"></h3>
+                    <p id="result-modal-subtitle" class="text-sm text-gray-500 mt-0.5"></p>
+                </div>
+            </div>
+            <!-- Body -->
+            <div id="result-modal-body" class="px-6 pb-4 hidden"></div>
+            <!-- Footer -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+                <button id="result-modal-close-btn"
+                    class="px-5 py-2.5 bg-ccf-blue text-white text-sm font-semibold rounded-lg hover:bg-ccf-blue-dark transition-colors shadow-sm">OK</button>
+            </div>
         </div>
     </div>
-
-    <main class="container mx-auto p-3 md:p-6 max-w-7xl">
-
-        <!-- SECTION 1: COUNTERS -->
-        <div class="grid grid-cols-4 gap-2 md:gap-6 mb-6 md:mb-8">
-            <!-- Card 1: Filtered Bookings -->
-            <div
-                class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue flex flex-col md:flex-row items-center md:items-center text-center md:text-left">
-                <div class="p-2 md:p-4 bg-blue-50 rounded-full text-ccf-blue mb-1 md:mb-0 md:mr-4">
-                    <svg class="h-5 w-5 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                    </svg>
-                </div>
-                <div>
-                    <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Filtered Bookings</p>
-                    <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="total-bookings-count">--
-                    </h3>
-                </div>
-            </div>
-            <!-- Card 2: Main Hall -->
-            <div
-                class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-teal-600 flex flex-col md:flex-row items-center md:items-center text-center md:text-left">
-                <div class="p-2 md:p-4 bg-teal-50 rounded-full text-teal-600 mb-1 md:mb-0 md:mr-4">
-                    <svg class="h-5 w-5 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M3 22v-8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8M3 22h18M6 22v-8M10 22v-8M14 22v-8M18 22v-8M3 12V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 6l9-4 9 4" />
-                    </svg>
-                </div>
-                <div>
-                    <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Main Hall</p>
-                    <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="main-hall-count">--</h3>
-                </div>
-            </div>
-            <!-- Card 3: Mezzanine -->
-            <div
-                class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-orange-500 flex flex-col md:flex-row items-center md:items-center text-center md:text-left">
-                <div class="p-2 md:p-4 bg-orange-50 rounded-full text-orange-500 mb-1 md:mb-0 md:mr-4">
-                    <svg class="h-5 w-5 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" x-description="User Group"
-                            d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg>
-                </div>
-                <div>
-                    <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Mezzanine</p>
-                    <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="mezzanine-count">--</h3>
-                </div>
-            </div>
-            <!-- Card 4: Selected Date -->
-            <div
-                class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-red flex flex-col md:flex-row items-center md:items-center text-center md:text-left">
-                <div class="p-2 md:p-4 bg-red-50 rounded-full text-ccf-red mb-1 md:mb-0 md:mr-4">
-                    <svg class="h-5 w-5 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M8 2v4M16 2v4M20 21H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2zM3 10h18" />
-                    </svg>
-                </div>
-                <div>
-                    <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">By Date</p>
-                    <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="date-specific-count">--
-                    </h3>
-                </div>
-            </div>
-        </div>
-
-        <!-- SECTION 2: CHARTS -->
-        <div class="grid grid-cols-2 gap-2 md:gap-6 mb-4 md:mb-8">
-            <div
-                class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue">
-                <h3 class="text-xs md:text-xl font-bold font-heading text-ccf-blue mb-1 md:mb-4 leading-tight">Bookings
-                    by Room Type</h3>
-                <div class="relative h-[160px] md:h-[300px] w-full" id="d3-room-bar-chart"></div>
-            </div>
-            <div
-                class="bg-white p-2 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue">
-                <h3 class="text-xs md:text-xl font-bold font-heading text-ccf-blue mb-1 md:mb-4 leading-tight">Booking
-                    Distribution (Event Type)</h3>
-                <div class="relative h-[160px] md:h-[300px] w-full flex justify-center" id="d3-event-pie-chart"></div>
-            </div>
-        </div>
-
-        <!-- SECTION 3: NEW GANTT CHART -->
-        <div
-            class="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-blue mb-4 md:mb-8">
-            <h3 class="text-base md:text-xl font-bold font-heading text-ccf-blue mb-2 md:mb-4">Room Schedule (Time View)
-            </h3>
-            <div class="relative w-full overflow-x-auto -mx-1 md:mx-0" id="d3-gantt-chart"></div>
-            <p class="text-xs text-gray-500 mt-2">* Overlapping bookings in Main Hall are displayed on separate tracks.
-            </p>
-        </div>
-
-        <!-- SECTION 4: ROOM DETAILED TABLES -->
-        <div id="room-tables-container" class="space-y-4 md:space-y-8 pb-6 md:pb-10">
-            <!-- Tables will be injected here by JS -->
-        </div>
-
-        <!-- SECTION 5: BLOCKED DATES MANAGEMENT -->
-        <div
-            class="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 mb-4 md:mb-8 mt-6 md:mt-12 border-t-4 border-t-ccf-red">
-            <h3 class="text-base md:text-xl font-bold font-heading text-ccf-blue mb-2 md:mb-4">Blocked Dates Management
-            </h3>
-            <p class="text-sm text-gray-500 mb-6">Manually block specific dates to prevent users from booking.</p>
-
-            <!-- Block Date Form -->
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-                <form id="block-date-form" class="flex flex-col md:flex-row gap-4 items-end">
-                    <div class="w-full md:w-1/4">
-                        <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Date</label>
-                        <input type="date" name="block_date" required
-                            class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
-                    </div>
-                    <div class="w-full md:w-1/4">
-                        <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Room</label>
-                        <select name="block_room" id="block-room-select"
-                            class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
-                            <option value="All Rooms">All Rooms</option>
-                            <!-- Options will be populated by JS -->
-                        </select>
-                    </div>
-                    <div class="w-full md:w-1/3">
-                        <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Reason</label>
-                        <input type="text" name="block_reason" placeholder="e.g. Maintenance, Holiday, Church Event"
-                            required
-                            class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
-                    </div>
-                    <div class="w-full md:w-1/6">
-                        <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Admin
-                            PIN</label>
-                        <input type="password" name="admin_pin" placeholder="PIN" required
-                            class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
-                    </div>
-                    <button type="submit"
-                        class="bg-ccf-red text-white px-6 py-2 rounded font-bold hover:bg-red-700 transition text-sm shadow-sm flex items-center gap-2 whitespace-nowrap">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
-                            </path>
-                        </svg>
-                        Block Date
-                    </button>
-                </form>
-            </div>
-
-            <!-- Blocked Dates Table -->
-            <div class="overflow-x-auto rounded-lg border border-gray-200 md:border">
-                <table class="min-w-full divide-y divide-gray-200 blocked-table">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
-                                Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
-                                Room</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
-                                Reason</th>
-                            <th class="px-6 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
-                                Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="blocked-dates-table-body" class="divide-y divide-gray-200 bg-white">
-                        <tr>
-                            <td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500 italic">No blocked dates
-                                found.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-    </main>
 
     <!-- Import Config -->
     <script src="config.js?v=1.5"></script>
@@ -1158,11 +1205,34 @@
                 document.body.removeChild(script);
 
                 if (response.success) {
-                    alert("Date blocked successfully!");
                     e.target.reset();
-                    fetchData(); // Refresh data
+                    fetchData();
+
+                    if (response.cancelledCount > 0) {
+                        // Build cancelled events list HTML
+                        let eventsHtml = '<div class="space-y-2">';
+                        eventsHtml += `<div class="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm font-medium">`;
+                        eventsHtml += `<svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>`;
+                        eventsHtml += `${response.cancelledCount} booking(s) auto-cancelled</div>`;
+                        eventsHtml += '<ul class="ml-1 space-y-1.5">';
+                        if (response.cancelledEvents && response.cancelledEvents.length > 0) {
+                            response.cancelledEvents.forEach((evt, idx) => {
+                                eventsHtml += `<li class="flex items-center gap-2 text-sm text-gray-700">`;
+                                eventsHtml += `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 text-red-600 text-xs font-bold flex items-center justify-center">${idx + 1}</span>`;
+                                eventsHtml += `<span>${evt}</span></li>`;
+                            });
+                        }
+                        eventsHtml += '</ul>';
+                        eventsHtml += `<div class="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm mt-2">`;
+                        eventsHtml += `<svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>`;
+                        eventsHtml += `Affected users notified via email.</div>`;
+                        eventsHtml += '</div>';
+                        showResultModal('success', 'Date Blocked Successfully', `${payload.date} — ${payload.room}`, eventsHtml);
+                    } else {
+                        showResultModal('success', 'Date Blocked Successfully', `${payload.date} — ${payload.room}`);
+                    }
                 } else {
-                    alert("Error: " + response.message);
+                    showResultModal('error', 'Failed to Block Date', response.message);
                 }
             };
 
@@ -1171,9 +1241,55 @@
             script.onerror = () => {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
-                alert("Network error.");
+                showResultModal('error', 'Network Error', 'Could not reach the server. Please check your connection and try again.');
             };
             document.body.appendChild(script);
+        }
+        // --- RESULT MODAL LOGIC ---
+        function showResultModal(type, title, subtitle, bodyHtml) {
+            const backdrop = document.getElementById('result-modal-backdrop');
+            const icon = document.getElementById('result-modal-icon');
+            const titleEl = document.getElementById('result-modal-title');
+            const subtitleEl = document.getElementById('result-modal-subtitle');
+            const body = document.getElementById('result-modal-body');
+            const closeBtn = document.getElementById('result-modal-close-btn');
+
+            // Set icon
+            if (type === 'success') {
+                icon.className = 'flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-emerald-100';
+                icon.innerHTML = '<svg class="w-7 h-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+            } else {
+                icon.className = 'flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-red-100';
+                icon.innerHTML = '<svg class="w-7 h-7 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+            }
+
+            titleEl.textContent = title;
+            subtitleEl.textContent = subtitle || '';
+            subtitleEl.classList.toggle('hidden', !subtitle);
+
+            if (bodyHtml) {
+                body.innerHTML = bodyHtml;
+                body.classList.remove('hidden');
+            } else {
+                body.innerHTML = '';
+                body.classList.add('hidden');
+            }
+
+            // Show
+            backdrop.style.display = 'flex';
+            backdrop.classList.remove('hidden');
+
+            // Close handler
+            const closeModal = () => {
+                backdrop.style.display = 'none';
+                backdrop.classList.add('hidden');
+                closeBtn.removeEventListener('click', closeModal);
+                backdrop.removeEventListener('click', backdropClick);
+            };
+            const backdropClick = (e) => { if (e.target === backdrop) closeModal(); };
+
+            closeBtn.addEventListener('click', closeModal);
+            backdrop.addEventListener('click', backdropClick);
         }
     </script>
 </body>

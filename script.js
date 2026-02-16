@@ -266,6 +266,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('duplicate-date-wrapper').classList.add('hidden');
                 document.getElementById('duplicate-date').value = '';
                 state.duplicationSource = null;
+                // Clear inline form alerts
+                clearAllFormAlerts();
             });
         });
 
@@ -683,21 +685,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
             choiceModal.showModal();
 
-            // Show toast AFTER modal is open (Top Layer Stack)
-            if (warningMessage) showToast(warningMessage, 'info');
+            // Show inline alert inside choice modal
+            clearAllFormAlerts();
+            if (warningMessage) {
+                showFormAlert('choice-form-alert', warningMessage, 'warning');
+                state.pendingWarning = warningMessage; // carry forward to booking form
+            }
 
         } else if (slot.classList.contains('available')) {
+            state.pendingWarning = warningMessage; // carry forward to booking form
             openBookingModalForSelectedSlot();
-
-            // Show toast AFTER modal is open (Top Layer Stack)
-            if (warningMessage) showToast(warningMessage, 'info');
         }
     }
 
     function openBookingModalForSelectedSlot() {
         choiceModal.close();
         bookingForm.reset();
-        // document.getElementById('admin-toggle').checked = false;
+
+        // Clear previous alerts and show pending warning if any
+        clearAllFormAlerts();
 
         // Ensure Admin Toggle is reset to User (unchecked)
         const adminToggle = document.getElementById('admin-toggle');
@@ -714,10 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- REVISED CHANGE: Using a dedicated element for date info ---
 
         // 1. Format the date/time string
-        // Example: "Mon, Nov 10, 9:00 AM" (using current time of Nov 8, 2025)
         const formattedDate = startTime.toFormat('ccc, MMM d, h:mm a');
-
-
 
         // 3. Populate the dedicated date/time element (This targets the highlighted area)
         const dateInfoElement = document.getElementById('modal-date-info');
@@ -732,6 +735,16 @@ document.addEventListener('DOMContentLoaded', () => {
         bookingForm.querySelector('#start-iso').value = startTime.toISO();
         bookingForm.querySelector('#end-time').value = startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES }).toFormat('HH:mm');
         bookingModal.showModal();
+
+        // Show pending warning inside the booking form
+        if (state.pendingWarning) {
+            showFormAlert('booking-form-alert', state.pendingWarning, 'warning');
+            state.pendingWarning = null;
+        }
+        // Show room optimization notice for non-Main-Hall rooms (non-admin)
+        if (state.selectedRoom !== 'Main Hall') {
+            appendFormAlert('booking-form-alert', 'Your booking may be <strong>automatically moved to Main Hall</strong> if your time slot is available there, to optimize room usage.', 'info');
+        }
     }
 
     function updateParticipantRules(rules, isAdmin) {
@@ -923,13 +936,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const adminPin = formData.get('admin_pin');
 
         if (!bookingId || !newDate || !newStartTime || !newEndTime || !reason || !adminPin) {
-            return showToast("All fields including Admin PIN are required.", "error");
+            return showFormAlert('move-form-alert', 'All fields including Admin PIN are required.', 'error');
         }
 
         const startIso = DateTime.fromISO(`${newDate}T${newStartTime}`, { zone: APP_CONFIG.TIMEZONE });
         const endIso = DateTime.fromISO(`${newDate}T${newEndTime}`, { zone: APP_CONFIG.TIMEZONE });
 
-        if (endIso <= startIso) return showToast("End time must be after start time.", "error");
+        if (endIso <= startIso) return showFormAlert('move-form-alert', 'End time must be after start time.', 'error');
 
         // 1. Save Preliminary Data to State (So we can access it after the modal)
         state.pendingMoveData = {
@@ -1061,6 +1074,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Reset Form
         bookingForm.reset();
+        clearAllFormAlerts();
 
         // 1. Pre-fill Fields
         document.getElementById('first_name').value = sourceBooking.first_name;
@@ -1169,7 +1183,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const MAX_ADVANCE_DAYS = 7;
 
         if (!isAdmin && diffInDays > MAX_ADVANCE_DAYS) {
-            return showToast(`Regular bookings cannot be made more than ${MAX_ADVANCE_DAYS} days in advance. Please login as Admin.`, "error");
+            return showFormAlert('booking-form-alert', `Regular bookings cannot be made more than ${MAX_ADVANCE_DAYS} days in advance. Please login as Admin.`, 'error');
         }
         // --- END STEP 3 ---
 
@@ -1181,7 +1195,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Only block if it is in the future (diff > 0) but less than 24 hours away
         if (!isAdmin && diffInHours > 0 && diffInHours < MIN_NOTICE_HOURS) {
-            return showToast(`Regular bookings require at least ${MIN_NOTICE_HOURS} hours notice. Please login as Admin.`, "error");
+            return showFormAlert('booking-form-alert', `Regular bookings require at least ${MIN_NOTICE_HOURS} hours notice. Please login as Admin.`, 'error');
         }
         // --- END SUBMISSION VALIDATION ---
 
@@ -1205,23 +1219,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- ENFORCE DUPLICATE RESTRICTION ---
         if (state.duplicationSource && !adminPin) {
-            return showToast("Admin PIN is required for Duplicate Booking.", "error");
+            return showFormAlert('booking-form-alert', 'Admin PIN is required for Duplicate Booking.', 'error');
         }
         // -------------------------------------
 
         let requiredFields = ['first_name', 'last_name', 'email', 'event'];
         if (isAdmin) {
-            if (!adminPin) return showToast("Admin PIN is required.", "error");
+            if (!adminPin) return showFormAlert('booking-form-alert', 'Admin PIN is required.', 'error');
         } else {
             if (!leaderFirstName || !leaderLastName) {
-                return showToast("Please fill in all required fields (including Dgroup Leader).", "error");
+                return showFormAlert('booking-form-alert', 'Please fill in all required fields (including Dgroup Leader).', 'error');
             }
             requiredFields.push('leader_first_name', 'leader_last_name');
         }
         if (!firstName || !lastName || !email || !event) {
-            return showToast("Please fill in all required fields.", "error");
+            return showFormAlert('booking-form-alert', 'Please fill in all required fields.', 'error');
         }
-        if (!/^\S+@\S+\.\S+$/.test(email)) return showToast("Please enter a valid email address.", "error");
+        if (!/^\S+@\S+\.\S+$/.test(email)) return showFormAlert('booking-form-alert', 'Please enter a valid email address.', 'error');
         // if (!participants || participants < roomRules.MIN_BOOKING_SIZE || participants > roomRules.MAX_BOOKING_SIZE) {
         //     return showToast(`Invalid participant number. Must be between ${roomRules.MIN_BOOKING_SIZE} and ${roomRules.MAX_BOOKING_SIZE}.`, "error");
         // }
@@ -1229,12 +1243,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 1. Check Minimum size (Applies to everyone)
         if (participants < roomRules.MIN_PARTICIPANTS) {
-            return showToast(`Invalid participant number. Must be at least ${roomRules.MIN_PARTICIPANTS}.`, "error");
+            return showFormAlert('booking-form-alert', `Invalid participant number. Must be at least ${roomRules.MIN_PARTICIPANTS}.`, 'error');
         }
 
         // 2. Check Maximum size (Applies ONLY to regular users)
         if (!isAdmin && participants > roomRules.MAX_BOOKING_SIZE) {
-            return showToast(`Invalid participant number. Must be between ${roomRules.MIN_PARTICIPANTS} and ${roomRules.MAX_BOOKING_SIZE}.`, "error");
+            return showFormAlert('booking-form-alert', `Invalid participant number. Must be between ${roomRules.MIN_PARTICIPANTS} and ${roomRules.MAX_BOOKING_SIZE}.`, 'error');
         }
 
         // 3. For Admins, we must ensure they don't exceed the overall room capacity (55 for Main Hall)
@@ -1243,19 +1257,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxRoomCapacity = ROOM_CAPACITIES[state.selectedRoom] || roomRules.MAX_TOTAL_PARTICIPANTS;
 
         if (participants > maxRoomCapacity) {
-            return showToast(`Invalid participant number. Admin booking cannot exceed room's total capacity (${maxRoomCapacity}).`, "error");
+            return showFormAlert('booking-form-alert', `Invalid participant number. Admin booking cannot exceed room's total capacity (${maxRoomCapacity}).`, 'error');
         }
 
         // --- END CRITICAL FIX ---
 
         const maxAllowed = parseInt(bookingForm.querySelector('#participants').max, 10);
         if (participants > maxAllowed) {
-            return showToast(`This slot only has ${maxAllowed} spots left.`, "error");
+            return showFormAlert('booking-form-alert', `This slot only has ${maxAllowed} spots left.`, 'error');
         }
         const startTime = DateTime.fromISO(bookingForm.querySelector('#start-iso').value);
         const [endHour, endMinute] = endTimeStr.split(':').map(Number);
         const endTime = startTime.set({ hour: endHour, minute: endMinute });
-        if (endTime <= startTime) return showToast("End time must be after the start time.", "error");
+        if (endTime <= startTime) return showFormAlert('booking-form-alert', 'End time must be after the start time.', 'error');
 
         // --- START OF REQUIRED CHANGE ---
 
@@ -1275,7 +1289,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Validate Past Bookings
         if (startTime < DateTime.local()) {
-            return showToast("Cannot create a booking in the past.", "error");
+            return showFormAlert('booking-form-alert', 'Cannot create a booking in the past.', 'error');
         }
 
         // Validate Admin 6-Month Limit 
@@ -1283,7 +1297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isAdmin) {
             const maxAdminDate = DateTime.local().plus({ months: 6 });
             if (startTime > maxAdminDate) {
-                return showToast("Admins can only book up to 6 months in advance.", "error");
+                return showFormAlert('booking-form-alert', 'Admins can only book up to 6 months in advance.', 'error');
             }
         }
 
@@ -1347,7 +1361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleCancelFormSubmit(e) {
         e.preventDefault();
         const selectedRadio = document.querySelector('input[name="booking-to-cancel"]:checked');
-        if (!selectedRadio) { return showToast("Please select a booking to cancel.", "error"); }
+        if (!selectedRadio) { return showFormAlert('cancel-form-alert', 'Please select a booking to cancel.', 'error'); }
 
         const bookingId = selectedRadio.value;
         const bookingCode = document.getElementById('cancel-booking-code').value.trim();
@@ -1355,7 +1369,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // If no admin pin is provided, booking code is strictly required.
         if (!adminPin && !bookingCode) {
-            return showToast("Please enter the Booking Code to confirm.", "error");
+            return showFormAlert('cancel-form-alert', 'Please enter the Booking Code to confirm.', 'error');
         }
 
         loadingModal.showModal();
@@ -1629,6 +1643,78 @@ document.addEventListener('DOMContentLoaded', () => {
             pinInput.value = '';
             pinInput.focus();
         }
+    }
+    // --- INLINE FORM ALERTS ---
+    // Displays contextual alerts (Note, Warning, Error) at the top of modals/forms.
+
+    function showFormAlert(alertId, message, type = 'info') {
+        const el = document.getElementById(alertId);
+        if (!el) return;
+
+        // Style map for each type
+        const styles = {
+            info: {
+                bg: 'bg-blue-50 border border-blue-200 text-blue-800',
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 flex-shrink-0 text-blue-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>'
+            },
+            warning: {
+                bg: 'bg-amber-50 border border-amber-200 text-amber-800',
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>'
+            },
+            error: {
+                bg: 'bg-red-50 border border-red-200 text-red-800',
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 flex-shrink-0 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>'
+            }
+        };
+
+        const s = styles[type] || styles.info;
+        el.className = `mb-3 flex items-start gap-2 text-xs rounded-md px-3 py-2.5 ${s.bg}`;
+        el.innerHTML = `${s.icon}<span>${message}</span>`;
+        el.classList.remove('hidden');
+    }
+
+    function clearFormAlert(alertId) {
+        const el = document.getElementById(alertId);
+        if (el) {
+            el.classList.add('hidden');
+            el.innerHTML = '';
+        }
+    }
+
+    function clearAllFormAlerts() {
+        ['booking-form-alert', 'cancel-form-alert', 'move-form-alert', 'choice-form-alert'].forEach(clearFormAlert);
+    }
+
+    function appendFormAlert(alertId, message, type = 'info') {
+        const el = document.getElementById(alertId);
+        if (!el) return;
+
+        const styles = {
+            info: {
+                bg: 'bg-blue-50 border-blue-200 text-blue-800',
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 flex-shrink-0 text-blue-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>'
+            },
+            warning: {
+                bg: 'bg-amber-50 border-amber-200 text-amber-800',
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>'
+            },
+            error: {
+                bg: 'bg-red-50 border-red-200 text-red-800',
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 flex-shrink-0 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>'
+            }
+        };
+
+        const s = styles[type] || styles.info;
+
+        // Create a new alert div and append it
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `flex items-start gap-2 text-xs rounded-md px-3 py-2 border ${s.bg}`;
+        alertDiv.innerHTML = `${s.icon}<span>${message}</span>`;
+
+        // Make the container a stack of alerts
+        el.className = 'mb-4 space-y-2';
+        el.appendChild(alertDiv);
+        el.classList.remove('hidden');
     }
 
     // --- TOAST NOTIFICATION ---

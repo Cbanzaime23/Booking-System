@@ -202,6 +202,8 @@
 
     <dialog id="choice-modal" class="p-0 rounded-lg shadow-xl max-w-sm w-full">
         <div class="p-6 text-center">
+            <div id="choice-form-alert"
+                class="hidden mb-3 flex items-start gap-2 text-left text-xs rounded-md px-3 py-2"></div>
             <h3 class="text-2xl font-bold mb-4 font-heading text-ccf-blue">What would you like to do?</h3>
             <p class="mb-6 text-gray-600">This time slot is partially booked. You can book a new slot or cancel an
                 existing one.</p>
@@ -241,6 +243,8 @@
             <h3 class="text-1xl font-bold mb-4 font-heading text-ccf-blue" id="modal-date-info"
                 class="text-md text-gray-600 font-semibold"></h3>
             <form id="booking-form" novalidate>
+                <div id="booking-form-alert" class="hidden mb-4 flex items-start gap-2 text-xs rounded-md px-3 py-2.5">
+                </div>
 
                 <!-- Duplicate Booking Date Picker (Hidden by default) -->
                 <div id="duplicate-date-wrapper" class="hidden mb-4 bg-blue-50 p-3 rounded border border-blue-200">
@@ -460,6 +464,8 @@
             <p class="mb-4 text-gray-600">Select the booking you wish to cancel.</p>
 
             <form id="cancel-form" novalidate>
+                <div id="cancel-form-alert" class="hidden mb-3 flex items-start gap-2 text-xs rounded-md px-3 py-2.5">
+                </div>
                 <div id="cancel-booking-list" class="space-y-2 border-y border-gray-200 py-3 mb-4">
                 </div>
 
@@ -516,6 +522,8 @@
             <p class="mb-4 text-gray-600">Select the booking to move and specify the new details.</p>
 
             <form id="move-form" novalidate>
+                <div id="move-form-alert" class="hidden mb-3 flex items-start gap-2 text-xs rounded-md px-3 py-2.5">
+                </div>
                 <div id="move-booking-list"
                     class="space-y-2 border-y border-gray-200 py-3 mb-4 max-h-40 overflow-y-auto">
                 </div>

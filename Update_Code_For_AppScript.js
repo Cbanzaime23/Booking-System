@@ -177,22 +177,229 @@ function handleCreateBooking(payload) {
 }
 
 // --- NEW FUNCTION: Handle Blocking a Date ---
+// Auto-cancels all existing confirmed bookings on the blocked date and emails affected users.
 function handleBlockDate(payload) {
     if (payload.adminPin !== ADMIN_PIN) {
         return { success: false, message: "Invalid Admin PIN." };
     }
 
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    let sheet = ss.getSheetByName(BLOCKED_SHEET_NAME);
-    if (!sheet) {
-        sheet = ss.insertSheet(BLOCKED_SHEET_NAME);
-        sheet.appendRow(["Date", "Room", "Reason"]); // Headers
+
+    // 1. Add blocked date entry
+    let blockedSheet = ss.getSheetByName(BLOCKED_SHEET_NAME);
+    if (!blockedSheet) {
+        blockedSheet = ss.insertSheet(BLOCKED_SHEET_NAME);
+        blockedSheet.appendRow(["Date", "Room", "Reason"]); // Headers
+    }
+    blockedSheet.appendRow([payload.date, payload.room, payload.reason]);
+
+    // 2. Find and cancel all confirmed bookings on this date
+    const bookingsSheet = ss.getSheetByName(SHEET_NAME);
+    if (!bookingsSheet) {
+        return { success: true, message: "Date blocked successfully. No bookings sheet found to check.", cancelledCount: 0 };
     }
 
-    // payload.date comes as YYYY-MM-DD string
-    sheet.appendRow([payload.date, payload.room, payload.reason]);
+    const data = bookingsSheet.getDataRange().getValues();
+    const headers = data[0];
+    const idIndex = headers.indexOf('id');
+    const startIsoIndex = headers.indexOf('start_iso');
+    const statusIndex = headers.indexOf('status');
+    const roomIndex = headers.indexOf('room');
+    const notesIndex = headers.indexOf('notes');
+    const emailIndex = headers.indexOf('email');
+    const firstNameIndex = headers.indexOf('first_name');
+    const lastNameIndex = headers.indexOf('last_name');
+    const eventIndex = headers.indexOf('event');
+    const endIsoIndex = headers.indexOf('end_iso');
+    const participantsIndex = headers.indexOf('participants');
 
-    return { success: true, message: "Date blocked successfully." };
+    if ([idIndex, startIsoIndex, statusIndex, roomIndex].some(i => i === -1)) {
+        return { success: true, message: "Date blocked successfully. Could not check existing bookings (missing columns).", cancelledCount: 0 };
+    }
+
+    const blockedDateStr = payload.date; // YYYY-MM-DD
+    const blockedRoom = payload.room;    // "All Rooms" or specific room name
+    const reason = payload.reason;
+    const cancelledBookings = [];
+
+    for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+
+        // Skip non-confirmed bookings
+        if (row[statusIndex] !== 'confirmed') continue;
+
+        // Parse the booking's start date to YYYY-MM-DD for comparison
+        // NOTE: start_iso is stored as Manila time with a misleading 'Z' suffix (from appendBookingRow).
+        // We must parse it properly to extract the correct Manila-timezone date.
+        let bookingStartIso = row[startIsoIndex];
+        let bookingDateStr;
+        if (bookingStartIso instanceof Date) {
+            bookingDateStr = Utilities.formatDate(bookingStartIso, SCRIPT_TIMEZONE, "yyyy-MM-dd");
+            bookingStartIso = Utilities.formatDate(bookingStartIso, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss");
+        } else {
+            // Strip trailing 'Z' to avoid UTC re-interpretation, then parse
+            const cleanIso = String(bookingStartIso).replace(/Z$/i, '');
+            const parsed = new Date(cleanIso);
+            if (!isNaN(parsed.getTime())) {
+                bookingDateStr = Utilities.formatDate(parsed, SCRIPT_TIMEZONE, "yyyy-MM-dd");
+            } else {
+                // Fallback: extract from string directly
+                bookingDateStr = String(bookingStartIso).substring(0, 10);
+            }
+        }
+
+        // Check if booking falls on the blocked date
+        if (bookingDateStr !== blockedDateStr) continue;
+
+        // Check room filter: "All Rooms" cancels everything, otherwise only matching room
+        if (blockedRoom !== 'All Rooms' && row[roomIndex] !== blockedRoom) continue;
+
+        // --- CANCEL THIS BOOKING ---
+        bookingsSheet.getRange(i + 1, statusIndex + 1).setValue('cancelled');
+
+        // Add note
+        if (notesIndex !== -1) {
+            const oldNotes = row[notesIndex] || "";
+            bookingsSheet.getRange(i + 1, notesIndex + 1).setValue(`[Auto-Cancelled: Blocked Date - ${reason}] ${oldNotes}`);
+        }
+
+        // Log the activity
+        logActivity('Auto-Cancel (Blocked Date)', row[idIndex], 'SYSTEM', {
+            reason: reason,
+            blockedRoom: blockedRoom,
+            blockedDate: blockedDateStr
+        });
+
+        // Collect info for email notification
+        let endIsoVal = row[endIsoIndex];
+        if (endIsoVal instanceof Date) {
+            endIsoVal = Utilities.formatDate(endIsoVal, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss");
+        }
+
+        cancelledBookings.push({
+            id: row[idIndex],
+            email: emailIndex !== -1 ? row[emailIndex] : null,
+            firstName: firstNameIndex !== -1 ? row[firstNameIndex] : 'Guest',
+            lastName: lastNameIndex !== -1 ? row[lastNameIndex] : '',
+            event: eventIndex !== -1 ? row[eventIndex] : 'Your Booking',
+            room: row[roomIndex],
+            start_iso: bookingStartIso,
+            end_iso: endIsoVal,
+            participants: participantsIndex !== -1 ? row[participantsIndex] : ''
+        });
+    }
+
+    // 3. Send cancellation emails to all affected users
+    cancelledBookings.forEach(booking => {
+        if (booking.email) {
+            try {
+                sendBlockedDateCancellationEmail(booking, reason, blockedDateStr);
+            } catch (emailError) {
+                Logger.log('Failed to send cancellation email to ' + booking.email + ': ' + emailError.toString());
+            }
+        }
+    });
+
+    // 4. Build response message
+    const cancelledCount = cancelledBookings.length;
+    const cancelledEvents = cancelledBookings.map(b => b.event);
+    let message = "Date blocked successfully.";
+    if (cancelledCount > 0) {
+        message += ` ${cancelledCount} existing booking(s) were automatically cancelled and affected users have been notified via email.`;
+    }
+
+    return {
+        success: true,
+        message: message,
+        cancelledCount: cancelledCount,
+        cancelledEvents: cancelledEvents
+    };
+}
+
+/**
+ * Sends an apology/cancellation email when a booking is auto-cancelled due to a blocked date.
+ * NOTE: start_iso/end_iso are stored as Manila time with misleading 'Z' suffix.
+ * We strip the 'Z' before parsing to avoid a UTC re-interpretation that shifts the date.
+ */
+function sendBlockedDateCancellationEmail(booking, reason, blockedDate) {
+    const recipient = booking.email;
+    const bookingCode = (booking.id || "").substring(0, 12).toUpperCase();
+
+    // Strip trailing 'Z' to treat as Manila local time (matches how appendBookingRow stores it)
+    const cleanStartIso = String(booking.start_iso).replace(/Z$/i, '');
+    const cleanEndIso = String(booking.end_iso).replace(/Z$/i, '');
+    const startDate = new Date(cleanStartIso);
+    const endDate = new Date(cleanEndIso);
+    const bookingDateStr = Utilities.formatDate(startDate, SCRIPT_TIMEZONE, "MMMM d, yyyy (EEE)");
+    const startTimeStr = Utilities.formatDate(startDate, SCRIPT_TIMEZONE, "h:mm a");
+    const endTimeStr = Utilities.formatDate(endDate, SCRIPT_TIMEZONE, "h:mm a");
+    const surveyLink = SURVEY_FORM_URL.replace('${bookingCode}', bookingCode);
+
+    // Format the BLOCKED date (the actual closure date) for the email notice text
+    const blockedDateObj = new Date(blockedDate + 'T00:00:00');
+    const closureDateStr = Utilities.formatDate(blockedDateObj, SCRIPT_TIMEZONE, "MMMM d, yyyy (EEE)");
+
+    const subject = `Booking Cancelled: ${booking.event} on ${bookingDateStr} — CCF Manila`;
+
+    const htmlBody = `
+    <div style="font-family: Arial, sans-serif; font-size: 16px; line-height: 1.6; max-width: 600px;">
+      <h2 style="color: #b80000;">Booking Cancellation Notice</h2>
+      <p>Hi <strong>${booking.firstName}</strong>,</p>
+      <p>We sincerely apologize for the inconvenience. Your booking has been <strong>automatically cancelled</strong> because the church facility will be <strong>closed on ${closureDateStr}</strong>.</p>
+      
+      <div style="background-color: #fef2f2; border-left: 4px solid #b80000; border-radius: 4px; padding: 15px; margin: 20px 0;">
+        <p style="margin: 0 0 8px 0; font-weight: bold; color: #b80000;">Reason for Closure:</p>
+        <p style="margin: 0; color: #7f1d1d;">${reason}</p>
+      </div>
+
+      <div style="background-color: #f4f4f4; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="margin-top: 0; color: #333;">Cancelled Booking Details</h3>
+        <p><strong>Booking Code:</strong> <span style="font-family: 'Courier New', monospace; font-size: 16px;">${bookingCode}</span></p>
+        <hr style="border: 0; border-top: 1px solid #ddd;">
+        <p><strong>Event:</strong> ${booking.event}</p>
+        <p><strong>Room:</strong> ${booking.room}</p>
+        <p><strong>Date:</strong> ${bookingDateStr}</p>
+        <p><strong>Time:</strong> ${startTimeStr} - ${endTimeStr}</p>
+        ${booking.participants ? `<p><strong>Participants:</strong> ${booking.participants}</p>` : ''}
+      </div>
+
+      <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 15px; margin: 20px 0;">
+        <p style="margin: 0; color: #1e40af; font-size: 14px;">
+          <strong>What to do next:</strong> Please rebook your event on a different available date using our <a href="https://cbanzaime23.github.io/Booking-System/" style="color: #1e40af;">Booking System</a>. We apologize again for any inconvenience caused.
+        </p>
+      </div>
+
+      <div style="background-color: #e6fffa; border: 1px solid #b2f5ea; border-radius: 8px; padding: 15px; margin-top: 20px;">
+        <h3 style="color: #047857; margin-top: 0;">Need Help or Have Questions?</h3>
+        <p style="color: #065f46; font-size: 14px;">For Queries, Feature Requests, or Help Needs, please submit them via our Survey Google Form.</p>
+        <a href="${surveyLink}" style="background-color: #047857; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; font-weight: bold;">Submit Feedback / Query</a>
+      </div>
+
+      <p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email notification.<br>We are sorry for the inconvenience and thank you for your understanding.</p>
+      <p style="color: #555;">God Bless,<br>CCF Manila Admin</p>
+    </div>
+  `;
+
+    const plainBody = `Hi ${booking.firstName},\n\n` +
+        `We sincerely apologize for the inconvenience. Your booking has been automatically cancelled because the church facility will be closed on ${closureDateStr}.\n\n` +
+        `Reason: ${reason}\n\n` +
+        `CANCELLED BOOKING DETAILS:\n` +
+        `Booking Code: ${bookingCode}\n` +
+        `Event: ${booking.event}\n` +
+        `Room: ${booking.room}\n` +
+        `Date: ${bookingDateStr}\n` +
+        `Time: ${startTimeStr} - ${endTimeStr}\n\n` +
+        `Please rebook your event on a different available date.\n\n` +
+        `For Queries or Help: ${surveyLink}\n\n` +
+        `God Bless,\nCCF Manila Admin`;
+
+    MailApp.sendEmail({
+        to: recipient,
+        subject: subject,
+        body: plainBody,
+        htmlBody: htmlBody,
+        name: EMAIL_SENDER_NAME
+    });
 }
 
 // --- NEW HELPER: Audit Logging ---
