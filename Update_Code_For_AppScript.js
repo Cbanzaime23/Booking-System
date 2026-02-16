@@ -149,14 +149,30 @@ function handleCreateBooking(payload) {
             return handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoom, blockedDates);
         }
 
-        // --- Single Booking Logic ---
-        const concurrent = findConcurrentBookings(newStart, newEnd, allBookings, finalRoom);
-        const currentPax = concurrent.reduce((sum, b) => sum + b.participantCount, 0);
-        if (concurrent.length + 1 > rules.MAX_CONCURRENT_GROUPS) {
-            throw new Error(`Group Limit Exceeded for ${finalRoom}.`);
+        // --- Duplicate Booking Detection ---
+        // Prevent the same user from booking the same timeslot + room twice
+        const payloadStartIso = String(payload.start_iso).replace(/Z$/i, '');
+        const existingDuplicate = allBookings.find(b => {
+            const bStartClean = String(b.start_iso).replace(/Z$/i, '');
+            return b.email && b.email.toLowerCase() === payload.email.toLowerCase()
+                && bStartClean === payloadStartIso
+                && b.room === finalRoom;
+        });
+        if (existingDuplicate) {
+            throw new Error('You already have a booking for this time slot.');
         }
-        if (currentPax + payload.participants > rules.MAX_TOTAL_PARTICIPANTS) {
-            throw new Error(`Participant Capacity Exceeded for ${finalRoom}.`);
+
+        // --- Race Condition Guard (Optimistic Locking) ---
+        // Re-read bookings from the sheet RIGHT BEFORE writing to catch any
+        // concurrent writes that may have occurred between our initial read and now.
+        const freshBookings = getActiveBookings(sheet);
+        const freshConcurrent = findConcurrentBookings(newStart, newEnd, freshBookings, finalRoom);
+        const freshPax = freshConcurrent.reduce((sum, b) => sum + b.participantCount, 0);
+        if (freshConcurrent.length + 1 > rules.MAX_CONCURRENT_GROUPS) {
+            throw new Error('Sorry, this slot was just filled by another user. Please choose a different time.');
+        }
+        if (freshPax + payload.participants > rules.MAX_TOTAL_PARTICIPANTS) {
+            throw new Error('Sorry, this slot was just filled by another user. Please choose a different time.');
         }
 
         const newId = generateUUID();
@@ -472,6 +488,7 @@ function getActiveBookings(sheet) {
     const firstNameIndex = headers.indexOf('first_name');
     const lastNameIndex = headers.indexOf('last_name');
     const roomIndex = headers.indexOf('room');
+    const emailIndex = headers.indexOf('email');
 
     if ([startIsoIndex, endIsoIndex, statusIndex, participantsIndex, idIndex, firstNameIndex, lastNameIndex, roomIndex].some(i => i === -1)) {
         throw new Error("Sheet is missing required columns. Check: id, start_iso, end_iso, status, participants, first_name, last_name, room.");
@@ -498,7 +515,8 @@ function getActiveBookings(sheet) {
                 first_name: row[firstNameIndex],
                 last_name: row[lastNameIndex],
                 participants: row[participantsIndex],
-                room: row[roomIndex]
+                room: row[roomIndex],
+                email: emailIndex !== -1 ? row[emailIndex] : ''
             };
         });
 }
@@ -620,6 +638,19 @@ function handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoo
 
         // --- CHECK BLOCK (Optimization: Skip if blocked) ---
         if (checkIsBlocked(iterStart, payload.room, blockedDates)) {
+            failCount++;
+            continue;
+        }
+
+        // --- Duplicate Booking Detection (per iteration) ---
+        const iterStartIso = Utilities.formatDate(iterStart, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss");
+        const isDuplicate = allBookings.some(b => {
+            const bStartClean = String(b.start_iso).replace(/Z$/i, '');
+            return b.email && b.email.toLowerCase() === payload.email.toLowerCase()
+                && bStartClean === iterStartIso
+                && b.room === payload.room;
+        });
+        if (isDuplicate) {
             failCount++;
             continue;
         }

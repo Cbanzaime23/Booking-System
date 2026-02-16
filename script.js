@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedSlot: null,
         pendingBookingData: null,
         pendingMoveData: null,
+        lastFetchTimestamp: null,
     };
 
     // Define the overall maximum capacity for each room (used for admin max bookings)
@@ -159,6 +160,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.setProperty('--calendar-header-top', `${totalTop}px`);
     }
 
+    let autoRefreshIntervalId = null;
+    let freshnessTickerId = null;
+    const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+    const FRESHNESS_TICK_MS = 30 * 1000;    // Update display every 30 seconds
+    const STALE_THRESHOLD_MS = 6 * 60 * 1000; // Mark stale after 6 minutes (buffer past auto-refresh)
+
     function init() {
         initializeRoomSelector();
         setupEventListeners();
@@ -181,6 +188,81 @@ document.addEventListener('DOMContentLoaded', () => {
         if (banner) resizeObserver.observe(banner); // Also watch banner height directly
 
         window.addEventListener('resize', adjustStickyOffsets);
+
+        // --- Auto-Refresh & Data Freshness ---
+        const freshnessBar = document.getElementById('data-freshness-bar');
+        if (freshnessBar) {
+            freshnessBar.addEventListener('click', () => {
+                if (!state.isLoading) render();
+            });
+        }
+
+        // Auto-refresh every 5 minutes (silent background refresh)
+        autoRefreshIntervalId = setInterval(() => {
+            // Only auto-refresh if no modal is open and page is visible
+            const anyModalOpen = document.querySelector('dialog[open]');
+            if (!anyModalOpen && !document.hidden && !state.isLoading) {
+                render();
+            }
+        }, AUTO_REFRESH_MS);
+
+        // Tick the freshness display every 30 seconds
+        freshnessTickerId = setInterval(updateFreshnessDisplay, FRESHNESS_TICK_MS);
+
+        // Pause auto-refresh when tab is hidden, resume when visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && state.lastFetchTimestamp) {
+                const elapsed = Date.now() - state.lastFetchTimestamp;
+                if (elapsed > AUTO_REFRESH_MS) {
+                    // Data is stale — refresh immediately
+                    render();
+                }
+                updateFreshnessDisplay();
+            }
+        });
+    }
+
+    /**
+     * Updates the freshness bar text with a relative timestamp.
+     */
+    function updateFreshnessDisplay() {
+        const bar = document.getElementById('data-freshness-bar');
+        const textEl = document.getElementById('freshness-text');
+        const iconEl = document.getElementById('freshness-icon');
+        if (!bar || !textEl || !state.lastFetchTimestamp) return;
+
+        const elapsed = Date.now() - state.lastFetchTimestamp;
+        const seconds = Math.floor(elapsed / 1000);
+        const minutes = Math.floor(seconds / 60);
+
+        let text;
+        let isStale = false;
+
+        if (seconds < 30) {
+            text = 'Updated just now';
+        } else if (seconds < 60) {
+            text = 'Updated less than a minute ago';
+        } else if (minutes === 1) {
+            text = 'Updated 1 min ago';
+        } else if (minutes < 60) {
+            text = `Updated ${minutes} min ago`;
+        } else {
+            text = `Updated ${Math.floor(minutes / 60)}h ${minutes % 60}m ago`;
+            isStale = true;
+        }
+
+        if (elapsed > STALE_THRESHOLD_MS) {
+            isStale = true;
+        }
+
+        if (isStale) {
+            text += ' — click to refresh';
+            bar.className = 'flex items-center justify-center gap-2 px-4 py-1.5 text-xs text-amber-600 cursor-pointer hover:text-amber-700 hover:bg-amber-50 transition-colors rounded-md mx-4 mb-1 select-none';
+        } else {
+            bar.className = 'flex items-center justify-center gap-2 px-4 py-1.5 text-xs text-gray-400 cursor-pointer hover:text-ccf-blue hover:bg-blue-50/50 transition-colors rounded-md mx-4 mb-1 select-none';
+        }
+
+        textEl.textContent = text;
     }
 
     function initializeRoomSelector() {
@@ -309,6 +391,36 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('move-booking-list').addEventListener('change', handleMoveSelectionChange);
 
         // NEW: Listener for Admin Toggle
+        // --- Real-time email confirmation hint ---
+        const emailInput = document.getElementById('email');
+        const confirmEmailInput = document.getElementById('confirm_email');
+        const emailMatchHint = document.getElementById('email-match-hint');
+        function updateEmailMatchHint() {
+            const emailVal = emailInput.value.trim();
+            const confirmVal = confirmEmailInput.value.trim();
+            if (!confirmVal) {
+                emailMatchHint.classList.add('hidden');
+                confirmEmailInput.classList.remove('border-red-400', 'border-green-400');
+                return;
+            }
+            emailMatchHint.classList.remove('hidden');
+            if (emailVal.toLowerCase() === confirmVal.toLowerCase()) {
+                emailMatchHint.textContent = '✓ Emails match';
+                emailMatchHint.className = 'text-xs mt-1 text-green-600';
+                confirmEmailInput.classList.remove('border-red-400');
+                confirmEmailInput.classList.add('border-green-400');
+            } else {
+                emailMatchHint.textContent = '✗ Emails do not match';
+                emailMatchHint.className = 'text-xs mt-1 text-red-600';
+                confirmEmailInput.classList.remove('border-green-400');
+                confirmEmailInput.classList.add('border-red-400');
+            }
+        }
+        emailInput.addEventListener('input', updateEmailMatchHint);
+        confirmEmailInput.addEventListener('input', updateEmailMatchHint);
+        // Prevent paste on confirm email to force manual re-entry
+        confirmEmailInput.addEventListener('paste', (e) => e.preventDefault());
+
         document.getElementById('admin-toggle').addEventListener('change', (e) => {
             const isAdmin = e.target.checked;
 
@@ -317,6 +429,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.getElementById('user-fields').classList.toggle('hidden', isAdmin);
             document.getElementById('admin-fields').classList.toggle('hidden', !isAdmin);
+            // Hide confirm email for admin (admins manage bookings on behalf of others)
+            document.getElementById('confirm-email-wrapper').classList.toggle('hidden', isAdmin);
+            confirmEmailInput.required = !isAdmin;
 
             const participantsInput = bookingForm.querySelector('#participants');
 
@@ -1080,6 +1195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('first_name').value = sourceBooking.first_name;
         document.getElementById('last_name').value = sourceBooking.last_name;
         document.getElementById('email').value = sourceBooking.email;
+        document.getElementById('confirm_email').value = sourceBooking.email;
         document.getElementById('event').value = sourceBooking.event;
         document.getElementById('participants').value = sourceBooking.participants;
         document.getElementById('notes').value = sourceBooking.notes || '';
@@ -1236,6 +1352,32 @@ document.addEventListener('DOMContentLoaded', () => {
             return showFormAlert('booking-form-alert', 'Please fill in all required fields.', 'error');
         }
         if (!/^\S+@\S+\.\S+$/.test(email)) return showFormAlert('booking-form-alert', 'Please enter a valid email address.', 'error');
+
+        // --- Email Confirmation Match (skip for admins) ---
+        if (!isAdmin) {
+            const confirmEmail = sanitize(formData.get('confirm_email'));
+            if (email.toLowerCase() !== confirmEmail.toLowerCase()) {
+                return showFormAlert('booking-form-alert', 'Email addresses do not match. Please re-enter your email.', 'error');
+            }
+        }
+
+        // --- Domain Typo Detection ---
+        const COMMON_TYPOS = {
+            'gmial.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gmai.com': 'gmail.com',
+            'gamil.com': 'gmail.com', 'gnail.com': 'gmail.com', 'gmaill.com': 'gmail.com',
+            'gmali.com': 'gmail.com', 'gmail.co': 'gmail.com', 'gmail.cm': 'gmail.com',
+            'yaho.com': 'yahoo.com', 'yahooo.com': 'yahoo.com', 'yhaoo.com': 'yahoo.com',
+            'yahoo.co': 'yahoo.com', 'yaoo.com': 'yahoo.com',
+            'hotmal.com': 'hotmail.com', 'hotmial.com': 'hotmail.com', 'hotmai.com': 'hotmail.com',
+            'hotmail.co': 'hotmail.com', 'hotamil.com': 'hotmail.com',
+            'outlok.com': 'outlook.com', 'outllook.com': 'outlook.com', 'outlookk.com': 'outlook.com',
+            'outlook.co': 'outlook.com', 'outloo.com': 'outlook.com',
+            'icloud.co': 'icloud.com', 'icoud.com': 'icloud.com',
+        };
+        const emailDomain = email.split('@')[1]?.toLowerCase();
+        if (emailDomain && COMMON_TYPOS[emailDomain]) {
+            return showFormAlert('booking-form-alert', `Did you mean <strong>@${COMMON_TYPOS[emailDomain]}</strong>? The domain "@${emailDomain}" looks like a typo.`, 'error');
+        }
         // if (!participants || participants < roomRules.MIN_BOOKING_SIZE || participants > roomRules.MAX_BOOKING_SIZE) {
         //     return showToast(`Invalid participant number. Must be between ${roomRules.MIN_BOOKING_SIZE} and ${roomRules.MAX_BOOKING_SIZE}.`, "error");
         // }
@@ -1301,7 +1443,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-
+        // --- Terms & Privacy Consent Validation ---
+        const termsChecked = document.getElementById('terms-checkbox').checked;
+        const privacyChecked = document.getElementById('privacy-checkbox').checked;
+        if (!termsChecked) {
+            return showFormAlert('booking-form-alert', 'You must agree to the Terms & Conditions to proceed.', 'error');
+        }
+        if (!privacyChecked) {
+            return showFormAlert('booking-form-alert', 'You must consent to the Privacy Policy to proceed.', 'error');
+        }
 
         state.pendingBookingData = {
             room: state.selectedRoom,
@@ -1317,8 +1467,8 @@ document.addEventListener('DOMContentLoaded', () => {
             end_iso: endTime.toISO(),
             adminPin: adminPin,
             recurrence: isAdmin ? recurrence : 'none',
-            terms_accepted: true,
-            privacy_accepted: true,
+            terms_accepted: termsChecked,
+            privacy_accepted: privacyChecked,
             consent_timestamp: DateTime.local().setZone(APP_CONFIG.TIMEZONE).toISO() // GDPR: log when consent was given
         };
 
@@ -1377,19 +1527,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function submitRequest(action, payload) {
+        const TIMEOUT_MS = 30000;
         const callbackName = `jsonp_callback_${Date.now()}`;
         const script = document.createElement('script');
         let timeoutId = null;
+
         const cleanup = () => {
             clearTimeout(timeoutId);
             if (script.parentNode) document.body.removeChild(script);
             delete window[callbackName];
             loadingModal.close();
         };
+
+        // Retry re-opens the loading modal and re-submits the same request
+        const retryFn = () => {
+            loadingModal.showModal();
+            submitRequest(action, payload);
+        };
+
         timeoutId = setTimeout(() => {
             cleanup();
-            showToast("Request timed out.", "error");
-        }, 30000);
+            showToastWithRetry(
+                'Request timed out. Please check your connection and try again.',
+                'error',
+                retryFn
+            );
+        }, TIMEOUT_MS);
 
         window[callbackName] = (data) => {
             cleanup();
@@ -1432,12 +1595,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
         script.onerror = () => {
             cleanup();
-            showToast("Failed to send request.", "error");
+            showToastWithRetry(
+                'Failed to reach the server. Please check your connection and try again.',
+                'error',
+                retryFn
+            );
         };
 
         const encodedPayload = encodeURIComponent(JSON.stringify(payload));
         script.src = `${APP_CONFIG.APPS_SCRIPT_URL}?action=${action}&callback=${callbackName}&payload=${encodedPayload}`;
         document.body.appendChild(script);
+    }
+
+    /**
+     * Shows a persistent error toast with a Retry button.
+     * Does NOT auto-dismiss — user must click Retry or Dismiss.
+     */
+    function showToastWithRetry(message, type, retryCallback) {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+
+        const icon = type === 'error' ? '✖' : 'ℹ';
+        toast.innerHTML = `
+            <span>${icon}</span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                <p style="margin: 0;">${message}</p>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="toast-retry-btn" style="
+                        background: rgba(255,255,255,0.2);
+                        border: 1px solid rgba(255,255,255,0.4);
+                        color: white;
+                        padding: 4px 14px;
+                        border-radius: 6px;
+                        font-size: 0.85rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: background 0.2s;
+                    ">↻ Retry</button>
+                    <button class="toast-dismiss-btn" style="
+                        background: none;
+                        border: none;
+                        color: rgba(255,255,255,0.7);
+                        font-size: 0.8rem;
+                        cursor: pointer;
+                        text-decoration: underline;
+                    ">Dismiss</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('show'));
+
+        const dismiss = () => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        };
+
+        toast.querySelector('.toast-retry-btn').addEventListener('click', () => {
+            dismiss();
+            if (retryCallback) retryCallback();
+        });
+        toast.querySelector('.toast-dismiss-btn').addEventListener('click', dismiss);
+
+        // Hover effect for retry button
+        const retryBtn = toast.querySelector('.toast-retry-btn');
+        retryBtn.addEventListener('mouseenter', () => { retryBtn.style.background = 'rgba(255,255,255,0.35)'; });
+        retryBtn.addEventListener('mouseleave', () => { retryBtn.style.background = 'rgba(255,255,255,0.2)'; });
     }
 
     // --- DATA & UTILITIES ---
@@ -2024,6 +2248,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         const banner = document.getElementById('announcement-banner');
                         if (banner) banner.classList.add('hidden');
                     }
+
+                    // --- Track data freshness ---
+                    state.lastFetchTimestamp = Date.now();
+                    const freshnessBar = document.getElementById('data-freshness-bar');
+                    if (freshnessBar) freshnessBar.classList.remove('hidden');
+                    updateFreshnessDisplay();
 
                     resolve();
                 } else {

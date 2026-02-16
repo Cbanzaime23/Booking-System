@@ -14,6 +14,22 @@ body {
     color: var(--ccf-dark-gray);
 }
 
+/* Form field label styling — uppercase, bold, tracked (matches calendar header aesthetic) */
+dialog label[for],
+form label[for],
+section label[for] {
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em;
+    font-size: 0.7rem !important;
+    color: var(--ccf-blue);
+}
+
+/* Preserve red accent for admin-only field labels */
+#admin-fields label[for] {
+    color: var(--ccf-red-dark);
+}
+
 /* Modal styles */
 dialog {
     border: none;

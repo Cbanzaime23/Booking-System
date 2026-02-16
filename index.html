@@ -161,6 +161,18 @@
                     </div>
                 </section>
 
+                <!-- Data Freshness Status Bar -->
+                <div id="data-freshness-bar"
+                    class="hidden flex items-center justify-center gap-2 px-4 py-1.5 text-xs text-gray-400 cursor-pointer hover:text-ccf-blue hover:bg-blue-50/50 transition-colors rounded-md mx-4 mb-1 select-none"
+                    title="Click to refresh calendar data">
+                    <svg id="freshness-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 flex-shrink-0"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span id="freshness-text">Loading...</span>
+                </div>
+
                 <section id="calendar-controls" class="flex justify-between items-center px-4 pb-4">
                     <button id="prev-week"
                         class="flex items-center gap-1 px-3 py-2 bg-gray-100 text-ccf-blue rounded-full hover:bg-ccf-blue hover:text-white transition-colors border border-gray-200 font-medium text-sm">
@@ -301,6 +313,24 @@
                         <input type="email" id="email" name="email" required
                             class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
                     </div>
+                </div>
+
+                <div class="mb-4" id="confirm-email-wrapper">
+                    <label for="confirm_email" class="block text-sm font-medium text-gray-700">Confirm Email
+                        Address</label>
+                    <div class="relative mt-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <input type="email" id="confirm_email" name="confirm_email" required autocomplete="off"
+                            placeholder="Re-enter your email"
+                            class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                    </div>
+                    <p id="email-match-hint" class="text-xs mt-1 hidden"></p>
                 </div>
 
                 <div class="mb-4">
