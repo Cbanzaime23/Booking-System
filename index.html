@@ -500,7 +500,22 @@
                 </div>
 
                 <div id="cancel-confirmation-section" class="hidden">
-                    <div class="mb-4">
+                    <!-- Series Cancellation Option (Admin Only) -->
+                    <div id="cancel-series-option"
+                        class="hidden mb-4 pt-4 border-t border-gray-100 bg-red-50 p-3 rounded-md border border-red-100">
+                        <label class="flex items-start gap-2 cursor-pointer">
+                            <input type="checkbox" id="cancel-series-checkbox"
+                                class="mt-1 h-4 w-4 text-ccf-red border-gray-300 rounded focus:ring-ccf-red">
+                            <div>
+                                <span class="text-sm font-bold text-ccf-red-dark">Cancel this and all related recurrent
+                                    bookings?</span>
+                                <p class="text-xs text-gray-500 mt-1">This will remove all future occurrences in this
+                                    series. <strong class="text-ccf-red-dark">Requires Admin PIN.</strong></p>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div id="booking-code-section" class="mb-4">
                         <label for="cancel-booking-code" class="block text-sm font-medium text-gray-700">Confirm with
                             Booking Code</label>
                         <div class="relative mt-1">
@@ -518,8 +533,8 @@
                         <p class="text-xs text-gray-500 mt-1">Found in your confirmation email or "My Bookings".</p>
                     </div>
 
-                    <div class="mb-4 pt-4 border-t border-gray-100">
-                        <label for="admin-pin" class="block text-sm font-medium text-ccf-red-dark">Admin PIN
+                    <div id="admin-pin-section" class="mb-4 pt-4 border-t border-gray-100">
+                        <label for="cancel-admin-pin" class="block text-sm font-medium text-ccf-red-dark">Admin PIN
                             (Optional)</label>
                         <div class="relative mt-1">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -529,7 +544,7 @@
                                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
                             </div>
-                            <input type="password" id="admin-pin" placeholder="Enter PIN to override"
+                            <input type="password" id="cancel-admin-pin" placeholder="Enter PIN to override"
                                 class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
                         </div>
                     </div>
@@ -932,6 +947,8 @@
             <div class="space-y-3 text-sm text-gray-700 mb-6 bg-gray-50 p-4 rounded border border-gray-200">
                 <p>By proceeding with this booking, you agree to the following:</p>
                 <ul class="list-disc pl-5 space-y-1">
+                    <li><strong>Exclusive Use:</strong> This application is for the exclusive use of CCF Manila.</li>
+                    <li><strong>Purpose:</strong> To be used only for the room reservation purpose.</li>
                     <li><strong>Clean Up:</strong> I agree to clean up the venue after use.</li>
                     <li><strong>Reset:</strong> I will reset chairs and equipment to their original arrangement.</li>
                     <li><strong>Cancellation:</strong> I agree to cancel at least 24 hours in advance if the event works

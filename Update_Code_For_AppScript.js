@@ -176,7 +176,7 @@ function handleCreateBooking(payload) {
         }
 
         const newId = generateUUID();
-        appendBookingRow(sheet, newId, payload, newStart, newEnd);
+        appendBookingRow(sheet, newId, payload, newStart, newEnd, null);
 
         try {
             sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom);
@@ -577,6 +577,7 @@ function findConcurrentBookings(newStart, newEnd, allBookings, roomName) {
  * UPDATED: Handles saving recurrent bookings with blocked date check.
  */
 function handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoom, blockedDates) {
+    const recurrenceId = Utilities.getUuid(); // Unique ID for this series
     let successCount = 0;
     let failCount = 0;
     let firstId = null;
@@ -662,7 +663,7 @@ function handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoo
         if (hasCapacity) {
             successCount++;
             const newId = generateUUID();
-            appendBookingRow(sheet, newId, payload, iterStart, iterEnd);
+            appendBookingRow(sheet, newId, payload, iterStart, iterEnd, recurrenceId);
 
             if (firstId === null) { firstId = newId; firstStart = iterStart; firstEnd = iterEnd; }
 
@@ -699,9 +700,28 @@ function findLastDayOfWeekOfMonth(date, dayOfWeek) {
 }
 
 
-function appendBookingRow(sheet, id, payload, startDate, endDate) {
+function appendBookingRow(sheet, id, payload, startDate, endDate, recurrenceId = null) {
     const formattedStartIso = Utilities.formatDate(startDate, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
     const formattedEndIso = Utilities.formatDate(endDate, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+
+    // Ensure header exists (naive check)
+    // We check if the last column header is 'recurrence_id'. If not, we append it.
+    // This is a simple check to avoid reading all headers every time.
+    // A better approach in production is to run a one-time setup script, but this works for auto-migration.
+    const lastColCtx = sheet.getLastColumn();
+    if (lastColCtx > 0) {
+        const headerVal = sheet.getRange(1, lastColCtx).getValue();
+        if (headerVal !== 'recurrence_id' && headerVal !== 'consent_timestamp') {
+            // If the last column isn't what we expect, maybe check if recurrence_id is missing
+            const headers = sheet.getRange(1, 1, 1, lastColCtx).getValues()[0];
+            if (headers.indexOf('recurrence_id') === -1) {
+                sheet.getRange(1, lastColCtx + 1).setValue('recurrence_id');
+            }
+        } else if (headerVal === 'consent_timestamp') {
+            // If consent_timestamp is last, append recurrence_id
+            sheet.getRange(1, lastColCtx + 1).setValue('recurrence_id');
+        }
+    }
 
     const newRow = [
         id,
@@ -714,7 +734,8 @@ function appendBookingRow(sheet, id, payload, startDate, endDate) {
         new Date(), payload.notes || '',
         payload.terms_accepted ? "TRUE" : "FALSE",
         payload.privacy_accepted ? "TRUE" : "FALSE",
-        payload.consent_timestamp || ''
+        payload.consent_timestamp || '',
+        recurrenceId || ''
     ];
     sheet.appendRow(newRow);
 }
@@ -748,8 +769,44 @@ function handleCancelBooking(payload) {
                 }
 
                 if (data[i][statusIndex] === 'cancelled') throw new Error("Already cancelled.");
-                if (!isAuthAdmin && !isUserVerified) throw new Error("Verification failed. Invalid Booking Code.");
+                if (data[i][statusIndex] === 'cancelled') throw new Error("Already cancelled.");
 
+                // --- DETECT ADMIN BOOKING ---
+                const leaderFirstIndex = headers.indexOf('leader_first_name');
+                const leaderFirstName = (leaderFirstIndex !== -1) ? data[i][leaderFirstIndex] : 'Unknown';
+                // Admin bookings have empty leader names
+                const isAdminBooking = (leaderFirstName === '' || leaderFirstName === null);
+
+                if (isAdminBooking) {
+                    // Admin Booking: MUST have Admin PIN. Ignore Booking Code.
+                    if (!isAuthAdmin) {
+                        throw new Error("This is an Admin booking. Please enter the Admin PIN to cancel.");
+                    }
+                } else {
+                    // Regular Booking: Needs Admin PIN -OR- Valid Booking Code
+                    if (!isAuthAdmin && !isUserVerified) {
+                        throw new Error("Verification failed. Invalid Booking Code.");
+                    }
+                }
+
+                // --- SERIES CANCELLATION LOGIC ---
+                const recurrenceCol = headers.indexOf('recurrence_id');
+                const recurrenceId = (recurrenceCol !== -1) ? data[i][recurrenceCol] : null;
+
+                if (payload.cancelSeries && recurrenceId && isAuthAdmin) {
+                    // Cance ALL bookings with this recurrenceId
+                    let count = 0;
+                    for (let j = 1; j < data.length; j++) {
+                        if (data[j][recurrenceCol] === recurrenceId && data[j][statusIndex] !== 'cancelled') {
+                            sheet.getRange(j + 1, statusIndex + 1).setValue('cancelled');
+                            count++;
+                        }
+                    }
+                    logActivity('Cancel Series', bookingId, adminPin, { bookingCode, reason: "Series Cancelled", count });
+                    return { success: true, message: `Series cancelled (${count} bookings).` };
+                }
+
+                // Single Cancel
                 sheet.getRange(i + 1, statusIndex + 1).setValue('cancelled');
 
                 if (isAuthAdmin && !isUserVerified && notesIndex !== -1) {
@@ -785,7 +842,10 @@ function handleFetchAllBookings() {
             first: headers.indexOf('first_name'), last: headers.indexOf('last_name'),
             event: headers.indexOf('event'), room: headers.indexOf('room'),
             pax: headers.indexOf('participants'), status: headers.indexOf('status'),
-            email: headers.indexOf('email')
+            pax: headers.indexOf('participants'), status: headers.indexOf('status'),
+            pax: headers.indexOf('participants'), status: headers.indexOf('status'),
+            email: headers.indexOf('email'), recurrence: headers.indexOf('recurrence_id'),
+            leader_first: headers.indexOf('leader_first_name')
         };
 
         if (idx.id !== -1 && idx.status !== -1) {
@@ -801,7 +861,9 @@ function handleFetchAllBookings() {
                         first_name: row[idx.first], last_name: row[idx.last], // Return separate names
                         event: row[idx.event], room: row[idx.room],
                         participants: row[idx.pax], // Return as participants
-                        status: row[idx.status]
+                        status: row[idx.status],
+                        recurrence_id: idx.recurrence !== -1 ? row[idx.recurrence] : null,
+                        leader_first_name: idx.leader_first !== -1 ? row[idx.leader_first] : ''
                     };
                 });
         }

@@ -19,18 +19,46 @@ A comprehensive, serverless room reservation web application designed for **CCF 
 
 ---
 
-## 🚀 Top 10 High-Level Features
+## ✨ Features
 
-1.  **Optimization of Main Hall Usage**: Smart "waterfall" logic automatically checks Main Hall availability when users select overflow rooms, maximizing efficient space management.
-2.  **GDPR Compliance & Data Privacy**: A dedicated "My Bookings" portal allows users to securely view, download (Export), or permanently delete their personal data.
-3.  **Advanced Admin Dashboard**: A restricted, PIN-protected view featuring D3.js Gantt charts, mobile-optimized metric cards, and data tables for high-level oversight.
-4.  **Role-Based Access Control (RBAC)**: Distinguishes between **Users** (7-day booking window, strict limits) and **Admins** (6-month window, capacity overrides, PIN access).
-5.  **Recurrent Booking Engine**: Allows Admins to schedule complex visiting patterns (e.g., "Every Friday", "First Monday of the Month") in a single action.
-6.  **Smart Conflict Detection**: Automatically detects double-bookings during creation or rescheduling ("Move") and warns the user with actionable options.
-7.  **Visual Calendar Clarity**: A color-coded weekly view featuring a new **Left Sidebar Legend**, distinct **AM/PM dividers**, and simplified time labels for instant scanning.
-8.  **Mobile-First Design**: The interface adapts seamlessly to phones and tablets, with vertically stacking cards and collapsible grids for on-the-go management.
-9.  **Automated Email Notifications**: Instantly sends branded confirmation emails to the booker via Google MailApp upon successful submission.
-10. **Multi-Room Configuration**: Supports distinct rules (Capacity, participant limits) for different spaces like "Main Hall" vs. "Annex" without requiring separate tools.
+### 👤 User Experience & Booking Interface
+*   **Visual Calendar**: Interactive weekly view with sticky headers, clear AM/PM dividers, and a "Last Updated" freshness status bar.
+*   **Multi-Room Support**: Seamless switching between rooms (Main Hall, Jonah, Joseph, Moses) with real-time capacity badges.
+*   **Smart Form Validation**:
+    *   **Typo Detection**: "Confirm Email" field warns users of common typos (e.g., "gmial.com").
+    *   **Logic Checks**: Prevents invalid times (End < Start), past dates, or exceeding room capacity.
+*   **Consent Management**: Mandatory Terms & Conditions and Privacy Policy checkboxes.
+*   **Mobile-First Design**: Fully responsive layout that adapts to desktops, tablets, and mobile phones.
+
+### 📅 Booking Management (User Side)
+*   **My Bookings Portal**: Secure, email-based lookup for users to view their active schedule.
+*   **Self-Service Actions**: Users can **Cancel** or **Reschedule (Move)** their own bookings without contacting admin.
+*   **Duplicate Prevention**: System actively prevents users from double-booking themselves for the same slot.
+*   **GDPR Compliance**: Built-in tools for users to **Export** their data or request **Deletion** (Right to be Forgotten).
+
+### 🛡️ Admin Capabilities & Dashboard
+*   **Secure Admin Mode**: PIN-protected toggle unlocks privileged features.
+*   **Analytics Dashboard**:
+    *   **Key Metrics**: Real-time counters for Total Bookings, Participants, and Room Utilization.
+    *   **Visualizations**: D3.js Gantt Timeline and Donut charts.
+    *   **Search**: Filter bookings by Name, Email, or Date.
+*   **Advanced Controls**:
+    *   **Policy Overrides**: Book up to 6 months in advance (vs. 7 days) and bypass minimum notice periods.
+    *   **Recurrent Bookings**: Schedule repeating events (Daily, Weekly, Monthly) in a single action.
+    *   **Force Booking**: Capability to override conflicts if necessary.
+*   **Block Dates**: Tool to close specific rooms for holidays/maintenance, automatically cancelling conflicting bookings and notifying users.
+*   **Global Announcements**: Manage a site-wide alert banner directly from Google Sheets.
+
+### ⚙️ System & Reliability
+*   **Race Condition Guard**: "Optimistic Locking" and double-read logic prevents overbooking when multiple users try to book the same slot simultaneously.
+*   **Network Recovery**: Robust error handling with auto-retry mechanisms and interactive toast notifications for flaky connections.
+*   **Smart Optimization**: "Waterfall" logic suggests moving small groups from large halls to smaller rooms to optimize space usage.
+*   **Serverless Backend**: Powered entirely by Google Apps Script and Google Sheets.
+
+### 🔔 Notifications
+*   **Automated Emails**: Instant branding-aware HTML confirmations sent via Google `MailApp`.
+*   **Calendar Integration**: Emails include `.ics` attachments for one-click addition to personal calendars.
+*   **Lifecycle Updates**: Automated notifications for Cancellations, Reschedules, or Admin-initiated blocks.
 
 ---
 

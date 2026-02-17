@@ -937,6 +937,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         document.getElementById('cancel-confirmation-section').classList.add('hidden');
         document.getElementById('confirm-cancel-btn').disabled = true;
+        document.getElementById('cancel-series-option').classList.add('hidden');
+        if (document.getElementById('cancel-series-checkbox')) document.getElementById('cancel-series-checkbox').checked = false;
         cancelForm.reset();
         cancelModal.showModal();
     }
@@ -947,6 +949,74 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('confirm-cancel-btn').disabled = false;
             document.querySelectorAll('#cancel-booking-list label').forEach(l => l.classList.remove('selected'));
             e.target.closest('label').classList.add('selected');
+
+
+            // --- Check for Recurrence ---
+            const bookingId = e.target.value;
+            // Use loose equality because value is string, id might be int (though UUID is string)
+            const booking = state.allBookings.find(b => b.id == bookingId);
+
+            const seriesOption = document.getElementById('cancel-series-option');
+            const seriesCheckbox = document.getElementById('cancel-series-checkbox');
+
+            // --- Check for Admin Booking (No Leader Name) ---
+            // If booking.leader_first_name is empty/null, it's an Admin Booking.
+            const isAdminBooking = !booking.leader_first_name;
+            const codeInput = document.getElementById('cancel-booking-code');
+            const codeSection = document.getElementById('booking-code-section');
+
+            const pinInput = document.getElementById('cancel-admin-pin');
+            // Select the label for the Admin PIN field
+            const pinLabel = document.querySelector('label[for="cancel-admin-pin"]');
+            const pinSection = document.getElementById('admin-pin-section');
+
+            // --- Series Option Logic ---
+            // Only show Series Option for Admin Bookings that have recurrence
+            // (Regular users can't cancel series because PIN field is hidden for them)
+            if (booking && booking.recurrence_id && isAdminBooking) {
+                seriesOption.classList.remove('hidden');
+            } else {
+                seriesOption.classList.add('hidden');
+                if (seriesCheckbox) seriesCheckbox.checked = false;
+            }
+
+            if (isAdminBooking) {
+                // Show PIN Section
+                pinSection.classList.remove('hidden');
+
+                // Hide Booking Code Section entirely
+                codeSection.classList.add('hidden');
+                codeInput.disabled = true; // Disable just in case
+                codeInput.value = '';
+
+                pinInput.placeholder = "Required: Enter Admin PIN";
+                pinInput.focus();
+
+                // Update label text and style
+                if (pinLabel) {
+                    pinLabel.textContent = "ADMIN PIN (REQUIRED)";
+                    pinLabel.classList.remove('text-ccf-red-dark'); // Remove original red-dark
+                    pinLabel.classList.add('text-red-600'); // Add standard red for warning
+                }
+            } else {
+                // Hide PIN Section for Regular Bookings
+                pinSection.classList.add('hidden');
+
+                // Show Booking Code Section
+                codeSection.classList.remove('hidden');
+
+                codeInput.disabled = false;
+                codeInput.placeholder = "Enter the Booking Code (e.g. 8A2B...)";
+                codeInput.parentElement.classList.remove('opacity-50');
+
+                // We don't need to update PIN label since it's hidden
+                // Revert label text just in case (optional)
+                if (pinLabel) {
+                    pinLabel.textContent = "ADMIN PIN (OPTIONAL)";
+                    pinLabel.classList.add('text-ccf-red-dark');
+                    pinLabel.classList.remove('text-red-600');
+                }
+            }
         }
     }
 
@@ -1515,15 +1585,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const bookingId = selectedRadio.value;
         const bookingCode = document.getElementById('cancel-booking-code').value.trim();
-        const adminPin = document.getElementById('admin-pin').value.trim();
+        const adminPin = document.getElementById('cancel-admin-pin').value.trim();
+        const cancelSeries = document.getElementById('cancel-series-checkbox') ? document.getElementById('cancel-series-checkbox').checked : false;
 
         // If no admin pin is provided, booking code is strictly required.
-        if (!adminPin && !bookingCode) {
-            return showFormAlert('cancel-form-alert', 'Please enter the Booking Code to confirm.', 'error');
+        // UNLESS trying to cancel series, then PIN is required (enforced by backend, but good to check here)
+        if (cancelSeries && !adminPin) {
+            return showFormAlert('cancel-form-alert', 'Admin PIN is required to cancel a recurrent series.', 'error');
+        }
+
+        if (cancelSeries) {
+            if (!confirm("⚠️ WARNING: You are about to cancel this ENTIRE series of bookings.\n\nThis action cannot be undone. Are you sure?")) {
+                return;
+            }
+        }
+
+        const booking = state.allBookings.find(b => b.id == bookingId);
+        const isAdminBooking = booking && !booking.leader_first_name;
+
+        // Validation Logic
+        if (isAdminBooking) {
+            // Admin Booking: PIN Mandatory, Code Ignored
+            if (!adminPin) {
+                return showFormAlert('cancel-form-alert', 'Admin PIN is required to cancel this Admin Booking.', 'error');
+            }
+        } else {
+            // Regular Booking: PIN -OR- Code
+            if (!adminPin && !bookingCode) {
+                return showFormAlert('cancel-form-alert', 'Please enter the Booking Code to confirm.', 'error');
+            }
         }
 
         loadingModal.showModal();
-        submitRequest('cancel', { bookingId, bookingCode, adminPin });
+        submitRequest('cancel', { bookingId, bookingCode, adminPin, cancelSeries });
     }
 
     function submitRequest(action, payload) {
