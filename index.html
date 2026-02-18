@@ -1069,6 +1069,61 @@
     </dialog>
 
 
+    <dialog id="cancel-user-series-modal" class="p-0 rounded-lg shadow-xl max-w-sm w-full">
+        <div class="p-6 text-center">
+            <h3 class="text-xl font-bold mb-4 font-heading text-ccf-blue">Recurrent Booking Detected</h3>
+            <p class="mb-6 text-gray-600">This booking is part of a recurrent series. Do you want to cancel just this
+                single event or the entire series?</p>
+
+            <div class="flex flex-col gap-3">
+                <button type="button" id="cancel-single-btn"
+                    class="w-full px-4 py-3 bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 font-semibold border border-gray-300 transition-colors">
+                    Cancel Only This Event
+                </button>
+                <button type="button" id="cancel-series-btn"
+                    class="w-full px-4 py-3 bg-ccf-red text-white rounded-md hover:bg-ccf-red-dark font-semibold shadow-sm transition-colors">
+                    Cancel Entire Series
+                </button>
+            </div>
+
+            <div class="mt-5 pt-3 border-t border-gray-100 text-center">
+                <button type="button" class="text-sm text-gray-500 hover:text-gray-700 underline font-medium"
+                    onclick="document.getElementById('cancel-user-series-modal').close()">
+                    Go Back
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="cancel-series-warning-modal" class="p-0 rounded-lg shadow-xl max-w-sm w-full">
+        <div class="p-6 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2">Final Warning</h3>
+            <p class="text-sm text-gray-500 mb-6">
+                You are about to cancel this <strong>ENTIRE series</strong> of bookings.
+                <br><br>
+                This action cannot be undone. Are you sure?
+            </p>
+
+            <div class="flex flex-col gap-3">
+                <button type="button" id="confirm-series-cancel-btn"
+                    class="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    Yes, Cancel Series
+                </button>
+                <button type="button"
+                    class="w-full px-4 py-2 bg-white text-gray-700 rounded-md hover:bg-gray-50 font-medium border border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    onclick="document.getElementById('cancel-series-warning-modal').close()">
+                    Go Back
+                </button>
+            </div>
+        </div>
+    </dialog>
+
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
     <script src="config.js?v=1.4"></script>
     <script src="script.js?v=1.4"></script>

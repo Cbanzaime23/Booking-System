@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
         pendingBookingData: null,
         pendingMoveData: null,
         lastFetchTimestamp: null,
+        duplicationSource: null,     // For Duplication Logic
+        duplicationDuration: null,   // For Duplication Logic
+        pendingCancelData: null,     // For Recurrent Cancellation Logic
     };
 
     // Define the overall maximum capacity for each room (used for admin max bookings)
@@ -81,9 +84,18 @@ document.addEventListener('DOMContentLoaded', () => {
      * Renders the event dropdown options based on admin status.
      * @param {boolean} isAdmin - True if the admin toggle is checked.
      */
+    /**
+     * Renders the event dropdown options based on admin status and selected recurrence.
+     * @param {boolean} isAdmin - True if the admin toggle is checked.
+     */
     function renderEventDropdown(isAdmin) {
         const eventSelector = bookingForm.querySelector('#event'); // Assuming the ID of the dropdown is 'event'
+        const recurrenceSelector = bookingForm.querySelector('#recurrence');
+
         if (!eventSelector) return;
+
+        // Get current recurrence value
+        const recurrenceValue = recurrenceSelector ? recurrenceSelector.value : 'none';
 
         // Start with a clean slate
         eventSelector.innerHTML = '';
@@ -97,11 +109,29 @@ document.addEventListener('DOMContentLoaded', () => {
         eventSelector.appendChild(placeholder);
 
         // 1. Add User (Base) options
+        // NOTE: If specific recurrence rules apply to USER options too, filter here. 
+        // For now, assuming rules only apply to Admin options or strict admin events.
         const allOptions = [...EVENT_OPTIONS.USER];
 
         // 2. Add Admin options if applicable
         if (isAdmin) {
-            allOptions.push(...EVENT_OPTIONS.ADMIN_ADDITIONS);
+            let adminOptions = [...EVENT_OPTIONS.ADMIN_ADDITIONS];
+
+            // --- FILTERING LOGIC BASED ON RECURRENCE ---
+            if (recurrenceValue === 'first_wednesday') {
+                // Only "Intercede Prayer Ministry"
+                adminOptions = adminOptions.filter(opt =>
+                    opt.name === "Ministry Event - Intercede Prayer Ministry"
+                );
+            } else if (recurrenceValue === 'last_saturday') {
+                // Only "Women 2 Women" and "MOVEMENT"
+                adminOptions = adminOptions.filter(opt =>
+                    opt.name === "Ministry Event - Women 2 Women" ||
+                    opt.name === "Ministry Event - MOVEMENT"
+                );
+            }
+
+            allOptions.push(...adminOptions);
         }
 
         // 3. Populate the dropdown
@@ -331,6 +361,27 @@ document.addEventListener('DOMContentLoaded', () => {
         bookingForm.addEventListener('submit', handleBookingFormSubmit);
         cancelForm.addEventListener('submit', handleCancelFormSubmit);
         document.getElementById('cancel-booking-list').addEventListener('change', handleCancelSelectionChange);
+
+        // --- NEW: Recurrent Cancellation Modal Listeners ---
+        const cancelSeriesModal = document.getElementById('cancel-user-series-modal');
+        if (cancelSeriesModal) {
+            document.getElementById('cancel-single-btn').addEventListener('click', () => submitPendingCancellation(false));
+            document.getElementById('cancel-series-btn').addEventListener('click', () => {
+                // Close the "Choice" modal and Open the "Warning" modal
+                document.getElementById('cancel-user-series-modal').close();
+                document.getElementById('cancel-series-warning-modal').showModal();
+            });
+        }
+
+        // --- NEW: Final Warning Modal Listeners ---
+        const finalWarningModal = document.getElementById('cancel-series-warning-modal');
+        if (finalWarningModal) {
+            document.getElementById('confirm-series-cancel-btn').addEventListener('click', () => {
+                document.getElementById('cancel-series-warning-modal').close();
+                submitPendingCancellation(true);
+            });
+        }
+
         document.getElementById('summary-yes-btn').addEventListener('click', proceedWithBooking);
         document.getElementById('summary-no-btn').addEventListener('click', () => confirmSummaryModal.close());
         document.getElementById('success-done-btn').addEventListener('click', () => successModal.close());
@@ -421,6 +472,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Prevent paste on confirm email to force manual re-entry
         confirmEmailInput.addEventListener('paste', (e) => e.preventDefault());
 
+        // NEW: Listener for Recurrence Dropdown to trigger Event filtering
+        const recurrenceDropdown = document.getElementById('recurrence');
+        if (recurrenceDropdown) {
+            recurrenceDropdown.addEventListener('change', () => {
+                // Re-render event dropdown based on current admin state and new recurrence value
+                const isAdmin = document.getElementById('admin-toggle')?.checked || false;
+                renderEventDropdown(isAdmin);
+            });
+        }
         document.getElementById('admin-toggle').addEventListener('change', (e) => {
             const isAdmin = e.target.checked;
 
@@ -971,14 +1031,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const pinSection = document.getElementById('admin-pin-section');
 
             // --- Series Option Logic ---
-            // Only show Series Option for Admin Bookings that have recurrence
-            // (Regular users can't cancel series because PIN field is hidden for them)
-            if (booking && booking.recurrence_id && isAdminBooking) {
-                seriesOption.classList.remove('hidden');
-            } else {
-                seriesOption.classList.add('hidden');
-                if (seriesCheckbox) seriesCheckbox.checked = false;
-            }
+            // HIDDEN BY DEFAULT: User requested a POST-CLICK confirmation flow.
+            // We no longer show the checkbox here. The logic is moved to handleCancelFormSubmit.
+            // if (booking && booking.recurrence_id && isAdminBooking) {
+            //    seriesOption.classList.remove('hidden');
+            // } else {
+            //    seriesOption.classList.add('hidden');
+            //    if (seriesCheckbox) seriesCheckbox.checked = false;
+            // }
+            seriesOption.classList.add('hidden'); // Ensure it stays hidden
+            if (seriesCheckbox) seriesCheckbox.checked = false;
 
             if (isAdminBooking) {
                 // Show PIN Section
@@ -1616,8 +1678,45 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Check if we need to show the Recurrent Series Choice Modal
+        // 1. Is it a recurrent booking?
+        // 2. Is it an Admin booking? (Only admins can cancel series)
+        // 3. Is the Admin PIN present? (Required for series cancellation)
+
+        if (booking && booking.recurrence_id && isAdminBooking && adminPin) {
+            // Store data for the next step
+            state.pendingCancelData = { bookingId, bookingCode, adminPin };
+
+            // Open the choice modal
+            document.getElementById('cancel-user-series-modal').showModal();
+            return; // STOP here
+        }
+
         loadingModal.showModal();
         submitRequest('cancel', { bookingId, bookingCode, adminPin, cancelSeries });
+    }
+
+    function submitPendingCancellation(cancelSeries) {
+        document.getElementById('cancel-user-series-modal').close();
+
+        if (!state.pendingCancelData) return;
+
+        const { bookingId, bookingCode, adminPin } = state.pendingCancelData;
+
+        // If cancelling series, show one last browser confirmation to be safe (optional, but good practice)
+        // REPLACED WITH CUSTOM MODAL (Logic handled in event listener above)
+        /*
+        if (cancelSeries) {
+            if (!confirm("⚠️ FINAL WARNING: You are about to cancel this ENTIRE series of bookings.\n\nThis action cannot be undone. Are you sure?")) {
+                state.pendingCancelData = null;
+                return;
+            }
+        }
+        */
+
+        loadingModal.showModal();
+        submitRequest('cancel', { bookingId, bookingCode, adminPin, cancelSeries });
+        state.pendingCancelData = null;
     }
 
     function submitRequest(action, payload) {
