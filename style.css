@@ -299,3 +299,47 @@ dialog::backdrop {
     border-color: #b3cdd2;
     /* ccf-blue-light */
 }
+
+/* Time Selection Modal Styles */
+#time-selection-modal {
+    border: none;
+    overflow: hidden;
+}
+
+#time-selection-modal .modal-content {
+    animation: modal-slide-up 0.3s ease-out;
+}
+
+#display-start-time {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+#selection-end-time {
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+}
+
+#display-duration {
+    transition: color 0.2s ease;
+}
+
+@keyframes modal-slide-up {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Ensure the calendar links container has some spacing if it exists */
+#calendar-links-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    margin-bottom: 0.75rem;
+}

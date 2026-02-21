@@ -1,4 +1,4 @@
-CCF Manila Booking System - Design System
+CCF Manila Room Reservation System - Design System
 
 1. Brand Identity
 

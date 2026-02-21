@@ -1,4 +1,4 @@
-# CCF Manila Booking System
+# CCF Manila Room Reservation System
 
 ![Version](https://img.shields.io/badge/version-1.5-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)

@@ -1,12 +1,12 @@
 
-# Booking System Process Map
+# Room Reservation System Process Map
 
 This document outlines the end-to-end journey of a user or admin creating a booking, detailing the interactions between the Frontend, Backend (Google Apps Script), and Google Services.
 
 | Step | Actor (Swimlane) | Action | Feature / Scenario / Decision |
 | :--- | :--- | :--- | :--- |
 | **Start** | User / Admin | Decides to book and opens the app URL. | |
-| 1 | User / Admin | Opens the booking app URL. | |
+| 1 | User / Admin | Opens the reservation app URL. | |
 | 2 | Frontend | Loads `index.html` & `script.js`. Populates room dropdown (default: "Main Hall"). | **Feature:** Multi-Room Selection |
 | 3 | Frontend | Calls Google Sheets API to get current bookings (`fetchAllBookings`). | **Feature:** Data Fetching |
 | 4 | Frontend | Renders the calendar for "Main Hall", calculating capacity colors (Red/Yellow/Blue). | **Feature:** Dynamic Capacity Calendar |

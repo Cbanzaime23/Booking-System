@@ -29,7 +29,7 @@ window.APP_CONFIG = {
   SLOT_DURATION_MINUTES: 30,
 
   /**
-   * Define the operating hours for the booking system in 24-hour format.
+   * Define the operating hours for the reservation system in 24-hour format.
    * Bookings cannot be made outside these hours.
    */
   BUSINESS_HOURS: {

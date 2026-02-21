@@ -1,4 +1,4 @@
-CCF Manila Booking System - Developer Guide
+CCF Manila Room Reservation System - Developer Guide
 
 1. Architecture Overview
 

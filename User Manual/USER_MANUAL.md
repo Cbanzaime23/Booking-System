@@ -1,4 +1,4 @@
-CCF Manila Booking System - User Manual
+CCF Manila Room Reservation System - User Manual
 
 For Regular Users
 
@@ -42,7 +42,7 @@ For Administrators
 
 Accessing the Dashboard
 
-Go to the main booking page.
+Go to the main reservation page.
 
 Click the "Admin Dashboard" button in the top right corner.
 

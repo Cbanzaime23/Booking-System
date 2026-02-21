@@ -60,6 +60,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingModal = document.getElementById('loading-modal');
     const successModal = document.getElementById('success-modal');
 
+    // Intermediate Time Selection Modal
+    const timeSelectionModal = document.getElementById('time-selection-modal');
+    const displayStartTime = document.getElementById('display-start-time');
+    const selectionEndTimeInput = document.getElementById('selection-end-time');
+    const displayDuration = document.getElementById('display-duration');
+    const timeSelectionConfirmBtn = document.getElementById('time-selection-confirm-btn');
+    const timeSelectionCancelBtn = document.getElementById('time-selection-cancel-btn');
+
     const calendarControls = {
         prevWeekBtn: document.getElementById('prev-week'),
         nextWeekBtn: document.getElementById('next-week'),
@@ -188,6 +196,40 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Set Calendar Header Top
         const totalTop = headerHeight + controlsHeight;
         document.body.style.setProperty('--calendar-header-top', `${totalTop}px`);
+    }
+
+    // --- TIME SELECTION HELPERS ---
+    function calculateDuration(startTime, endTimeStr) {
+        if (!startTime || !endTimeStr) return null;
+        const [hours, minutes] = endTimeStr.split(':').map(Number);
+        const endTime = startTime.set({ hour: hours, minute: minutes });
+
+        let diff = endTime.diff(startTime, 'hours').hours;
+        // Handle potential day wraparound if end time is before start time
+        if (diff < 0) diff += 24;
+        return diff;
+    }
+
+    function updateDurationDisplay() {
+        const duration = calculateDuration(state.selectedSlot.startTime, selectionEndTimeInput.value);
+        if (duration !== null && duration > 0) {
+            displayDuration.textContent = `${duration.toFixed(1)} hours`;
+        } else {
+            displayDuration.textContent = '--';
+        }
+    }
+
+    function openTimeSelectionModal() {
+        choiceModal.close();
+        const { startTime } = state.selectedSlot;
+        displayStartTime.textContent = startTime.toFormat('ccc, MMM d, h:mm a');
+
+        // Default end time: start time + slot duration
+        const defaultEndDate = startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES || 30 });
+        selectionEndTimeInput.value = defaultEndDate.toFormat('HH:mm');
+
+        updateDurationDisplay();
+        timeSelectionModal.showModal();
     }
 
     let autoRefreshIntervalId = null;
@@ -339,8 +381,28 @@ document.addEventListener('DOMContentLoaded', () => {
         calendarView.addEventListener('click', handleSlotClick);
 
         // Modal Listeners
-        document.getElementById('choice-book-btn').addEventListener('click', openBookingModalForSelectedSlot);
+        document.getElementById('choice-book-btn').addEventListener('click', openTimeSelectionModal);
         document.getElementById('choice-cancel-btn').addEventListener('click', openCancelModalForSelectedSlot);
+
+        // Time Selection Listeners
+        selectionEndTimeInput.addEventListener('input', updateDurationDisplay);
+        timeSelectionCancelBtn.addEventListener('click', () => timeSelectionModal.close());
+        timeSelectionConfirmBtn.addEventListener('click', () => {
+            const endTime = selectionEndTimeInput.value;
+            const duration = calculateDuration(state.selectedSlot.startTime, endTime);
+
+            if (!endTime) {
+                showFormAlert('time-selection-alert', 'Please select an end time.', 'error');
+                return;
+            }
+            if (duration <= 0) {
+                showFormAlert('time-selection-alert', 'End time must be after start time.', 'error');
+                return;
+            }
+
+            clearAllFormAlerts();
+            openBookingModalForSelectedSlot(state.selectedSlot.startTime, endTime);
+        });
         const moveBtn = document.getElementById('choice-move-btn');
         if (moveBtn) {
             moveBtn.addEventListener('click', openMoveModalForSelectedSlot);
@@ -390,8 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Close ALL modals when any cancel button is clicked
                 if (typeof bookingModal !== 'undefined') bookingModal.close();
                 if (typeof cancelModal !== 'undefined') cancelModal.close();
-                if (typeof bookingModal !== 'undefined') bookingModal.close();
-                if (typeof cancelModal !== 'undefined') cancelModal.close();
+                if (timeSelectionModal) timeSelectionModal.close();
                 if (moveModal) moveModal.close();
                 const duplicateModal = document.getElementById('duplicate-selection-modal');
                 if (duplicateModal) duplicateModal.close();
@@ -869,12 +930,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } else if (slot.classList.contains('available')) {
             state.pendingWarning = warningMessage; // carry forward to booking form
-            openBookingModalForSelectedSlot();
+            openTimeSelectionModal();
         }
     }
 
-    function openBookingModalForSelectedSlot() {
+    function openTimeSelectionModal() {
+        if (choiceModal) choiceModal.close();
+        if (!state.selectedSlot) return;
+
+        const { startTime } = state.selectedSlot;
+        displayStartTime.textContent = startTime.toFormat('h:mm a');
+
+        // Set default end time to 1 hour after start
+        const defaultEndDate = startTime.plus({ hours: 1 });
+        selectionEndTimeInput.value = defaultEndDate.toFormat('HH:mm');
+
+        updateDurationDisplay();
+        timeSelectionModal.showModal();
+    }
+
+    function calculateDuration(startTime, endTimeStr) {
+        if (!endTimeStr) return 0;
+        const [hours, minutes] = endTimeStr.split(':').map(Number);
+        const endTime = startTime.set({ hour: hours, minute: minutes });
+        return endTime.diff(startTime, 'minutes').minutes;
+    }
+
+    function updateDurationDisplay() {
+        const endTime = selectionEndTimeInput.value;
+        const durationMin = calculateDuration(state.selectedSlot.startTime, endTime);
+
+        if (durationMin <= 0) {
+            displayDuration.textContent = '--';
+            displayDuration.className = 'font-bold text-red-500';
+            return;
+        }
+
+        const hours = durationMin / 60;
+        let durationText = '';
+        if (durationMin >= 60) {
+            durationText = `${hours} hour${hours !== 1 ? 's' : ''}`;
+        } else {
+            durationText = `${durationMin} minute${durationMin !== 1 ? 's' : ''}`;
+        }
+
+        displayDuration.textContent = durationText;
+        displayDuration.className = 'font-bold text-ccf-blue';
+    }
+
+    function openBookingModalForSelectedSlot(customStartTime = null, customEndTime = null) {
         choiceModal.close();
+        if (timeSelectionModal) timeSelectionModal.close();
         bookingForm.reset();
 
         // Clear previous alerts and show pending warning if any
@@ -888,27 +994,56 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-fields').classList.remove('hidden');
         document.getElementById('admin-fields').classList.add('hidden');
         const { startTime, rules } = state.selectedSlot;
+
+        const finalStart = customStartTime || startTime;
+        // Default end time is 30 mins after start if not provided
+        const finalEnd = customEndTime || startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES || 30 }).toFormat('HH:mm');
+
         // --- CRITICAL ADDITION: RENDER DROPDOWN FOR USER (false) ---
         renderEventDropdown(isAdmin);
 
 
         // --- REVISED CHANGE: Using a dedicated element for date info ---
 
-        // 1. Format the date/time string
-        const formattedDate = startTime.toFormat('ccc, MMM d, h:mm a');
+        // 1. Format the date/time range
+        const startFmt = finalStart.toFormat('h:mm a');
+        const endFmt = DateTime.fromFormat(finalEnd, 'HH:mm').toFormat('h:mm a');
+        const dateFmt = finalStart.toFormat('ccc, MMM d');
 
-        // 3. Populate the dedicated date/time element (This targets the highlighted area)
+        // 3. Populate the dedicated date/time element
         const dateInfoElement = document.getElementById('modal-date-info');
         if (dateInfoElement) {
-            dateInfoElement.textContent = formattedDate;
+            dateInfoElement.innerHTML = `
+            <div class="mb-4 p-3 bg-ccf-blue/5 border border-ccf-blue/10 rounded-lg">
+                <p class="text-xs text-ccf-blue uppercase font-bold tracking-wider mb-1">Selected Schedule</p>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-lg font-bold text-gray-800">${dateFmt}</p>
+                        <p class="text-md text-ccf-blue font-semibold">${startFmt} - ${endFmt}</p>
+                    </div>
+                    <div class="text-right">
+                        <button type="button" id="change-time-btn" class="text-xs text-ccf-red hover:underline font-semibold">Change Time</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+            // Add listener for change time button
+            const changeTimeBtn = dateInfoElement.querySelector('#change-time-btn');
+            if (changeTimeBtn) {
+                changeTimeBtn.addEventListener('click', () => {
+                    bookingModal.close();
+                    openTimeSelectionModal();
+                });
+            }
         }
 
         // --- END OF REVISED CHANGE ---
 
         updateParticipantRules(rules, false);
         document.getElementById('modal-title').textContent = `Book ${state.selectedRoom}`;
-        bookingForm.querySelector('#start-iso').value = startTime.toISO();
-        bookingForm.querySelector('#end-time').value = startTime.plus({ minutes: APP_CONFIG.SLOT_DURATION_MINUTES }).toFormat('HH:mm');
+        bookingForm.querySelector('#start-iso').value = finalStart.toISO();
+        bookingForm.querySelector('#end-time').value = finalEnd;
         bookingModal.showModal();
 
         // Show pending warning inside the booking form
@@ -1991,39 +2126,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // ctz=Asia/Manila ensures the calendar opens in the correct timezone
         const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&details=${details}&location=${location}&ctz=Asia/Manila`;
 
-        // 4. Generate ICS File Content
-        const icsData = [
-            'BEGIN:VCALENDAR',
-            'VERSION:2.0',
-            'PRODID:-//CCF Manila//Booking System//EN',
-            'BEGIN:VEVENT',
-            `UID:${booking.id}@ccfmanila.org`,
-            `DTSTAMP:${DateTime.now().setZone('Asia/Manila').toFormat(fmt)}Z`,
-            `DTSTART;TZID=Asia/Manila:${startStr}`,
-            `DTEND;TZID=Asia/Manila:${endStr}`,
-            `SUMMARY:CCF Booking: ${booking.event}`,
-            `DESCRIPTION:${booking.notes || ''}`,
-            `LOCATION:CCF Manila - ${booking.room}`,
-            'END:VEVENT',
-            'END:VCALENDAR'
-        ].join('\r\n');
-
-        // Create a downloadable file blob
-        const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
-        const icsUrl = URL.createObjectURL(blob);
-
-        // 5. Inject HTML
+        // 4. Inject HTML
+        // Note: .ics download removed as per user request. 
+        // We make the Google button w-full to match the 'Done' button.
         container.innerHTML = `
-            <a href="${gCalUrl}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 text-sm font-medium transition-colors">
+            <a href="${gCalUrl}" target="_blank" rel="noopener noreferrer" class="w-full flex items-center justify-center gap-2 px-3 py-3 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 text-sm font-bold transition-colors">
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5v-5z"/></svg>
-                Add to Google
-            </a>
-            <a href="${icsUrl}" download="ccf-booking-${booking.id}.ics" class="flex items-center justify-center gap-2 px-3 py-2 bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 text-sm font-medium transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                Download .ics
+                Add to Google Calendar
             </a>
         `;
     }
+
 
 
     /**

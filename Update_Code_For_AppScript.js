@@ -7,7 +7,7 @@ const BLOCKED_SHEET_NAME = 'BlockedDates';
 const SETTINGS_SHEET_NAME = 'Settings'; // NEW: Configuration for Global Settings
 const LOGS_SHEET_NAME = 'Logs'; // NEW: Audit Logs
 const SCRIPT_TIMEZONE = "Asia/Manila";
-const EMAIL_SENDER_NAME = "CCF Manila Booking";
+const EMAIL_SENDER_NAME = "CCF Manila Room Reservation System";
 
 // --- SURVEY FORM CONFIGURATION ---
 const SURVEY_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfEZsWJRYGRh0Jqr6_L9Cw3OGcew6TGGV0YxM0cRTuB4GuJ3A/viewform?usp=pp_url&entry.1009510910=${bookingCode}";
@@ -381,7 +381,7 @@ function sendBlockedDateCancellationEmail(booking, reason, blockedDate) {
 
       <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 15px; margin: 20px 0;">
         <p style="margin: 0; color: #1e40af; font-size: 14px;">
-          <strong>What to do next:</strong> Please rebook your event on a different available date using our <a href="https://cbanzaime23.github.io/Booking-System/" style="color: #1e40af;">Booking System</a>. We apologize again for any inconvenience caused.
+          <strong>What to do next:</strong> Please rebook your event on a different available date using our <a href="https://cbanzaime23.github.io/Booking-System/" style="color: #1e40af;">Room Reservation System</a>. We apologize again for any inconvenience caused.
         </p>
       </div>
 
