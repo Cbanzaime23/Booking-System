@@ -1,6 +1,6 @@
 # CCF Manila Room Reservation System
 
-![Version](https://img.shields.io/badge/version-1.5-blue.svg)
+![Version](https://img.shields.io/badge/version-1.6-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 ![Tech](https://img.shields.io/badge/stack-HTML%20%7C%20JS%20%7C%20Google%20Apps%20Script-orange)
 
@@ -24,6 +24,7 @@ A comprehensive, serverless room reservation web application designed for **CCF 
 ### 👤 User Experience & Booking Interface
 *   **Visual Calendar**: Interactive weekly view with sticky headers, clear AM/PM dividers, and a "Last Updated" freshness status bar.
 *   **Multi-Room Support**: Seamless switching between rooms (Main Hall, Jonah, Joseph, Moses) with real-time capacity badges.
+*   **Duration Visibility**: Real-time duration calculation (e.g., "1.5 hrs") displayed during time selection and in the booking modal.
 *   **Smart Form Validation**:
     *   **Typo Detection**: "Confirm Email" field warns users of common typos (e.g., "gmial.com").
     *   **Logic Checks**: Prevents invalid times (End < Start), past dates, or exceeding room capacity.
@@ -40,6 +41,7 @@ A comprehensive, serverless room reservation web application designed for **CCF 
 *   **Secure Admin Mode**: PIN-protected toggle unlocks privileged features.
 *   **Analytics Dashboard**:
     *   **Key Metrics**: Real-time counters for Total Bookings, Participants, and Room Utilization.
+    *   **Weekly Admin Horizon**: A dedicated scrollable view of upcoming church-led events for the next 7 days.
     *   **Visualizations**: D3.js Gantt Timeline and Donut charts.
     *   **Search**: Filter bookings by Name, Email, or Date.
 *   **Advanced Controls**:
@@ -57,7 +59,7 @@ A comprehensive, serverless room reservation web application designed for **CCF 
 
 ### 🔔 Notifications
 *   **Automated Emails**: Instant branding-aware HTML confirmations sent via Google `MailApp`.
-*   **Calendar Integration**: Emails include `.ics` attachments for one-click addition to personal calendars.
+*   **Calendar Integration**: Emails include direct "Add to Google Calendar" links for one-click scheduling.
 *   **Lifecycle Updates**: Automated notifications for Cancellations, Reschedules, or Admin-initiated blocks.
 
 ---

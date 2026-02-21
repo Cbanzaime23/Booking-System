@@ -85,14 +85,27 @@ D. Gantt Chart Visualization
 Logic Location: dashboard.html -> renderD3GanttChart
 
 Mechanism: Uses D3.js. It calculates "tracks" for overlapping bookings. If Booking B starts before Booking A ends, Booking B is pushed to a new Y-axis row (Track 2). This prevents visual overlapping.
-
-E. GDPR Compliance
-
-Logic Location: index.html (My Bookings Modal) -> Code.gs
-
-Mechanism: Users can request a copy of their data or deletion.
-- **Export:** Returns a JSON list of all bookings where the user's email matches.
-- **Delete:** Updates the `status` column to "DELETED_USER" and clears PII fields (Name, Email, Phone) in the Google Sheet, preserving statistical data (Room, Time) but removing personal info.
+ 
+ E. Admin Horizon View
+ 
+ Logic Location: `dashboard.html` -> `renderAdminWeeklySummary`
+ 
+ Mechanism: Filters `allBookings` for the next 7 days and checks for an empty `leader_first_name` field. Renders results as a horizontal scroller of cards.
+ 
+ F. Time Selection & Duration
+ 
+ Logic Location: `script.js` -> `openTimeSelectionModal` & `calculateDuration`
+ 
+ Mechanism: An intermediate step between slot-click and booking-form. It calculates the difference between `startTime` and `endTimeStr` using Luxon. The result is displayed in the UI as "(X.X hrs)".
+ 
+ G. GDPR Compliance & Retention
+ 
+ Logic Location: `index.html` (My Bookings Modal) -> `Code.gs` -> `handleExportUserData`, `handleDeleteUserData`
+ 
+ Mechanism: 
+ - **Export:** Returns a JSON list of all bookings matching the verified email.
+ - **Delete:** Anonymizes personal data (Name, Email, Notes) in the sheet, preserving statistics.
+ - **Auto-Retention:** `Code.gs` includes a `anonymizeExpiredBookings` function (triggered daily) that automatically anonymizes bookings older than 365 days.
 
 4. Setup & Deployment
 
@@ -107,7 +120,7 @@ GitHub Repository (for hosting).
 Google Sheet Schema
 
 The Bookings sheet must have these exact headers in Row 1:
-id, date, start_iso, end_iso, first_name, last_name, email, leader_first_name, leader_last_name, event, room, participants, status, created_at, notes
+id, date, start_iso, end_iso, first_name, last_name, email, leader_first_name, leader_last_name, event, room, participants, status, created_at, notes, terms_accepted, privacy_accepted, consent_timestamp, recurrence_id
 
 Deployment Steps
 

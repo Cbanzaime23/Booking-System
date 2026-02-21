@@ -1013,13 +1013,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Populate the dedicated date/time element
         const dateInfoElement = document.getElementById('modal-date-info');
         if (dateInfoElement) {
+            const durationHours = calculateDuration(finalStart, finalEnd);
+            const durationText = (durationHours !== null && durationHours > 0) ? `(${durationHours.toFixed(1)} ${durationHours === 1 ? 'hr' : 'hrs'})` : '';
+
             dateInfoElement.innerHTML = `
             <div class="mb-4 p-3 bg-ccf-blue/5 border border-ccf-blue/10 rounded-lg">
                 <p class="text-xs text-ccf-blue uppercase font-bold tracking-wider mb-1">Selected Schedule</p>
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-lg font-bold text-gray-800">${dateFmt}</p>
-                        <p class="text-md text-ccf-blue font-semibold">${startFmt} - ${endFmt}</p>
+                        <p class="text-md text-ccf-blue font-semibold">
+                            ${startFmt} - ${endFmt}
+                            <span class="ml-2 text-sm text-gray-500 font-normal">${durationText}</span>
+                        </p>
                     </div>
                     <div class="text-right">
                         <button type="button" id="change-time-btn" class="text-xs text-ccf-red hover:underline font-semibold">Change Time</button>

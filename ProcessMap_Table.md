@@ -14,8 +14,9 @@ This document outlines the end-to-end journey of a user or admin creating a book
 | 6 | Frontend | `roomSelector` listener fires. Calls `render()` to redraw calendar for "Jonah". | |
 | 7 | User / Admin | Navigates weeks and clicks on a desired time slot. | |
 | 8 | Frontend | `handleSlotClick` triggered. | **Decision:** Is slot "Available"?<br>• **YES:** Go to Step 10<br>• **NO (Partial/Full):** Go to Step 9 |
-| 9 | Frontend | Displays "What would you like to do?" modal. | **Feature:** Choice Modal<br>*Scenario: User clicks "Book a New Slot" -> Go to Step 10* |
-| 10 | Frontend | Calls `openBookingModalForSelectedSlot`. Modal opens. | **Feature:** Dynamic Booking Modal |
+| 9 | Frontend | Displays "What would you like to do?" modal. | **Feature:** Choice Modal<br>*Scenario: User clicks "Book a New Slot" -> Go to Step 9b* |
+| 9b | Frontend | Opens `openTimeSelectionModal`. User selects **End Time**. | **Feature:** Intermediate Time Selection |
+| 10 | Frontend | Calls `openBookingModalForSelectedSlot`. Modal opens. Displays **Duration** (hrs). | **Feature:** Dynamic Booking Modal |
 | 11 | Frontend | Checks `ROOM_CONFIG` and slot capacity. Sets `min` and `max` attributes on inputs. | **Feature:** Dynamic Participant Rules |
 | 12 | User / Admin | Fills out the booking form. | **Decision:** Is user Admin?<br>• **NO:** Fills all fields (inc. Leader)<br>• **YES:** Go to Step 13 |
 | 13 | User / Admin | Clicks "I am an Admin" checkbox. | |
@@ -25,7 +26,7 @@ This document outlines the end-to-end journey of a user or admin creating a book
 | 17 | Frontend | `#event` listener detects `setsMaxCapacity`. Auto-fills participants to room total (e.g., 55). | **Feature:** Admin Max Capacity |
 | 18 | User / Admin | Finishes form and clicks "Confirm Booking". | |
 | 19 | Frontend | `handleBookingFormSubmit` runs validation. | **Feature:** Client-Side Validation<br>**Decision:** Passed?<br>• **NO:** Show Toast [END]<br>• **YES:** Go to Step 20 |
-| 20 | Frontend | Populates and shows `#confirm-summary-modal`. | **Feature:** Booking Summary Modal |
+| 20 | Frontend | Populates and shows `#confirm-summary-modal`. Includes **Duration**. | **Feature:** Booking Summary Modal |
 | 21 | User / Admin | Reviews summary and clicks "Yes, Confirm". | |
 | 22 | Frontend | Calls `proceedWithBooking`. Shows `#loading-modal`. | **Feature:** Loading Modal |
 | 23 | Frontend | Calls `submitRequest`. Sends JSONP payload to Apps Script. | |

@@ -391,6 +391,26 @@
                 </p>
             </div>
 
+            <!-- SECTION 3b: WEEKLY ADMIN HORIZON -->
+            <div id="admin-horizon-section" class="mb-4 md:mb-8 hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base md:text-xl font-bold font-heading text-ccf-blue flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-ccf-red-dark" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Weekly Admin Horizon
+                    </h3>
+                    <span
+                        class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200 uppercase tracking-wider">Church
+                        Events - Next 7 Days</span>
+                </div>
+                <div id="admin-horizon-container" class="flex overflow-x-auto gap-4 pb-4 custom-scrollbar snap-x">
+                    <!-- Dynamic Cards will be injected here -->
+                </div>
+            </div>
+
             <!-- SECTION 4: ROOM DETAILED TABLES -->
             <div id="room-tables-container" class="space-y-4 md:space-y-8 pb-6 md:pb-10">
                 <!-- Tables will be injected here by JS -->
@@ -845,6 +865,7 @@
             renderD3BarChart(roomCounts);
             renderD3DonutChart(eventCounts);
             renderD3GanttChart(bookings);
+            renderAdminWeeklySummary(allBookings); // Pass allBookings to look ahead 7 days regardless of current filter
 
             bookings.sort((a, b) => {
                 const dA = parseDate(a.start_iso);
@@ -852,6 +873,62 @@
                 return dA - dB;
             });
             renderRoomTables(bookings);
+        }
+
+        function renderAdminWeeklySummary(data) {
+            const container = document.getElementById('admin-horizon-container');
+            const section = document.getElementById('admin-horizon-section');
+            if (!container || !section) return;
+
+            const now = DateTime.now().setZone(APP_CONFIG.TIMEZONE);
+            const horizonEnd = now.plus({ days: 7 }).endOf('day');
+
+            // Filter: Next 7 days + Admin Bookings (leader_first_name is empty)
+            const adminEvents = data.filter(b => {
+                const bStart = parseDate(b.start_iso);
+                if (!bStart.isValid) return false;
+
+                // Admin check: No leader first name
+                const isAdminBooking = !b.leader_first_name || b.leader_first_name.trim() === '';
+
+                return isAdminBooking && bStart >= now.startOf('day') && bStart <= horizonEnd;
+            }).sort((a, b) => parseDate(a.start_iso) - parseDate(b.start_iso));
+
+            if (adminEvents.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+            container.innerHTML = '';
+
+            adminEvents.forEach(b => {
+                const start = parseDate(b.start_iso);
+                const dateStr = start.toFormat('EEE, MMM d');
+                const timeStr = `${start.toFormat('h:mm a')} - ${parseDate(b.end_iso).toFormat('h:mm a')}`;
+
+                const card = document.createElement('div');
+                card.className = "min-w-[260px] md:min-w-[300px] bg-white border border-gray-100 rounded-xl p-4 shadow-sm border-l-4 border-l-ccf-red snap-start flex flex-col hover:shadow-md transition-shadow cursor-default";
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] font-bold text-ccf-red-dark bg-red-50 px-2 py-0.5 rounded border border-red-100 uppercase">${b.event}</span>
+                        <span class="text-[11px] font-bold text-gray-400 capitalize">${b.room}</span>
+                    </div>
+                    <h4 class="font-bold text-gray-800 text-sm md:text-base mb-1 line-clamp-1">${b.first_name} ${b.last_name || ''}</h4>
+                    <div class="mt-auto pt-2 flex flex-col gap-1 border-t border-gray-50">
+                        <div class="flex items-center gap-1.5 text-ccf-blue font-bold text-xs">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2" /></svg>
+                            ${dateStr}
+                        </div>
+                        <div class="flex items-center gap-1.5 text-gray-500 font-medium text-[11px]">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" /></svg>
+                            ${timeStr}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
         }
 
         // --- D3.JS CHARTS ---

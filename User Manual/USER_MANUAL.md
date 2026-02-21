@@ -8,19 +8,18 @@ Select Room: Choose your desired room from the dropdown menu (top left).
 
 Select Slot: Navigate to your desired date using the "Prev" and "Next" buttons. Click on a time slot that shows as "Available" or has "Spots left".
 
+Time Selection: A modal will appear allowing you to select your **End Time**. The system will display the total duration (e.g., "1.5 hrs"). If you are satisfied, click "Continue to Booking".
+
 Fill Form:
-
-Enter your Name and Email.
-
-Dgroup Leader: Enter the name of your Dgroup leader.
-
-Event: Select the type of event.
-
-Time & Participants: Confirm the end time and number of people.
+*   Enter your First and Last Name.
+*   Enter and confirm your Email Address.
+*   Dgroup Leader: Enter the name of your Dgroup leader.
+*   Event: Select the type of event.
+*   Group Size: Enter the number of participants. The system hides the end-time field here as it was already confirmed in the previous step.
 
 Confirm: Click "Confirm Booking". Review the summary details and click "Yes, Confirm".
 
-Done: You will see a success message with a Booking Code. You will also receive a confirmation email.
+Done: You will see a success message with a **Booking Code**. You will also receive a confirmation email with a link to add the event to your Google Calendar.
 
 Note: If you book a Mezzanine room but the Main Hall is available, the system may automatically move your booking to the Main Hall to optimize space. Your email will confirm which room you were assigned.
 
@@ -34,9 +33,9 @@ Select "Cancel a Booking".
 
 Choose your booking from the list.
 
-Enter the Email Address you used to make the booking.
+Verification: Enter your **Booking Code** (found in your confirmation email or 'My Bookings' portal).
 
-Click "Confirm Cancellation".
+Confirm Cancellation: Click the red "Confirm Cancellation" button.
 
 For Administrators
 
@@ -51,6 +50,8 @@ Enter the secure Admin PIN.
 Dashboard Features
 
 Summary Cards: See total active bookings, counts per room, and bookings for today.
+
+Weekly Admin Horizon: A high-level scroller showing all church-led (Admin) events scheduled for the next 7 days.
 
 Charts: Visual breakdown of room usage and event types.
 
@@ -88,6 +89,6 @@ Select "Cancel a Booking".
 
 Choose the booking to cancel.
 
-Enter the Admin PIN in the PIN field (leave email blank).
+Admin PIN: Enter the secure **Admin PIN** in the PIN field to override the requirement for a booking code.
 
 Click "Confirm Cancellation".
