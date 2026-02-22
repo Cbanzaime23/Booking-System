@@ -989,7 +989,7 @@ function sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom) 
         <p style="color: #065f46; font-size: 14px;">For Queries, Feature Requests, or Help Needs, please submit them via our Survey Google Form.</p>
         <a href="${surveyLink}" style="background-color: #047857; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; font-weight: bold;">Submit Feedback / Query</a>
       </div>
-      <p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email confirmation.<br>Thank you for using the CCF Manila Booking System.</p>
+      <p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email confirmation.<br>Thank you for using the CCF Manila Room Reservation System.</p>
     </div>
   `;
 
@@ -1378,7 +1378,7 @@ function handleDeleteUserData(payload) {
  * Lists all bookings that were included in the download.
  */
 function sendGdprExportEmail(email, bookings) {
-    const subject = 'Your Data Export Confirmation - CCF Manila Booking System';
+    const subject = 'Your Data Export Confirmation - CCF Manila Room Reservation System';
     const dateNow = Utilities.formatDate(new Date(), SCRIPT_TIMEZONE, "MMMM d, yyyy 'at' h:mm a");
 
     let bookingRows = '';
@@ -1427,7 +1427,7 @@ function sendGdprExportEmail(email, bookings) {
         </p>
       </div>
 
-      <p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email confirmation.<br>Thank you for using the CCF Manila Booking System.</p>
+      <p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email confirmation.<br>Thank you for using the CCF Manila Room Reservation System.</p>
     </div>`;
 
     MailApp.sendEmail({
@@ -1443,7 +1443,7 @@ function sendGdprExportEmail(email, bookings) {
  * Lists all bookings that were anonymized as a final receipt.
  */
 function sendGdprDeletionEmail(email, deletedBookings, count) {
-    const subject = '⚠️ Data Deletion Confirmation - CCF Manila Booking System';
+    const subject = '⚠️ Data Deletion Confirmation - CCF Manila Room Reservation System';
     const dateNow = Utilities.formatDate(new Date(), SCRIPT_TIMEZONE, "MMMM d, yyyy 'at' h:mm a");
 
     let bookingRows = '';
@@ -1497,7 +1497,7 @@ function sendGdprDeletionEmail(email, deletedBookings, count) {
         </p>
       </div>
 
-      <p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email confirmation.<br>Thank you for using the CCF Manila Booking System.</p>
+      <p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email confirmation.<br>Thank you for using the CCF Manila Room Reservation System.</p>
     </div>`;
 
     MailApp.sendEmail({

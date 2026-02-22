@@ -953,7 +953,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!endTimeStr) return 0;
         const [hours, minutes] = endTimeStr.split(':').map(Number);
         const endTime = startTime.set({ hour: hours, minute: minutes });
-        return endTime.diff(startTime, 'minutes').minutes;
+        let diff = endTime.diff(startTime, 'minutes').minutes;
+        if (diff < 0) diff += 24 * 60; // Handle day wraparound
+        return diff;
     }
 
     function updateDurationDisplay() {
@@ -1013,8 +1015,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Populate the dedicated date/time element
         const dateInfoElement = document.getElementById('modal-date-info');
         if (dateInfoElement) {
-            const durationHours = calculateDuration(finalStart, finalEnd);
-            const durationText = (durationHours !== null && durationHours > 0) ? `(${durationHours.toFixed(1)} ${durationHours === 1 ? 'hr' : 'hrs'})` : '';
+            const durationMin = calculateDuration(finalStart, finalEnd);
+            const durationHours = durationMin / 60;
+            const durationText = (durationMin > 0) ? `(${durationHours.toFixed(1)} ${durationHours === 1 ? 'hr' : 'hrs'})` : '';
 
             dateInfoElement.innerHTML = `
             <div class="mb-4 p-3 bg-ccf-blue/5 border border-ccf-blue/10 rounded-lg">
