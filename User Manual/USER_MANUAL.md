@@ -1,5 +1,7 @@
 CCF Manila Room Reservation System - User Manual
 
+> 💡 **Visual Guide Available:** Prefer a visual walkthrough? View the [User Guide Presentation](https://docs.google.com/presentation/d/1oNwuIu89BxDH1aAoz8RPQeR73xltX3wS6vVrT3Pdvnc/edit?slide=id.g3bf48505da8_0_25#slide=id.g3bf48505da8_0_25).
+
 For Regular Users
 
 How to Book a Room

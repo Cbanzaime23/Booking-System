@@ -248,3 +248,17 @@ graph TD
     Step36 -- Yes --> Step37
     Step36 -- No --> Toast
     Step37 --> End
+```
+
+---
+
+## 📖 Documentation
+
+*   **User Manual (Text Version)**: [User Manual/USER_MANUAL.md](./User%20Manual/USER_MANUAL.md)
+*   **User Guide (Presentation)**: [Google Slides Version](https://docs.google.com/presentation/d/1oNwuIu89BxDH1aAoz8RPQeR73xltX3wS6vVrT3Pdvnc/edit?slide=id.g3bf48505da8_0_25#slide=id.g3bf48505da8_0_25)
+*   **Developer Guide**: [Documentation/DEVELOPER_GUIDE.md](./Documentation/DEVELOPER_GUIDE.md)
+
+### 📲 QR Codes
+You can find scannable QR codes for the system in the `img/` directory:
+*   **System Booking QR**: `img/booking_qr_code.png`
+*   **User Guide QR**: `img/user_guide_qr.png`
