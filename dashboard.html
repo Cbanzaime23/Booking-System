@@ -495,6 +495,109 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- SECTION 6: RESERVATION WINDOW SETTINGS -->
+            <div
+                class="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 mb-4 md:mb-8 mt-6 md:mt-8 border-t-4 border-t-emerald-500">
+                <div class="flex items-center justify-between mb-2 md:mb-4">
+                    <h3 class="text-base md:text-xl font-bold font-heading text-ccf-blue">Reservation Window Settings
+                    </h3>
+                    <span id="rw-status-badge"
+                        class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200">Loading...</span>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">Configure when users can create or modify reservations each week.
+                </p>
+
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                        <!-- Open Window -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Window
+                                Opens</label>
+                            <div class="flex gap-2">
+                                <select id="rw-open-day"
+                                    class="flex-1 p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
+                                    <option value="0">Sunday</option>
+                                    <option value="1">Monday</option>
+                                    <option value="2">Tuesday</option>
+                                    <option value="3">Wednesday</option>
+                                    <option value="4">Thursday</option>
+                                    <option value="5">Friday</option>
+                                    <option value="6">Saturday</option>
+                                </select>
+                                <input type="time" id="rw-open-time" value="08:00"
+                                    class="w-[120px] p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
+                            </div>
+                        </div>
+                        <!-- Close Window -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Window
+                                Closes</label>
+                            <div class="flex gap-2">
+                                <select id="rw-close-day"
+                                    class="flex-1 p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
+                                    <option value="0">Sunday</option>
+                                    <option value="1">Monday</option>
+                                    <option value="2">Tuesday</option>
+                                    <option value="3">Wednesday</option>
+                                    <option value="4">Thursday</option>
+                                    <option value="5">Friday</option>
+                                    <option value="6">Saturday</option>
+                                </select>
+                                <input type="time" id="rw-close-time" value="20:00"
+                                    class="w-[120px] p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row gap-4 items-end">
+                        <div class="w-full md:w-1/4">
+                            <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Admin
+                                PIN</label>
+                            <input type="password" id="rw-admin-pin" placeholder="PIN" required
+                                class="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
+                        </div>
+                        <button id="rw-save-btn" type="button"
+                            class="bg-emerald-600 text-white px-6 py-2 rounded font-bold hover:bg-emerald-700 transition text-sm shadow-sm flex items-center gap-2 whitespace-nowrap">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Save Settings
+                        </button>
+                        <span id="rw-save-feedback" class="text-sm font-medium hidden"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 7: HOUSEKEEPING REPORT -->
+            <div
+                class="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm border border-gray-100 mb-4 md:mb-8 border-t-4 border-t-amber-500">
+                <div class="flex items-center justify-between mb-2 md:mb-4">
+                    <h3 class="text-base md:text-xl font-bold font-heading text-ccf-blue flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Housekeeping Report
+                    </h3>
+                    <button id="housekeeping-print-btn" type="button"
+                        class="bg-amber-500 text-white px-4 py-2 rounded font-bold hover:bg-amber-600 transition text-sm shadow-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
+                            </path>
+                        </svg>
+                        Print Report
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mb-4">Finalized room bookings for the current week (Tue → Mon). This
+                    data is ready for housekeeping distribution.</p>
+                <div id="housekeeping-report-container" class="space-y-4">
+                    <p class="text-sm text-gray-400 italic text-center py-6">Loading report...</p>
+                </div>
+            </div>
 
         </main>
     </div> <!-- close container wrapper -->
@@ -801,6 +904,12 @@
                     blockedDates = response.blocked_dates || [];
                     applyFilters();
                     renderBlockedDates();
+
+                    // Reservation window
+                    if (response.reservation_window) {
+                        populateReservationWindowForm(response.reservation_window);
+                        renderHousekeepingReport(allBookings, response.reservation_window);
+                    }
                 } else {
                     updateStatus('Error fetching data', 'text-red-600');
                     console.error("Fetch error:", response.message);
@@ -813,6 +922,185 @@
             script.onerror = () => { updateStatus('Connection failed', 'text-red-600'); };
             document.body.appendChild(script);
         }
+
+        // ============================================================
+        // RESERVATION WINDOW SETTINGS
+        // ============================================================
+
+        function populateReservationWindowForm(rw) {
+            const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            document.getElementById('rw-open-day').value = rw.openDay;
+            document.getElementById('rw-open-time').value = rw.openTime;
+            document.getElementById('rw-close-day').value = rw.closeDay;
+            document.getElementById('rw-close-time').value = rw.closeTime;
+
+            const badge = document.getElementById('rw-status-badge');
+            if (rw.isOpen) {
+                badge.textContent = `Open until ${DAY_NAMES[rw.closeDay]} ${rw.closeTime}`;
+                badge.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200';
+            } else {
+                badge.textContent = `Closed — Opens ${DAY_NAMES[rw.openDay]} ${rw.openTime}`;
+                badge.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200';
+            }
+        }
+
+        // Save button handler
+        document.getElementById('rw-save-btn').addEventListener('click', () => {
+            const pin = document.getElementById('rw-admin-pin').value.trim();
+            if (!pin) return;
+
+            const payload = {
+                openDay: document.getElementById('rw-open-day').value,
+                openTime: document.getElementById('rw-open-time').value,
+                closeDay: document.getElementById('rw-close-day').value,
+                closeTime: document.getElementById('rw-close-time').value,
+                admin_pin: pin
+            };
+
+            const feedback = document.getElementById('rw-save-feedback');
+            const saveBtn = document.getElementById('rw-save-btn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            const callbackName = `rw_save_callback_${Date.now()}`;
+            const script = document.createElement('script');
+
+            window[callbackName] = (response) => {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Save Settings';
+
+                if (response.success) {
+                    feedback.textContent = '✓ Saved successfully';
+                    feedback.className = 'text-sm font-medium text-emerald-600';
+                    feedback.classList.remove('hidden');
+                    document.getElementById('rw-admin-pin').value = '';
+                    setTimeout(() => feedback.classList.add('hidden'), 3000);
+                    fetchData(); // Refresh to update status badge
+                } else {
+                    feedback.textContent = '✕ ' + (response.message || 'Error saving');
+                    feedback.className = 'text-sm font-medium text-red-600';
+                    feedback.classList.remove('hidden');
+                }
+            };
+
+            const encodedPayload = encodeURIComponent(JSON.stringify(payload));
+            script.src = `${APP_CONFIG.APPS_SCRIPT_URL}?action=update_reservation_window&callback=${callbackName}&payload=${encodedPayload}`;
+            script.onerror = () => {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Save Settings';
+                feedback.textContent = '✕ Connection failed';
+                feedback.className = 'text-sm font-medium text-red-600';
+                feedback.classList.remove('hidden');
+            };
+            document.body.appendChild(script);
+        });
+
+        // ============================================================
+        // HOUSEKEEPING REPORT
+        // ============================================================
+
+        function renderHousekeepingReport(bookings, rw) {
+            const container = document.getElementById('housekeeping-report-container');
+            if (!container) return;
+
+            // Calculate the current week range: Tue to Mon
+            const now = DateTime.now().setZone(APP_CONFIG.TIMEZONE);
+            // Find the most recent Tuesday (or today if it's Tuesday)
+            let weekStart = now;
+            while (weekStart.weekday !== 2) { // 2 = Tuesday in Luxon
+                weekStart = weekStart.minus({ days: 1 });
+            }
+            weekStart = weekStart.startOf('day');
+            const weekEnd = weekStart.plus({ days: 6 }).endOf('day'); // Monday
+
+            // Filter bookings for this week range
+            const weekBookings = bookings.filter(b => {
+                const bStart = parseDate(b.start_iso);
+                if (!bStart.isValid) return false;
+                return bStart >= weekStart && bStart <= weekEnd;
+            }).sort((a, b) => parseDate(a.start_iso) - parseDate(b.start_iso));
+
+            if (weekBookings.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-400 italic text-center py-6">No bookings for this week (Tue ' + weekStart.toFormat('MMM d') + ' — Mon ' + weekEnd.toFormat('MMM d') + ').</p>';
+                return;
+            }
+
+            // Group by date
+            const grouped = {};
+            weekBookings.forEach(b => {
+                const bStart = parseDate(b.start_iso);
+                const dateKey = bStart.toFormat('yyyy-MM-dd');
+                const dateLabel = bStart.toFormat('cccc, MMMM d');
+                if (!grouped[dateKey]) grouped[dateKey] = { label: dateLabel, bookings: [] };
+                grouped[dateKey].bookings.push(b);
+            });
+
+            let html = `<p class="text-xs text-gray-500 mb-3">Week: ${weekStart.toFormat('MMM d')} (Tue) — ${weekEnd.toFormat('MMM d')} (Mon) · ${weekBookings.length} total bookings</p>`;
+
+            Object.keys(grouped).sort().forEach(dateKey => {
+                const group = grouped[dateKey];
+                html += `<div class="border border-gray-200 rounded-lg overflow-hidden mb-3">
+                    <div class="bg-gray-100 px-4 py-2 font-bold text-sm text-gray-700">${group.label} <span class="text-gray-400 font-normal">(${group.bookings.length} booking${group.bookings.length > 1 ? 's' : ''})</span></div>
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Time</th>
+                                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Room</th>
+                                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Event</th>
+                                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Contact</th>
+                                <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Pax</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">`;
+
+                group.bookings.forEach(b => {
+                    const bStart = parseDate(b.start_iso);
+                    const bEnd = parseDate(b.end_iso);
+                    const timeStr = bStart.toFormat('h:mm a') + ' – ' + bEnd.toFormat('h:mm a');
+                    const name = [b.first_name, b.last_name].filter(Boolean).join(' ') || '—';
+
+                    html += `<tr class="hover:bg-blue-50/50">
+                        <td class="px-4 py-2 text-gray-700 whitespace-nowrap">${timeStr}</td>
+                        <td class="px-4 py-2 text-gray-700">${b.room}</td>
+                        <td class="px-4 py-2 text-gray-700">${b.event || '—'}</td>
+                        <td class="px-4 py-2 text-gray-700">${name}</td>
+                        <td class="px-4 py-2 text-right text-gray-700">${b.participants || '—'}</td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table></div>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Print handler
+        document.getElementById('housekeeping-print-btn').addEventListener('click', () => {
+            const container = document.getElementById('housekeeping-report-container');
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html><head><title>Housekeeping Report</title>
+                <style>
+                    body { font-family: 'Montserrat', Arial, sans-serif; padding: 20px; color: #333; }
+                    h1 { font-size: 18px; margin-bottom: 10px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+                    th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #ddd; font-size: 12px; }
+                    th { background: #f3f4f6; font-weight: 700; text-transform: uppercase; font-size: 10px; color: #666; }
+                    .day-header { background: #e5e7eb; padding: 6px 10px; font-weight: 700; font-size: 13px; }
+                    @media print { body { padding: 0; } }
+                </style></head><body>
+                <h1>Housekeeping Report — CCF Manila Room Reservation</h1>
+                <p style="font-size:11px;color:#888;margin-bottom:16px;">Generated: ${DateTime.now().setZone(APP_CONFIG.TIMEZONE).toFormat('MMMM d, yyyy h:mm a')}</p>
+                ${container.innerHTML}
+                </body></html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        });
 
         function applyFilters() {
             if (!allBookings) return;

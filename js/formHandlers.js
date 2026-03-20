@@ -41,9 +41,9 @@ export function handleMoveFormSubmit(e) {
     const newStartTime = formData.get('new_start_time');
     const newEndTime = formData.get('new_end_time');
     const reason = formData.get('move_reason');
-    const adminPin = formData.get('admin_pin');
+    const adminPin = state.isAdmin ? state.adminPin : formData.get('admin_pin');
 
-    if (!bookingId || !newDate || !newStartTime || !newEndTime || !reason || !adminPin) {
+    if (!bookingId || !newDate || !newStartTime || !newEndTime || !reason || (!state.isAdmin && !adminPin)) {
         return showFormAlert('move-form-alert', 'All fields including Admin PIN are required.', 'error');
     }
 
@@ -111,9 +111,9 @@ function extractBookingFormData(formElement) {
         endTimeStr: formData.get('end-time'),
         tableId: formData.get('table_id'),
         notes: sanitizeInput(formData.get('notes')),
-        adminPin: formData.get('admin-pin') ? formData.get('admin-pin').trim() : '',
+        adminPin: state.isAdmin ? state.adminPin : '',
         recurrence: formData.get('recurrence'),
-        isAdmin: document.getElementById('admin-toggle').checked,
+        isAdmin: state.isAdmin,
         termsChecked: document.getElementById('terms-checkbox').checked,
         privacyChecked: document.getElementById('privacy-checkbox').checked
     };
@@ -194,7 +194,8 @@ function buildBookingPayload(data) {
         recurrence: data.isAdmin ? data.recurrence : 'none',
         terms_accepted: data.termsChecked,
         privacy_accepted: data.privacyChecked,
-        consent_timestamp: DateTime.local().setZone(window.APP_CONFIG.TIMEZONE).toISO()
+        consent_timestamp: DateTime.local().setZone(window.APP_CONFIG.TIMEZONE).toISO(),
+        app_url: window.location.origin + window.location.pathname
     };
 }
 
@@ -271,7 +272,7 @@ export function handleCancelFormSubmit(e) {
 
     const bookingId = selectedRadio.value;
     const bookingCode = document.getElementById('cancel-booking-code').value.trim();
-    const adminPin = document.getElementById('cancel-admin-pin').value.trim();
+    const adminPin = state.isAdmin ? state.adminPin : document.getElementById('cancel-admin-pin').value.trim();
     const cancelSeries = document.getElementById('cancel-series-checkbox') ? document.getElementById('cancel-series-checkbox').checked : false;
 
     if (cancelSeries && !adminPin) {

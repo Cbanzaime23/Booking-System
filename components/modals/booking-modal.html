@@ -177,13 +177,7 @@
                 <p id="email-match-hint" class="text-xs mt-1 hidden"></p>
             </div>
 
-            <div class="mb-4">
-                <label class="flex items-center">
-                    <input type="checkbox" id="admin-toggle"
-                        class="form-checkbox h-4 w-4 text-ccf-red border-gray-300 rounded focus:ring-ccf-red">
-                    <span class="ml-2 text-sm text-gray-700">I am an Admin</span>
-                </label>
-            </div>
+            <!-- Admin Role Toggle Removed: Role is determined at initial modal selection -->
 
             <div id="user-fields" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
@@ -203,11 +197,6 @@
             </div>
 
             <div id="admin-fields" class="hidden space-y-4 rounded-lg border border-red-200 bg-red-50 p-4 my-4">
-                <div>
-                    <label for="admin-pin" class="block text-sm font-medium text-ccf-red-dark">Admin PIN</label>
-                    <input type="password" id="admin-pin" name="admin-pin" placeholder="Enter PIN for admin booking"
-                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
-                </div>
                 <div>
                     <label for="recurrence" class="block text-sm font-medium text-ccf-red-dark">Recurrence
                         (Optional)</label>

@@ -11,7 +11,7 @@ window.APP_CONFIG = {
    * The URL of your deployed Google Apps Script Web App.
    * This is the ONLY gateway to your data — all reads and writes go through here.
    */
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwtxUdb8aYVHK-cakA5N7dhhaajcFGOt1C9wKULm0AAq5EGLvQligGJZY0w38UsrXGy/exec',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwvmSyRgkfDgD2zx2mrFnyliYmco71sC3rNXiA_OWOMRk6kgxtSoIIvxp08m52DOfi4/exec',
 
   // --- Optional Configurations ---
 
@@ -77,5 +77,18 @@ window.APP_CONFIG = {
       MIN_BOOKING_SIZE: 2,
       MAX_BOOKING_SIZE: 15
     }
+  },
+
+  /**
+   * Default reservation window schedule.
+   * OPEN_DAY/CLOSE_DAY use JS weekday: 0=Sun, 1=Mon, ..., 6=Sat.
+   * Times are in 24-hour "HH:mm" format (Manila time).
+   * These are defaults — the admin can override via the Settings sheet.
+   */
+  RESERVATION_WINDOW: {
+    OPEN_DAY: 0,      // Sunday
+    OPEN_TIME: '08:00',
+    CLOSE_DAY: 1,     // Monday
+    CLOSE_TIME: '20:00'
   }
 };

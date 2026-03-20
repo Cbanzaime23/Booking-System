@@ -229,3 +229,116 @@ function getGlobalSettings(ss) {
 
     return settings;
 }
+
+/**
+ * Reads reservation window settings from the Settings sheet.
+ *
+ * @param {Spreadsheet} ss - The spreadsheet reference.
+ * @returns {{openDay: number, openTime: string, closeDay: number, closeTime: string}}
+ */
+function getReservationWindowSettings(ss) {
+    const defaults = { openDay: 0, openTime: '08:00', closeDay: 1, closeTime: '20:00' };
+    const sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
+    if (!sheet) return defaults;
+
+    const data = sheet.getDataRange().getValues();
+    const map = {};
+    data.forEach(row => {
+        if (row[0]) map[row[0].toString().trim()] = row[1];
+    });
+
+    /**
+     * Safely converts a Sheets cell value to an "HH:mm" time string.
+     * Google Sheets may return Date objects for time-formatted cells.
+     */
+    function toTimeString(val, fallback) {
+        if (!val && val !== 0) return fallback;
+        if (val instanceof Date) {
+            return Utilities.formatDate(val, SCRIPT_TIMEZONE, 'HH:mm');
+        }
+        return String(val);
+    }
+
+    return {
+        openDay:   (map['Reservation Window Open Day'] !== undefined) ? parseInt(map['Reservation Window Open Day'], 10) : defaults.openDay,
+        openTime:  toTimeString(map['Reservation Window Open Time'], defaults.openTime),
+        closeDay:  (map['Reservation Window Close Day'] !== undefined) ? parseInt(map['Reservation Window Close Day'], 10) : defaults.closeDay,
+        closeTime: toTimeString(map['Reservation Window Close Time'], defaults.closeTime)
+    };
+}
+
+/**
+ * Saves reservation window settings to the Settings sheet.
+ * Updates existing rows or appends new ones.
+ *
+ * @param {Spreadsheet} ss - The spreadsheet reference.
+ * @param {{openDay: number, openTime: string, closeDay: number, closeTime: string}} settings
+ */
+function saveReservationWindowSettings(ss, settings) {
+    let sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
+    if (!sheet) {
+        sheet = ss.insertSheet(SETTINGS_SHEET_NAME);
+        sheet.appendRow(['Key', 'Value']);
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const keyMap = {
+        'Reservation Window Open Day': settings.openDay,
+        'Reservation Window Open Time': settings.openTime,
+        'Reservation Window Close Day': settings.closeDay,
+        'Reservation Window Close Time': settings.closeTime
+    };
+
+    // Update existing rows or track which keys need to be appended
+    const keysToAppend = { ...keyMap };
+    for (let i = 0; i < data.length; i++) {
+        const key = data[i][0] ? data[i][0].toString().trim() : '';
+        if (keyMap.hasOwnProperty(key)) {
+            sheet.getRange(i + 1, 2).setValue(keyMap[key]);
+            delete keysToAppend[key];
+        }
+    }
+
+    // Append any keys that weren't found
+    Object.keys(keysToAppend).forEach(key => {
+        sheet.appendRow([key, keysToAppend[key]]);
+    });
+}
+
+/**
+ * Checks if the reservation window is currently open.
+ * Uses Manila timezone for all calculations.
+ *
+ * @param {{openDay: number, openTime: string, closeDay: number, closeTime: string}} windowSettings
+ * @returns {boolean} True if window is currently open.
+ */
+function isReservationWindowCurrentlyOpen(windowSettings) {
+    const now = new Date();
+    const manilaOffset = 8 * 60; // UTC+8
+    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const manilaTime = new Date(utcMs + (manilaOffset * 60000));
+
+    const currentDay = manilaTime.getDay(); // 0=Sun, 1=Mon, ...
+    const currentMinutes = manilaTime.getHours() * 60 + manilaTime.getMinutes();
+
+    const [openH, openM] = windowSettings.openTime.split(':').map(Number);
+    const [closeH, closeM] = windowSettings.closeTime.split(':').map(Number);
+    const openMinutes = openH * 60 + openM;
+    const closeMinutes = closeH * 60 + closeM;
+
+    const openDay = windowSettings.openDay;
+    const closeDay = windowSettings.closeDay;
+
+    // Convert to a weekly minute offset (0 = Sunday 00:00, max = Saturday 23:59)
+    const currentWeekMinute = currentDay * 1440 + currentMinutes;
+    const openWeekMinute = openDay * 1440 + openMinutes;
+    const closeWeekMinute = closeDay * 1440 + closeMinutes;
+
+    if (openWeekMinute <= closeWeekMinute) {
+        // Normal range: open and close within the same week span
+        return currentWeekMinute >= openWeekMinute && currentWeekMinute < closeWeekMinute;
+    } else {
+        // Wraps around the week boundary (e.g., Sat → Mon)
+        return currentWeekMinute >= openWeekMinute || currentWeekMinute < closeWeekMinute;
+    }
+}

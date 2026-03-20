@@ -40,7 +40,9 @@ export const state = {
     duplicationSource: null,
     duplicationDuration: null,
     pendingCancelData: null,
-    blockedDates: []
+    blockedDates: [],
+    reservationWindow: null,
+    isAdmin: false
 };
 
 /**

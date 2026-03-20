@@ -5,7 +5,7 @@
 // blocked date cancellation notices, and GDPR receipts.
 // ============================================================================
 
-function sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom) {
+function sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom, appUrl) {
     const recipient = payload.email;
     const subject = `Booking Confirmed: ${payload.event} for ${payload.room}`;
     const bookingCode = newId.substring(0, 12).toUpperCase();
@@ -20,6 +20,7 @@ function sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom) 
     const gLoc = encodeURIComponent(`CCF Manila - ${payload.room}`);
     const gDetails = encodeURIComponent(`Ref: ${bookingCode}\nParticipants: ${payload.participants}\nNotes: ${payload.notes || 'None'}`);
     const gCalLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gTitle}&dates=${gStart}/${gEnd}&details=${gDetails}&location=${gLoc}&ctz=${SCRIPT_TIMEZONE}`;
+    const cancelLink = appUrl ? `${appUrl}?action=cancel&id=${newId}&code=${bookingCode}` : '';
 
     let greeting = `<h2 style="color: #333;">Hi ${payload.first_name},</h2>`;
     if (requestedRoom && payload.room !== requestedRoom) {
@@ -41,7 +42,8 @@ function sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom) 
         '<p><strong>Time:</strong> ' + timeStr + '</p>' +
         '<p><strong>Participants:</strong> ' + payload.participants + '</p>' +
         (payload.notes ? '<p><strong>Notes:</strong> ' + payload.notes + '</p>' : '') +
-        '<div style="margin-top: 25px; text-align: left;">' +
+        '<div style="margin-top: 25px; text-align: left; display: flex; gap: 10px; flex-wrap: wrap;">' +
+           (cancelLink ? '<a href="' + cancelLink + '" style="background-color: #b91c1c; color: white; padding: 12px 18px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; border: 1px solid #991b1b;">❌ Cancel My Reservation</a>' : '') +
            '<a href="' + gCalLink + '" style="background-color: #004d60; color: white; padding: 12px 18px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px;">📅 Add to Google Calendar</a>' +
         '</div>' +
       '</div>' +

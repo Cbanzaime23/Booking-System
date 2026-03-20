@@ -12,12 +12,12 @@
  */
 
 import { state, initState, ROOM_CAPACITIES } from './js/state.js';
-import { elements, initDOM, setLoading, adjustStickyOffsets, clearAllFormAlerts, showFormAlert } from './js/utils/dom.js';
+import { elements, initDOM, setLoading, adjustStickyOffsets, clearAllFormAlerts, showFormAlert, showToast } from './js/utils/dom.js';
 import { calculateDuration, parseDate } from './js/utils/date.js';
-import { getSlotWarning } from './js/utils/validation.js';
+import { getSlotWarning, isReservationWindowOpen } from './js/utils/validation.js';
 import { fetchAllBookings, submitRequest, setRenderCallback, setRenderCalendarButtonsCallback } from './js/api.js';
 import { renderCalendarShell, renderBookingsForSelectedRoom, renderCalendarButtons } from './js/calendar.js';
-import { renderEventDropdown, openAdminLoginModal, handleAdminLoginSubmit } from './js/admin.js';
+import { renderEventDropdown } from './js/admin.js';
 import {
     openTimeSelectionModal,
     openBookingModalForSelectedSlot,
@@ -28,7 +28,8 @@ import {
     handleMyBookingsSubmit,
     updateDurationDisplay,
     updateParticipantRules,
-    openFloorplanModal
+    openFloorplanModal,
+    handleEmailCancelDeepLink
 } from './js/modals.js';
 import { handleMoveFormSubmit, handleBookingFormSubmit, handleCancelFormSubmit, submitPendingCancellation } from './js/formHandlers.js';
 import { loadComponents } from './js/utils/componentLoader.js';
@@ -145,21 +146,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     /**
      * Opens the choice modal (Book / Cancel / Move / Duplicate) for
      * a slot that already has bookings. Hides the Book button if the
-     * slot is at capacity.
+     * slot is at capacity. When reservation window is closed and user
+     * is not admin, hides Book and disables Move with message.
      */
     function showChoiceModal(roomRules, warningMessage) {
         const bookButton = document.getElementById('choice-book-btn');
+        const moveButton = document.getElementById('choice-move-btn');
         const duplicateButton = document.getElementById('choice-duplicate-btn');
 
         const remainingGroups = roomRules.MAX_CONCURRENT_GROUPS - state.selectedSlot.totalGroups;
         const remainingPax = roomRules.MAX_TOTAL_PARTICIPANTS - state.selectedSlot.totalParticipants;
 
-        bookButton.style.display = (remainingGroups <= 0 || remainingPax < roomRules.MIN_BOOKING_SIZE) ? 'none' : 'inline-block';
-        if (duplicateButton) duplicateButton.classList.remove('hidden');
+        // Check reservation window
+        const windowStatus = isReservationWindowOpen();
+        const windowClosed = !windowStatus.isOpen && !state.isAdmin;
+
+        if (windowClosed) {
+            // Hide Book and Duplicate, disable Move
+            bookButton.style.display = 'none';
+            if (duplicateButton) duplicateButton.classList.add('hidden');
+            if (moveButton) {
+                moveButton.disabled = true;
+                moveButton.classList.add('opacity-50', 'cursor-not-allowed');
+                moveButton.title = 'Moving is unavailable — reservations are closed';
+            }
+        } else {
+            bookButton.style.display = (remainingGroups <= 0 || remainingPax < roomRules.MIN_BOOKING_SIZE) ? 'none' : 'inline-block';
+            if (duplicateButton) duplicateButton.classList.remove('hidden');
+            if (moveButton) {
+                moveButton.disabled = false;
+                moveButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                moveButton.title = '';
+            }
+        }
 
         elements.choiceModal.showModal();
         clearAllFormAlerts();
-        if (warningMessage) {
+
+        if (windowClosed) {
+            showFormAlert('choice-form-alert', 'Reservations are closed. You may only cancel existing bookings.', 'warning');
+        } else if (warningMessage) {
             showFormAlert('choice-form-alert', warningMessage, 'warning');
         }
     }
@@ -167,6 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     /**
      * Delegated click handler for calendar time-slot cells.
      * Determines the slot status and opens the appropriate next step:
+     * - When window is closed (non-admin): blocks new bookings with toast
      * - partial/full → choice modal
      * - available → time selection modal
      */
@@ -174,9 +201,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         const slot = e.target.closest('.time-slot');
         if (!slot || slot.classList.contains('past')) return;
 
+        // Check reservation window status early for all slots
+        const windowStatus = isReservationWindowOpen();
+
+        if (slot.classList.contains('window-closed')) {
+            showToast(windowStatus.message, 'error');
+            return;
+        }
+
         state.selectedSlot = parseSlotData(slot);
         const warningMessage = getSlotWarning(state.selectedSlot.startTime);
         state.pendingWarning = warningMessage;
+
+        // Check reservation window for available slots (non-admin)
+        if (!windowStatus.isOpen && !state.isAdmin) {
+            if (slot.classList.contains('available')) {
+                showToast(windowStatus.message, 'error');
+                return;
+            }
+        }
 
         if (slot.classList.contains('partial') || slot.classList.contains('full')) {
             showChoiceModal(state.selectedSlot.rules, warningMessage);
@@ -308,23 +351,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
-        document.getElementById('admin-toggle').addEventListener('change', (e) => {
-            const isAdmin = e.target.checked;
-            renderEventDropdown(isAdmin);
-            document.getElementById('user-fields').classList.toggle('hidden', isAdmin);
-            document.getElementById('admin-fields').classList.toggle('hidden', !isAdmin);
-            document.getElementById('confirm-email-wrapper').classList.toggle('hidden', isAdmin);
-            document.getElementById('confirm_email').required = !isAdmin;
+        // Email Deep Link Cancel Modal Listeners
+        const emailCancelYes = document.getElementById('email-cancel-yes-btn');
+        if (emailCancelYes) {
+            emailCancelYes.addEventListener('click', () => {
+                const modal = document.getElementById('email-cancel-confirm-modal');
+                if (modal) modal.close();
+                if (state.pendingCancelData) {
+                    elements.loadingModal.showModal();
+                    submitRequest('cancel', {
+                        bookingId: state.pendingCancelData.bookingId,
+                        bookingCode: state.pendingCancelData.bookingCode,
+                        adminPin: '',
+                        cancelSeries: false
+                    });
+                }
+            });
+        }
 
-            const participantsInput = elements.bookingForm.querySelector('#participants');
-            if (isAdmin) {
-                participantsInput.removeAttribute('max');
-            } else if (state.selectedSlot) {
-                participantsInput.max = state.selectedSlot.rules.MAX_PARTICIPANTS_PER_BOOKING;
-            }
-            if (state.selectedSlot) updateParticipantRules(state.selectedSlot.rules, isAdmin);
-            updateRoomCapacityBadge(state.selectedRoom);
-        });
+        const emailCancelNo = document.getElementById('email-cancel-no-btn');
+        if (emailCancelNo) {
+            emailCancelNo.addEventListener('click', () => {
+                const modal = document.getElementById('email-cancel-confirm-modal');
+                if (modal) modal.close();
+                state.pendingCancelData = null;
+            });
+        }
+        // Admin-toggle logic removed. Role is now fixed at login and applied during modal open.
 
         if (elements.myBookingsBtn) {
             elements.myBookingsBtn.addEventListener('click', () => {
@@ -337,11 +390,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
         if (elements.myBookingsForm) elements.myBookingsForm.addEventListener('submit', handleMyBookingsSubmit);
-
-        const goToDashboardBtn = document.getElementById('go-to-dashboard-btn');
-        if (goToDashboardBtn) goToDashboardBtn.addEventListener('click', openAdminLoginModal);
-        const adminLoginForm = document.getElementById('admin-login-form');
-        if (adminLoginForm) adminLoginForm.addEventListener('submit', handleAdminLoginSubmit);
     }
 
     /**
@@ -362,14 +410,158 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     /**
-     * One-time initialization: populates the room selector, attaches
-     * event listeners, performs the first render, and starts auto-refresh
-     * and visibility-change timers.
+     * Shows role selection modal and returns a Promise that resolves
+     * with { isAdmin: boolean } when the user makes a selection.
      */
-    function init() {
+    function showRoleSelectionModal() {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('role-selection-modal');
+            const userBtn = document.getElementById('role-user-btn');
+            const adminBtn = document.getElementById('role-admin-btn');
+            const pinSection = document.getElementById('role-admin-pin-section');
+            const pinInput = document.getElementById('role-admin-pin');
+            const pinError = document.getElementById('role-admin-error');
+            const backBtn = document.getElementById('role-admin-back-btn');
+            const submitBtn = document.getElementById('role-admin-submit-btn');
+            const buttonsDiv = document.getElementById('role-buttons');
+
+            if (!modal) {
+                // Fallback if modal doesn't exist
+                resolve({ isAdmin: false });
+                return;
+            }
+
+            modal.showModal();
+
+            // Prevent closing with Escape
+            modal.addEventListener('cancel', (e) => e.preventDefault());
+
+            userBtn.addEventListener('click', () => {
+                modal.close();
+                resolve({ isAdmin: false });
+            });
+
+            adminBtn.addEventListener('click', () => {
+                buttonsDiv.classList.add('hidden');
+                pinSection.classList.remove('hidden');
+                pinInput.value = '';
+                pinError.classList.add('hidden');
+                pinInput.focus();
+            });
+
+            backBtn.addEventListener('click', () => {
+                pinSection.classList.add('hidden');
+                buttonsDiv.classList.remove('hidden');
+                pinError.classList.add('hidden');
+            });
+
+            const attemptAdminLogin = () => {
+                const pin = pinInput.value.trim();
+                if (!pin) {
+                    pinError.textContent = 'Please enter the Admin PIN.';
+                    pinError.classList.remove('hidden');
+                    return;
+                }
+                // We validate by making a test request to the backend, but to keep it simple, 
+                // we store the PIN and validate it on each request. For now, we accept inputs
+                // and validate server-side on actual operations.
+                // For UX, we check against a simple JSONP call.
+                const callbackName = `admin_check_${Date.now()}`;
+                const script = document.createElement('script');
+                const payload = encodeURIComponent(JSON.stringify({ admin_pin: pin }));
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Verifying...';
+
+                window[callbackName] = (response) => {
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Login';
+
+                    if (response.success) {
+                        modal.close();
+                        resolve({ isAdmin: true, adminPin: pin });
+                    } else {
+                        pinError.textContent = 'Invalid PIN. Please try again.';
+                        pinError.classList.remove('hidden');
+                        pinInput.value = '';
+                        pinInput.focus();
+                    }
+                };
+
+                script.src = `${window.APP_CONFIG.APPS_SCRIPT_URL}?action=verify_admin&callback=${callbackName}&payload=${payload}`;
+                script.onerror = () => {
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Login';
+                    pinError.textContent = 'Connection failed. Please try again.';
+                    pinError.classList.remove('hidden');
+                };
+                document.body.appendChild(script);
+            };
+
+            submitBtn.addEventListener('click', attemptAdminLogin);
+            pinInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    attemptAdminLogin();
+                }
+            });
+        });
+    }
+
+    /**
+     * Applies admin mode UI changes when logged in as admin.
+     */
+    function applyAdminMode() {
+        // Show admin badge
+        const badge = document.getElementById('admin-mode-badge');
+        if (badge) badge.classList.remove('hidden'), badge.classList.add('flex');
+
+        // Show dashboard link
+        const dashLink = document.getElementById('go-to-dashboard-link');
+        if (dashLink) dashLink.classList.remove('hidden'), dashLink.classList.add('flex');
+
+        // Pre-checking the admin toggle is no longer necessary as the role is fixed at login.
+    }
+
+    /**
+     * One-time initialization: shows role selection, populates the room
+     * selector, attaches event listeners, performs the first render, and
+     * starts auto-refresh and visibility-change timers.
+     */
+    async function init() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isCancelLink = urlParams.get('action') === 'cancel';
+
+        let roleResult = { isAdmin: false };
+
+        // Skip role selection if it's a direct cancel link
+        if (!isCancelLink) {
+            roleResult = await showRoleSelectionModal();
+        }
+
+        state.isAdmin = roleResult.isAdmin;
+
+        if (state.isAdmin) {
+            // Store admin PIN for later use in booking requests
+            state.adminPin = roleResult.adminPin;
+            applyAdminMode();
+        }
+
         initializeRoomSelector();
         setupEventListeners();
-        render();
+        await render(); // Changed to await to ensure state is fully populated before deep link handles
+
+        if (isCancelLink) {
+            const id = urlParams.get('id');
+            const code = urlParams.get('code');
+            if (id && code) {
+                handleEmailCancelDeepLink(id, code);
+            }
+        }
 
         adjustStickyOffsets();
         window.addEventListener('resize', adjustStickyOffsets);

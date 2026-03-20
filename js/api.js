@@ -15,6 +15,7 @@
 
 import { state } from './state.js';
 import { elements, showToast, showToastWithRetry } from './utils/dom.js';
+import { isReservationWindowOpen } from './utils/validation.js';
 
 /** @type {Function} Callback invoked after any successful write to re-render the calendar. */
 let onRenderCallback = () => { };
@@ -229,6 +230,60 @@ export async function fetchAllBookings(updateFreshnessDisplay) {
                     room: d.room,
                     reason: d.reason
                 }));
+
+                // Store reservation window settings
+                if (response.reservation_window) {
+                    // Ensure time values are strings (Sheets may return Date objects)
+                    const rw = response.reservation_window;
+                    if (rw.openTime) rw.openTime = String(rw.openTime);
+                    if (rw.closeTime) rw.closeTime = String(rw.closeTime);
+                    state.reservationWindow = rw;
+                }
+
+                // Update reservation window banner
+                const windowBanner = document.getElementById('reservation-window-banner');
+                if (windowBanner && state.reservationWindow) {
+                    const rwStatus = isReservationWindowOpen();
+
+                    if (rwStatus.isOpen) {
+                        windowBanner.className = 'bg-emerald-50 border-l-4 border-emerald-500 p-3 mb-4 rounded-r-lg';
+                        windowBanner.innerHTML = `
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span class="text-sm font-medium text-emerald-800">
+                                    ${rwStatus.message.replace('open until', '<strong>open</strong> until')}
+                                </span>
+                            </div>`;
+                        windowBanner.classList.remove('hidden');
+                    } else if (!state.isAdmin) {
+                        windowBanner.className = 'bg-amber-50 border-l-4 border-amber-500 p-3 mb-4 rounded-r-lg';
+                        windowBanner.innerHTML = `
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                                </svg>
+                                <span class="text-sm font-medium text-amber-800">
+                                    ${rwStatus.message.replace('closed.', '<strong>closed</strong>.')}
+                                </span>
+                            </div>`;
+                        windowBanner.classList.remove('hidden');
+                    } else {
+                        // Admin sees a subtle indicator
+                        windowBanner.className = 'bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded-r-lg';
+                        windowBanner.innerHTML = `
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span class="text-sm font-medium text-blue-700">
+                                    <strong>Admin Mode</strong> — Reservation window is closed for users. Next opening: ${DAY_NAMES[rw.openDay]} ${rw.openTime.replace(/^0/, '')}
+                                </span>
+                            </div>`;
+                        windowBanner.classList.remove('hidden');
+                    }
+                }
 
                 if (response.announcement && response.announcement.isActive) {
                     const banner = document.getElementById('announcement-banner');

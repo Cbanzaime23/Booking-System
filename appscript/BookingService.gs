@@ -19,6 +19,16 @@ function handleCreateBooking(payload) {
         if (payload.adminPin && !isAdmin) {
             throw new Error("Invalid Admin PIN. Booking not created.");
         }
+
+        // Reservation window enforcement (non-admin only)
+        if (!isAdmin) {
+            const ss_check = SpreadsheetApp.openById(SPREADSHEET_ID);
+            const windowSettings = getReservationWindowSettings(ss_check);
+            if (!isReservationWindowCurrentlyOpen(windowSettings)) {
+                throw new Error("Reservation window is currently closed. Please try again when the booking window reopens.");
+            }
+        }
+
         const requestedRoom = payload.room;
         let finalRoom = requestedRoom;
         const newStart = new Date(payload.start_iso);
@@ -113,7 +123,7 @@ function handleCreateBooking(payload) {
         appendBookingRow(sheet, newId, payload, newStart, newEnd, null);
 
         try {
-            sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom);
+            sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom, payload.app_url);
         } catch (emailError) {
             Logger.log(`Booking ${newId} created, but email failed: ${emailError.message}`);
         }
@@ -235,7 +245,7 @@ function handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoo
     }
 
     if (firstId) {
-        try { sendConfirmationEmail(payload, firstId, firstStart, firstEnd, requestedRoom); } catch (e) { Logger.log(e.message); }
+        try { sendConfirmationEmail(payload, firstId, firstStart, firstEnd, requestedRoom, payload.app_url); } catch (e) { Logger.log(e.message); }
     } else {
         throw new Error("No recurrent events could be booked due to conflicts or blocked dates.");
     }
@@ -328,6 +338,14 @@ function handleCancelBooking(payload) {
 function handleMoveBooking(payload) {
     if (payload.adminPin !== ADMIN_PIN) {
         return { success: false, message: "Invalid Admin PIN." };
+    }
+
+    // Reservation window enforcement — moves are admin-only, but double-check
+    const ss_window = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const windowSettings = getReservationWindowSettings(ss_window);
+    if (!isReservationWindowCurrentlyOpen(windowSettings)) {
+        // Even admin can move, but log it
+        logActivity('Move (Window Closed)', payload.bookingId, payload.adminPin, payload);
     }
     var bookingId = payload.bookingId;
     var newRoom = payload.newRoom;
@@ -426,7 +444,23 @@ function handleFetchAllBookings() {
     const blocked = getBlockedDates(ss);
     const settings = getGlobalSettings(ss);
 
-    return { success: true, data: bookings, blocked_dates: blocked, announcement: settings };
+    // Reservation window — wrapped in try-catch so errors don't break the entire response
+    let reservationWindowData = { openDay: 0, openTime: '08:00', closeDay: 1, closeTime: '20:00', isOpen: true };
+    try {
+        const reservationWindow = getReservationWindowSettings(ss);
+        const windowIsOpen = isReservationWindowCurrentlyOpen(reservationWindow);
+        reservationWindowData = { ...reservationWindow, isOpen: windowIsOpen };
+    } catch (rwError) {
+        Logger.log('Reservation window error (non-fatal): ' + rwError.toString());
+    }
+
+    return {
+        success: true,
+        data: bookings,
+        blocked_dates: blocked,
+        announcement: settings,
+        reservation_window: reservationWindowData
+    };
 }
 
 /**
@@ -612,4 +646,39 @@ function handleBlockDate(payload) {
         cancelledCount: cancelledCount,
         cancelledEvents: cancelledEvents
     };
+}
+
+/**
+ * Updates reservation window settings.
+ * Requires admin PIN. Saves to the Settings sheet.
+ */
+function handleUpdateReservationWindow(payload) {
+    if (payload.admin_pin !== ADMIN_PIN) {
+        return { success: false, message: "Invalid Admin PIN." };
+    }
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    saveReservationWindowSettings(ss, {
+        openDay: parseInt(payload.openDay, 10),
+        openTime: payload.openTime,
+        closeDay: parseInt(payload.closeDay, 10),
+        closeTime: payload.closeTime
+    });
+
+    logActivity('Update Reservation Window', 'N/A', payload.admin_pin, {
+        openDay: payload.openDay, openTime: payload.openTime,
+        closeDay: payload.closeDay, closeTime: payload.closeTime
+    });
+
+    return { success: true, message: "Reservation window settings updated successfully." };
+}
+
+/**
+ * Verifies an Admin PIN. Used by the role selection modal on the booking page.
+ */
+function handleVerifyAdmin(payload) {
+    if (payload.admin_pin === ADMIN_PIN) {
+        return { success: true, message: "Admin verified." };
+    }
+    return { success: false, message: "Invalid Admin PIN." };
 }

@@ -9,6 +9,7 @@ const components = [
     { id: 'component-loader', path: 'components/shared/loader.html' },
     { id: 'component-booking-modal', path: 'components/modals/booking-modal.html' },
     { id: 'component-cancel-modal', path: 'components/modals/cancel-modal.html' },
+    { id: 'component-email-cancel-modal', path: 'components/modals/email-cancel-modal.html' },
     { id: 'component-move-modal', path: 'components/modals/move-modal.html' },
     { id: 'component-my-bookings-modal', path: 'components/modals/my-bookings-modal.html' },
     { id: 'component-info-modals', path: 'components/modals/info-modals.html' },

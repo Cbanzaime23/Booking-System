@@ -40,6 +40,12 @@ function doGet(e) {
                 case 'block_date':
                     result = handleBlockDate(payload);
                     break;
+                case 'update_reservation_window':
+                    result = handleUpdateReservationWindow(payload);
+                    break;
+                case 'verify_admin':
+                    result = handleVerifyAdmin(payload);
+                    break;
                 case 'fetch_user_bookings':
                     result = handleFetchUserBookings(payload);
                     break;

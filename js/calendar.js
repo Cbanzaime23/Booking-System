@@ -11,6 +11,7 @@
 import { state } from './state.js';
 import { elements } from './utils/dom.js';
 import { parseDate } from './utils/date.js';
+import { isReservationWindowOpen } from './utils/validation.js';
 
 const DateTime = window.luxon.DateTime;
 
@@ -141,6 +142,11 @@ function createTimeSlot(time) {
 export function renderBookingsForSelectedRoom() {
     const roomRules = window.APP_CONFIG.ROOM_CONFIG[state.selectedRoom];
     const roomBookings = state.allBookings.filter(b => b.room === state.selectedRoom);
+
+    // Reservation window: block all slots for non-admin users when closed
+    const windowStatus = isReservationWindowOpen();
+    const windowClosed = !windowStatus.isOpen && !state.isAdmin;
+
     document.querySelectorAll('.time-slot').forEach(slotEl => {
         if (slotEl.classList.contains('past')) return;
 
@@ -148,6 +154,28 @@ export function renderBookingsForSelectedRoom() {
         const slotEnd = slotStart.plus({ minutes: window.APP_CONFIG.SLOT_DURATION_MINUTES });
         const borderClass = (slotStart.hour === 12 && slotStart.minute === 0) ? 'border-t-4 border-gray-300' : 'border-t border-slate-100';
         const isPast = slotEl.classList.contains('past');
+
+        // Block all slots when reservation window is closed (non-admin)
+        if (windowClosed) {
+            slotEl.className = `time-slot p-1 md:p-2 text-center text-[10px] md:text-sm ${borderClass} h-10 md:h-14 flex flex-col items-center justify-center bg-gray-200 text-gray-400 cursor-not-allowed`;
+            const isMobile = window.innerWidth < 768;
+            const closedLabel = isMobile ? 'Closed' : 'Reservations Closed';
+            slotEl.innerHTML = `<div class="time-label" style="color:#94a3b8;">${slotStart.toFormat('h:mm')}</div><div class="status-label font-bold text-gray-500">${closedLabel}</div>`;
+            slotEl.classList.add('window-closed');
+            return;
+        }
+
+        // Block slots outside the bookable date range (non-admin, window open)
+        if (!state.isAdmin && windowStatus.bookableStart && windowStatus.bookableEnd) {
+            if (slotStart < windowStatus.bookableStart || slotStart > windowStatus.bookableEnd) {
+                slotEl.className = `time-slot p-1 md:p-2 text-center text-[10px] md:text-sm ${borderClass} h-10 md:h-14 flex flex-col items-center justify-center bg-gray-200 text-gray-400 cursor-not-allowed`;
+                const isMobile = window.innerWidth < 768;
+                const outLabel = isMobile ? 'N/A' : 'Outside Booking Window';
+                slotEl.innerHTML = `<div class="time-label" style="color:#94a3b8;">${slotStart.toFormat('h:mm')}</div><div class="status-label font-bold text-gray-500">${outLabel}</div>`;
+                slotEl.classList.add('window-closed');
+                return;
+            }
+        }
 
         const slotDateStr = slotStart.toISODate();
         const blockedInfo = state.blockedDates && state.blockedDates.find(d => {

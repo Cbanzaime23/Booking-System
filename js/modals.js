@@ -155,12 +155,15 @@ export function openBookingModalForSelectedSlot(customStartTime = null, customEn
     elements.bookingForm.reset();
     clearAllFormAlerts();
 
-    const adminToggle = document.getElementById('admin-toggle');
-    adminToggle.disabled = false;
-    const isAdmin = adminToggle.checked = false;
+    const isAdmin = state.isAdmin;
 
-    document.getElementById('user-fields').classList.remove('hidden');
-    document.getElementById('admin-fields').classList.add('hidden');
+    document.getElementById('user-fields').classList.toggle('hidden', isAdmin);
+    document.getElementById('admin-fields').classList.toggle('hidden', !isAdmin);
+
+    // Hide email confirmation field for admins
+    document.getElementById('confirm-email-wrapper').classList.toggle('hidden', isAdmin);
+    document.getElementById('confirm_email').required = !isAdmin;
+
     const { startTime, rules } = state.selectedSlot;
 
     const finalStart = customStartTime || startTime;
@@ -297,6 +300,16 @@ export function openCancelModalForSelectedSlot() {
     document.getElementById('confirm-cancel-btn').disabled = true;
     document.getElementById('cancel-series-option').classList.add('hidden');
     if (document.getElementById('cancel-series-checkbox')) document.getElementById('cancel-series-checkbox').checked = false;
+
+    // Hide auth fields for authenticated admins
+    if (state.isAdmin) {
+        document.getElementById('booking-code-section').classList.add('hidden');
+        document.getElementById('admin-pin-section').classList.add('hidden');
+    } else {
+        document.getElementById('booking-code-section').classList.remove('hidden');
+        document.getElementById('admin-pin-section').classList.remove('hidden');
+    }
+
     elements.cancelForm.reset();
     elements.cancelModal.showModal();
 }
@@ -324,6 +337,13 @@ export function openMoveModalForSelectedSlot(preselectedBookingId = null) {
 
     document.getElementById('move-details-section').classList.add('hidden');
     document.getElementById('confirm-move-btn').disabled = true;
+
+    // Hide move admin pin section for authenticated admins
+    const movePinSection = document.getElementById('move-admin-pin-section');
+    if (movePinSection) {
+        movePinSection.classList.toggle('hidden', state.isAdmin);
+    }
+
     document.getElementById('move-form').reset();
     document.getElementById('move-modal').showModal();
 
@@ -408,9 +428,6 @@ export function openDuplicateBookingModal(sourceBooking) {
     document.getElementById('leader_first_name').value = sourceBooking.leader_first_name || '';
     document.getElementById('leader_last_name').value = sourceBooking.leader_last_name || '';
 
-    const adminToggle = document.getElementById('admin-toggle');
-    adminToggle.checked = true;
-    adminToggle.disabled = true;
     document.getElementById('user-fields').classList.add('hidden');
     document.getElementById('admin-fields').classList.remove('hidden');
 
@@ -532,7 +549,7 @@ export function openFloorplanModal() {
         }
     });
 
-    const isAdmin = document.getElementById('admin-toggle').checked;
+    const isAdmin = state.isAdmin;
     const tableBtns = elements.floorplanModal.querySelectorAll('.table-btn');
 
     tableBtns.forEach(btn => {
@@ -560,4 +577,45 @@ export function openFloorplanModal() {
     });
 
     elements.floorplanModal.showModal();
+}
+
+/**
+ * Processes a deep link to cancel a booking from an email.
+ * Validates the booking exists, then routes to the correct confirmation modal.
+ * 
+ * @param {string} bookingId - The original UUID
+ * @param {string} bookingCode - The 12-char auth string
+ */
+export function handleEmailCancelDeepLink(bookingId, bookingCode) {
+    // Strip URL parameters for cleanliness
+    const url = new URL(window.location);
+    url.search = '';
+    window.history.replaceState({}, document.title, url);
+
+    const booking = state.allBookings.find(b => b.id === bookingId);
+
+    if (!booking || new Date(booking.start_iso) < new Date()) {
+        const errorMsg = !booking
+            ? 'This booking is no longer active or could not be found.'
+            : 'You cannot cancel a booking that has already started or passed.';
+        // Wait a tick for DOM to be ready to show the alert
+        setTimeout(() => showFormAlert('dashboard-alert', errorMsg, 'error'), 100);
+        return;
+    }
+
+    state.pendingCancelData = { bookingId, bookingCode, adminPin: '' };
+
+    if (booking.recurrence_id && booking.recurrence_id !== 'none') {
+        const modal = document.getElementById('cancel-user-series-modal');
+        if (modal) modal.showModal();
+    } else {
+        const start = window.luxon.DateTime.fromISO(booking.start_iso);
+        const end = window.luxon.DateTime.fromISO(booking.end_iso);
+        document.getElementById('email-cancel-event-name').textContent = booking.event;
+        document.getElementById('email-cancel-date').textContent = start.toFormat('MMM d, yyyy (ccc)');
+        document.getElementById('email-cancel-time').textContent = `${start.toFormat('h:mm a')} - ${end.toFormat('h:mm a')}`;
+
+        const modal = document.getElementById('email-cancel-confirm-modal');
+        if (modal) modal.showModal();
+    }
 }

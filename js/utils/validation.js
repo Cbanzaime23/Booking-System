@@ -1,4 +1,4 @@
-import { ROOM_CAPACITIES } from '../state.js';
+import { ROOM_CAPACITIES, state } from '../state.js';
 
 const DateTime = window.luxon.DateTime;
 
@@ -126,4 +126,117 @@ export function getSlotWarning(slotStartTime) {
     }
 
     return null;
+}
+
+/**
+ * Checks if the reservation window is currently open.
+ * Uses state.reservationWindow (from server) or falls back to APP_CONFIG defaults.
+ *
+ * Also computes the bookable date range (Tue→Mon) that users are allowed to book for.
+ *
+ * @returns {{ isOpen: boolean, message: string, bookableStart: DateTime|null, bookableEnd: DateTime|null }}
+ */
+export function isReservationWindowOpen() {
+    const DateTime = window.luxon.DateTime;
+    const now = DateTime.now().setZone(window.APP_CONFIG.TIMEZONE);
+
+    // Use server settings if available, otherwise fall back to config defaults
+    const rw = state.reservationWindow || window.APP_CONFIG.RESERVATION_WINDOW;
+    if (!rw) return { isOpen: true, message: '', bookableStart: null, bookableEnd: null };
+
+    const openDay = (rw.openDay !== undefined) ? Number(rw.openDay) : (rw.OPEN_DAY || 0);
+    const openTime = String(rw.openTime || rw.OPEN_TIME || '08:00');
+    const closeDay = (rw.closeDay !== undefined) ? Number(rw.closeDay) : (rw.CLOSE_DAY || 1);
+    const closeTime = String(rw.closeTime || rw.CLOSE_TIME || '20:00');
+
+    /**
+     * Returns the next occurrence of a specific weekday + time as a Luxon DateTime.
+     * @param {number} targetDay 0=Sun, 1=Mon, ..., 6=Sat
+     * @param {string} timeStr "HH:mm"
+     * @returns {DateTime}
+     */
+    function getNextOccurrence(targetDay, timeStr) {
+        const [hour, minute] = timeStr.split(':').map(Number);
+        let target = now.set({ hour, minute, second: 0, millisecond: 0 });
+
+        const nowDay = now.weekday === 7 ? 0 : now.weekday; // match 0=Sun convention
+        let daysToAdd = targetDay - nowDay;
+        if (daysToAdd < 0) daysToAdd += 7;
+
+        target = target.plus({ days: daysToAdd });
+
+        if (target <= now) {
+            target = target.plus({ days: 7 });
+        }
+
+        return target;
+    }
+
+    /**
+     * Computes the bookable Tue→Mon range based on a given close DateTime.
+     * bookableStart = the next Tuesday on or after closeDateTime
+     * bookableEnd   = bookableStart + 6 days (Monday) at 23:59
+     */
+    function computeBookableRange(closeDateTime) {
+        // Luxon weekday: 1=Mon, 2=Tue, ..., 7=Sun
+        const TUESDAY = 2;
+        let daysToTuesday = (TUESDAY - closeDateTime.weekday + 7) % 7;
+        if (daysToTuesday === 0) daysToTuesday = 7; // if close day IS Tuesday, go to next Tue
+        const bookableStart = closeDateTime.plus({ days: daysToTuesday }).startOf('day');
+        const bookableEnd = bookableStart.plus({ days: 6 }).endOf('day');
+        return { bookableStart, bookableEnd };
+    }
+
+    const fmtDate = "cccc, MMMM d, yyyy h:mm a 'GMT+8'";
+    const fmtShort = "MMMM d";
+
+    // Determine current state based on server flag if it exists, otherwise compute locally
+    let isOpen = false;
+    if (rw.isOpen !== undefined) {
+        isOpen = rw.isOpen;
+    } else {
+        const currentDay = now.weekday === 7 ? 0 : now.weekday;
+        const currentMinutes = now.hour * 60 + now.minute;
+        const currentWeekMinute = currentDay * 1440 + currentMinutes;
+
+        const [openH, openM] = openTime.split(':').map(Number);
+        const [closeH, closeM] = closeTime.split(':').map(Number);
+        const openWeekMinute = openDay * 1440 + (openH * 60 + openM);
+        const closeWeekMinute = closeDay * 1440 + (closeH * 60 + closeM);
+
+        if (openWeekMinute <= closeWeekMinute) {
+            isOpen = currentWeekMinute >= openWeekMinute && currentWeekMinute < closeWeekMinute;
+        } else {
+            isOpen = currentWeekMinute >= openWeekMinute || currentWeekMinute < closeWeekMinute;
+        }
+    }
+
+    if (isOpen) {
+        const closeDateTime = getNextOccurrence(closeDay, closeTime);
+        const { bookableStart, bookableEnd } = computeBookableRange(closeDateTime);
+        return {
+            isOpen: true,
+            bookableStart,
+            bookableEnd,
+            message: `Reservations are open until ${closeDateTime.toFormat(fmtDate)}. Bookings accepted for ${bookableStart.toFormat(fmtShort)} – ${bookableEnd.toFormat(fmtShort)} only.`
+        };
+    } else {
+        const nextOpen = getNextOccurrence(openDay, openTime);
+        // Compute a future close DateTime after the next open
+        const [closeH, closeM] = closeTime.split(':').map(Number);
+        let futureClose = nextOpen.set({ hour: closeH, minute: closeM, second: 0 });
+        const futureCloseNowDay = futureClose.weekday === 7 ? 0 : futureClose.weekday;
+        let daysToCloseDay = closeDay - (nextOpen.weekday === 7 ? 0 : nextOpen.weekday);
+        if (daysToCloseDay < 0) daysToCloseDay += 7;
+        if (daysToCloseDay === 0 && futureClose <= nextOpen) daysToCloseDay = 7;
+        futureClose = nextOpen.plus({ days: daysToCloseDay }).set({ hour: closeH, minute: closeM, second: 0 });
+
+        const { bookableStart, bookableEnd } = computeBookableRange(futureClose);
+        return {
+            isOpen: false,
+            bookableStart,
+            bookableEnd,
+            message: `Reservations are closed. Next opening: ${nextOpen.toFormat(fmtDate)} (for ${bookableStart.toFormat(fmtShort)} – ${bookableEnd.toFormat(fmtShort)}). You may still cancel existing bookings via the link in your email confirmation.`
+        };
+    }
 }
