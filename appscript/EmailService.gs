@@ -1,13 +1,13 @@
 // ============================================================================
 // EmailService.gs — Email Notifications
 // ============================================================================
-// All email sending functions: booking confirmations, move notifications,
+// All email sending functions: reservation confirmations, move notifications,
 // blocked date cancellation notices, and GDPR receipts.
 // ============================================================================
 
 function sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom, appUrl) {
     const recipient = payload.email;
-    const subject = `Booking Confirmed: ${payload.event} for ${payload.room}`;
+    const subject = `Reservation Confirmed: ${payload.event} for ${payload.room}`;
     const bookingCode = newId.substring(0, 12).toUpperCase();
     const dateStr = Utilities.formatDate(newStart, SCRIPT_TIMEZONE, "MMMM d, yyyy");
     const timeStr = `${Utilities.formatDate(newStart, SCRIPT_TIMEZONE, "h:mm a")} - ${Utilities.formatDate(newEnd, SCRIPT_TIMEZONE, "h:mm a")}`;
@@ -16,7 +16,7 @@ function sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom, 
     const fmt = "yyyyMMdd'T'HHmmss";
     const gStart = Utilities.formatDate(newStart, SCRIPT_TIMEZONE, fmt);
     const gEnd = Utilities.formatDate(newEnd, SCRIPT_TIMEZONE, fmt);
-    const gTitle = encodeURIComponent(`CCF Booking: ${payload.event}`);
+    const gTitle = encodeURIComponent(`CCF Reservation: ${payload.event}`);
     const gLoc = encodeURIComponent(`CCF Manila - ${payload.room}`);
     const gDetails = encodeURIComponent(`Ref: ${bookingCode}\nParticipants: ${payload.participants}\nNotes: ${payload.notes || 'None'}`);
     const gCalLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gTitle}&dates=${gStart}/${gEnd}&details=${gDetails}&location=${gLoc}&ctz=${SCRIPT_TIMEZONE}`;
@@ -24,9 +24,9 @@ function sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom, 
 
     let greeting = `<h2 style="color: #333;">Hi ${payload.first_name},</h2>`;
     if (requestedRoom && payload.room !== requestedRoom) {
-        greeting += `<p>To optimize room usage, your booking for <strong>${requestedRoom}</strong> has been moved to the <strong>${payload.room}</strong>. Your booking is confirmed for the following details:</p>`;
+        greeting += `<p><span style="background-color: #fef08a; color: #854d0e; padding: 6px 10px; border-radius: 6px; border: 1px solid #fde047; font-weight: bold; display: inline-block; margin-bottom: 10px;">To optimize room usage, the room reservation system moves your reservation to Main Hall.</span><br>Your reservation is confirmed for the following details:</p>`;
     } else {
-        greeting += `<p>Your booking for <strong>${payload.room}</strong> is confirmed! Please review the details below.</p>`;
+        greeting += `<p>Your reservation for <strong>${payload.room}</strong> is confirmed! Please review the details below.</p>`;
     }
 
     const htmlBody = '<div style="font-family: Arial, sans-serif; font-size: 16px; line-height: 1.6;">' +
@@ -68,14 +68,14 @@ function sendMoveNotificationEmail(email, name, event, room, startIso, endIso, r
     var endTimeStr = Utilities.formatDate(endDate, 'Asia/Manila', "h:mm a");
     var subject = "Update: Your Booking Schedule Has Changed - CCF Manila";
 
-    var body = "Hi " + name + ",\n\nPlease be advised that your booking for '" + event + "' has been moved by an Administrator.\n\n" +
+    var body = "Hi " + name + ",\n\nPlease be advised that your reservation for '" + event + "' has been moved by an Administrator.\n\n" +
         "NEW DETAILS:\nDate: " + dateStr + "\nTime: " + startTimeStr + " - " + endTimeStr + "\nRoom: " + room + "\n\nReason: " + reason + "\n\n" +
         "For Queries or Help: " + surveyLink + "\n\nGod Bless,\nCCF Manila Admin";
 
     var htmlBody = "<div style='font-family: sans-serif; color: #333;'>" +
         "<h2 style='color: #004d60;'>Booking Update</h2>" +
         "<p>Hi <strong>" + name + "</strong>,</p>" +
-        "<p>Please be advised that your booking for <strong>" + event + "</strong> has been moved.</p>" +
+        "<p>Please be advised that your reservation for <strong>" + event + "</strong> has been moved.</p>" +
         "<div style='background: #f8fafc; padding: 15px; border-left: 4px solid #004d60; margin: 20px 0;'>" +
         "<p style='margin: 5px 0;'><strong>New Date:</strong> " + dateStr + "</p>" +
         "<p style='margin: 5px 0;'><strong>New Time:</strong> " + startTimeStr + " - " + endTimeStr + "</p>" +
@@ -111,7 +111,7 @@ function sendBlockedDateCancellationEmail(booking, reason, blockedDate) {
     const htmlBody = '<div style="font-family: Arial, sans-serif; font-size: 16px; line-height: 1.6; max-width: 600px;">' +
       '<h2 style="color: #b80000;">Booking Cancellation Notice</h2>' +
       '<p>Hi <strong>' + booking.firstName + '</strong>,</p>' +
-      '<p>We sincerely apologize. Your booking has been <strong>automatically cancelled</strong> because the facility will be <strong>closed on ' + closureDateStr + '</strong>.</p>' +
+      '<p>We sincerely apologize. Your reservation has been <strong>automatically cancelled</strong> because the facility will be <strong>closed on ' + closureDateStr + '</strong>.</p>' +
       '<div style="background-color: #fef2f2; border-left: 4px solid #b80000; border-radius: 4px; padding: 15px; margin: 20px 0;">' +
         '<p style="margin: 0 0 8px 0; font-weight: bold; color: #b80000;">Reason for Closure:</p>' +
         '<p style="margin: 0; color: #7f1d1d;">' + reason + '</p>' +
@@ -136,7 +136,7 @@ function sendBlockedDateCancellationEmail(booking, reason, blockedDate) {
       '<p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email notification.</p>' +
       '<p style="color: #555;">God Bless,<br>CCF Manila Admin</p></div>';
 
-    const plainBody = 'Hi ' + booking.firstName + ',\n\nYour booking was auto-cancelled due to facility closure on ' + closureDateStr + '.\nReason: ' + reason + '\n\nBooking Code: ' + bookingCode + '\nEvent: ' + booking.event + '\nRoom: ' + booking.room + '\nDate: ' + bookingDateStr + '\nTime: ' + startTimeStr + ' - ' + endTimeStr + '\n\nPlease rebook on a different date.\n\nGod Bless,\nCCF Manila Admin';
+    const plainBody = 'Hi ' + booking.firstName + ',\n\nYour reservation was auto-cancelled due to facility closure on ' + closureDateStr + '.\nReason: ' + reason + '\n\nBooking Code: ' + bookingCode + '\nEvent: ' + booking.event + '\nRoom: ' + booking.room + '\nDate: ' + bookingDateStr + '\nTime: ' + startTimeStr + ' - ' + endTimeStr + '\n\nPlease rebook on a different date.\n\nGod Bless,\nCCF Manila Admin';
     MailApp.sendEmail({ to: recipient, subject: subject, body: plainBody, htmlBody: htmlBody, name: EMAIL_SENDER_NAME });
 }
 
@@ -160,7 +160,7 @@ function sendDeniedEmail(payload) {
       '<p>We sincerely apologize, but your recent room reservation request has been <strong>denied</strong>.</p>' +
       '<div style="background-color: #fef2f2; border-left: 4px solid #b80000; border-radius: 4px; padding: 15px; margin: 20px 0;">' +
         '<p style="margin: 0 0 8px 0; font-weight: bold; color: #b80000;">Reason for Denial:</p>' +
-        '<p style="margin: 0; color: #7f1d1d;">We are very sorry but currently you are not listed as a Dleader or Timothy. Please update your status with our Discipleship Group Management in CCF Manila.</p>' +
+        '<p style="margin: 0; color: #7f1d1d;">Apologies but currently you or your discipleship group leader is not listed as a Discipleship Leader or Timothy database. Please update your status with our Discipleship Group Management in CCF Manila.</p>' +
       '</div>' +
       '<div style="background-color: #f4f4f4; border-radius: 8px; padding: 20px; margin: 20px 0;">' +
         '<h3 style="margin-top: 0; color: #333;">Requested Booking Details</h3>' +

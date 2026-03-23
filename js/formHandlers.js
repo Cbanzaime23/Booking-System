@@ -129,6 +129,9 @@ function extractBookingFormData(formElement) {
  * @private
  */
 function validateBookingForm(data, roomRules) {
+    if (!data.termsChecked) return 'You must agree to the Terms & Conditions.';
+    if (!data.privacyChecked) return 'You must consent to the processing of your personal data.';
+
     // Duplicate booking requires admin PIN
     if (state.duplicationSource && !data.adminPin) return 'Admin PIN is required for Duplicate Booking.';
 
@@ -252,8 +255,79 @@ export function handleBookingFormSubmit(e) {
     const error = validateBookingForm(data, roomRules);
     if (error) return showFormAlert('booking-form-alert', error, 'error');
 
-    state.pendingBookingData = buildBookingPayload(data);
+    const payload = buildBookingPayload(data);
+
+    // --- Frontend Main Hall Prioritization (Squeeze Logic) ---
+    let reassigned = false;
+    if (!state.isAdmin && state.selectedRoom !== "Main Hall") {
+        const { start_iso, end_iso, participants } = payload;
+        const mainHallRules = window.APP_CONFIG.ROOM_CONFIG["Main Hall"];
+
+        const startLux = DateTime.fromISO(start_iso);
+        const endLux = DateTime.fromISO(end_iso);
+
+        const mainHallConcurrent = state.allBookings.filter(b => {
+            if (b.room !== "Main Hall") return false;
+            const bStart = parseDate(b.start_iso);
+            const bEnd = parseDate(b.end_iso);
+            if (!bStart.isValid || !bEnd.isValid) return false;
+            return startLux < bEnd && endLux > bStart;
+        });
+
+        const mainHallCurrentPax = mainHallConcurrent.reduce((sum, b) => sum + parseInt(b.participantCount || 0, 10), 0);
+
+        const canFitGroup = (mainHallConcurrent.length + 1) <= mainHallRules.MAX_CONCURRENT_GROUPS;
+        const canFitPax = (mainHallCurrentPax + participants) <= mainHallRules.MAX_TOTAL_PARTICIPANTS;
+        const meetsSizeRules = (participants >= mainHallRules.MIN_BOOKING_SIZE) && (participants <= mainHallRules.MAX_BOOKING_SIZE);
+
+        const isMainHallBlocked = state.blockedDates && state.blockedDates.some(d => {
+            return d.date === startLux.toISODate() && (d.room === "All Rooms" || d.room === "Main Hall");
+        });
+
+        if (canFitGroup && canFitPax && meetsSizeRules && !isMainHallBlocked) {
+            payload.original_room = payload.room;
+            payload.room = "Main Hall";
+            reassigned = true;
+        }
+    }
+
+    // If upgraded, pause the submission flow and force the user to select a table
+    if (reassigned && !payload.table_id) {
+        state.isAutoUpgradeTableSelect = true;
+        state.pendingBookingData = payload;
+
+        // Dynamically import the modal opener here to avoid massive refactoring/circular deps
+        import('./modals.js').then(modals => {
+            modals.openFloorplanModal(payload);
+        });
+        return; // Halt execution until table is selected
+    }
+
+    resumeBookingSubmit(payload, reassigned);
+}
+
+/**
+ * Continuation of the booking submission flow after a table has been assigned
+ * during an automatic Main Hall upgrade.
+ * 
+ * @param {Object} payload - The partially completed booking payload.
+ * @param {boolean} reassigned - Whether the booking was automatically upgraded.
+ */
+export function resumeBookingSubmit(payload, reassigned = false) {
+    state.pendingBookingData = payload;
     populateBookingSummary(state.pendingBookingData);
+
+    // Toggle the reassignment notice visibility
+    const noticeEl = document.getElementById('summary-reassign-notice');
+    if (noticeEl) {
+        if (reassigned) {
+            noticeEl.innerHTML = `To optimize room usage, your reservation will be moved from <strong>${payload.original_room}</strong> to <strong>Main Hall</strong>.`;
+            noticeEl.classList.remove('hidden');
+        } else {
+            noticeEl.classList.add('hidden');
+        }
+    }
+
     elements.confirmSummaryModal.showModal();
 }
 

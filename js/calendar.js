@@ -3,7 +3,7 @@
  * @description Weekly calendar grid renderer.
  *
  * Builds the 7-day calendar shell (day headers + time slot cells),
- * overlays booking status (available / partial / full / blocked) onto
+ * overlays reservation status (available / partial / full / blocked) onto
  * each slot, and renders "Add to Google Calendar" buttons on the
  * success modal after a booking is created.
  */
@@ -126,7 +126,7 @@ function createTimeSlot(time) {
 }
 
 /**
- * Overlays booking status onto every time slot in the calendar.
+ * Overlays reservation status onto every time slot in the calendar.
  *
  * For each slot, calculates the number of overlapping bookings,
  * total participant count, and blocked-date status. Then sets
@@ -170,7 +170,7 @@ export function renderBookingsForSelectedRoom() {
             if (slotStart < windowStatus.bookableStart || slotStart > windowStatus.bookableEnd) {
                 slotEl.className = `time-slot p-1 md:p-2 text-center text-[10px] md:text-sm ${borderClass} h-10 md:h-14 flex flex-col items-center justify-center bg-gray-200 text-gray-400 cursor-not-allowed`;
                 const isMobile = window.innerWidth < 768;
-                const outLabel = isMobile ? 'N/A' : 'Outside Booking Window';
+                const outLabel = isMobile ? 'N/A' : 'Outside Reservation Window';
                 slotEl.innerHTML = `<div class="time-label" style="color:#94a3b8;">${slotStart.toFormat('h:mm')}</div><div class="status-label font-bold text-gray-500">${outLabel}</div>`;
                 slotEl.classList.add('window-closed');
                 return;
@@ -266,9 +266,9 @@ export function renderCalendarButtons(booking) {
     const startStr = startObj.toFormat(fmt);
     const endStr = endObj.toFormat(fmt);
 
-    const title = encodeURIComponent(`CCF Booking: ${booking.event}`);
+    const title = encodeURIComponent(`CCF Reservation: ${booking.event}`);
     const location = encodeURIComponent(`CCF Manila - ${booking.room}`);
-    const details = encodeURIComponent(`Booking Ref: ${booking.id}\nNote: ${booking.notes || ''}`);
+    const details = encodeURIComponent(`Reservation Ref: ${booking.id}\nNote: ${booking.notes || ''}`);
 
     const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&details=${details}&location=${location}&ctz=Asia/Manila`;
 

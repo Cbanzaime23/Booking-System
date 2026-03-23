@@ -30,7 +30,7 @@ function handleCreateBooking(payload) {
         }
 
         const requestedRoom = payload.room;
-        let finalRoom = requestedRoom;
+        const autoUpgradedRoom = payload.original_room || requestedRoom;
         const newStart = new Date(payload.start_iso);
         const newEnd = new Date(payload.end_iso);
         payload.participants = parseInt(payload.participants, 10);
@@ -45,24 +45,8 @@ function handleCreateBooking(payload) {
 
         const allBookings = getActiveBookings(sheet);
 
-        // Main Hall prioritization (squeeze logic)
-        if (!isAdmin && requestedRoom !== "Main Hall") {
-            const mainHallRules = ROOM_CONFIG["Main Hall"];
-            const mainHallConcurrent = findConcurrentBookings(newStart, newEnd, allBookings, "Main Hall");
-            const mainHallCurrentPax = mainHallConcurrent.reduce((sum, b) => sum + b.participantCount, 0);
-            const canFitGroup = (mainHallConcurrent.length + 1) <= mainHallRules.MAX_CONCURRENT_GROUPS;
-            const canFitPax = (mainHallCurrentPax + payload.participants) <= mainHallRules.MAX_TOTAL_PARTICIPANTS;
-            const meetsSizeRules = (payload.participants >= mainHallRules.MIN_BOOKING_SIZE) && (payload.participants <= mainHallRules.MAX_BOOKING_SIZE);
-            const isMainHallBlocked = checkIsBlocked(newStart, "Main Hall", blockedDates);
-
-            if (canFitGroup && canFitPax && meetsSizeRules && !isMainHallBlocked) {
-                finalRoom = "Main Hall";
-            }
-        }
-
-        const rules = ROOM_CONFIG[finalRoom];
-        if (!rules) throw new Error(`Invalid room name: ${finalRoom}`);
-        payload.room = finalRoom;
+        const rules = ROOM_CONFIG[requestedRoom];
+        if (!rules) throw new Error(`Invalid room name: ${requestedRoom}`);
 
         const validationError = validateInput(payload, rules, isAdmin);
         if (validationError) throw new Error(validationError);
@@ -111,7 +95,7 @@ function handleCreateBooking(payload) {
             const bStartClean = String(b.start_iso).replace(/Z$/i, '');
             return b.email && b.email.toLowerCase() === payload.email.toLowerCase()
                 && bStartClean === payloadStartIso
-                && b.room === finalRoom;
+                && b.room === requestedRoom;
         });
         if (existingDuplicate) {
             throw new Error('You already have a booking for this time slot.');
@@ -119,7 +103,7 @@ function handleCreateBooking(payload) {
 
         // Race condition guard (optimistic locking)
         const freshBookings = getActiveBookings(sheet);
-        const freshConcurrent = findConcurrentBookings(newStart, newEnd, freshBookings, finalRoom);
+        const freshConcurrent = findConcurrentBookings(newStart, newEnd, freshBookings, requestedRoom);
         const freshPax = freshConcurrent.reduce((sum, b) => sum + b.participantCount, 0);
         if (freshConcurrent.length + 1 > rules.MAX_CONCURRENT_GROUPS) {
             throw new Error('Sorry, this slot was just filled by another user. Please choose a different time.');
@@ -132,19 +116,19 @@ function handleCreateBooking(payload) {
         appendBookingRow(sheet, newId, payload, newStart, newEnd, null);
 
         try {
-            sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom, payload.app_url);
+            sendConfirmationEmail(payload, newId, newStart, newEnd, autoUpgradedRoom, payload.app_url);
         } catch (emailError) {
             Logger.log(`Booking ${newId} created, but email failed: ${emailError.message}`);
         }
 
         const result = { 
             success: true, 
-            message: 'Booking confirmed!', 
-            id: newId, 
-            bookedRoom: finalRoom, 
-            requestedRoom: requestedRoom,
-            start_iso: payload.start_iso,
-            end_iso: payload.end_iso 
+             message: 'Booking confirmed!', 
+             id: newId, 
+             bookedRoom: requestedRoom, 
+             requestedRoom: autoUpgradedRoom,
+             start_iso: payload.start_iso,
+             end_iso: payload.end_iso 
         };
         logActivity('Create', newId, payload.adminPin, payload);
         return result;
@@ -403,7 +387,7 @@ function handleMoveBooking(payload) {
     sendMoveNotificationEmail(userEmail, userFirstName, eventName, newRoom, newStartIso, newEndIso, reason, bookingId);
 
     logActivity('Move', bookingId, payload.adminPin, payload);
-    return { success: true, message: "Booking moved successfully." };
+    return { success: true, message: "Reservation moved successfully." };
 }
 
 /**

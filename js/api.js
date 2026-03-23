@@ -88,9 +88,9 @@ export function submitRequest(action, payload) {
                 if (data.message.includes('Recurrent')) {
                     redirectMsgEl.textContent = data.message;
                 } else if (bookedRoom !== requestedRoom) {
-                    redirectMsgEl.innerHTML = `To optimize room usage, your booking for <strong>${requestedRoom}</strong> has been moved to the <strong>${bookedRoom}</strong>.`;
+                    redirectMsgEl.innerHTML = `<div class="bg-amber-100 border border-amber-300 rounded-lg p-3 my-3 text-amber-800 font-medium text-sm text-center">To optimize room usage, the room reservation system moves your reservation to Main Hall.</div>`;
                 } else {
-                    redirectMsgEl.textContent = `Your booking for ${bookedRoom} is confirmed. Please save this code for your records.`;
+                    redirectMsgEl.textContent = `Your reservation for ${bookedRoom} is confirmed. Please save this code for your records.`;
                 }
 
                 onRenderCalendarButtons({
@@ -151,7 +151,7 @@ export function submitRequest(action, payload) {
 
 /**
  * Fetches future confirmed bookings for a specific user email.
- * Used by the "My Bookings" modal. Returns a Promise that
+ * Used by the "My Reservations" modal. Returns a Promise that
  * resolves with an array of safe (non-PII) booking objects.
  *
  * @param {string} email - The user's email address.
@@ -170,7 +170,7 @@ export async function fetchUserBookings(email) {
             if (response.success) {
                 resolve(response.bookings);
             } else {
-                reject(new Error(response.message || "Failed to fetch bookings"));
+                reject(new Error(response.message || "Failed to fetch reservations"));
             }
         };
 
@@ -246,25 +246,25 @@ export async function fetchAllBookings(updateFreshnessDisplay) {
                     const rwStatus = isReservationWindowOpen();
 
                     if (rwStatus.isOpen) {
-                        windowBanner.className = 'bg-emerald-50 border-l-4 border-emerald-500 p-3 mb-4 rounded-r-lg';
+                        windowBanner.className = 'bg-blue-50 border-l-4 border-blue-500 p-2 sm:p-3 mb-3 sm:mb-4 rounded-xl';
                         windowBanner.innerHTML = `
-                            <div class="flex items-center gap-2">
-                                <svg class="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            <div class="flex items-center gap-1.5 sm:gap-2">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                <span class="text-sm font-medium text-emerald-800">
+                                <span class="text-xs sm:text-sm font-medium text-blue-800 leading-tight">
                                     ${rwStatus.message.replace('open until', '<strong>open</strong> until')}
                                 </span>
                             </div>`;
                         windowBanner.classList.remove('hidden');
                     } else if (!state.isAdmin) {
-                        windowBanner.className = 'bg-amber-50 border-l-4 border-amber-500 p-3 mb-4 rounded-r-lg';
+                        windowBanner.className = 'bg-amber-50 border-l-4 border-amber-500 p-2 sm:p-3 mb-3 sm:mb-4 rounded-xl';
                         windowBanner.innerHTML = `
-                            <div class="flex items-center gap-2">
-                                <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <div class="flex items-center gap-1.5 sm:gap-2">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
                                 </svg>
-                                <span class="text-sm font-medium text-amber-800">
+                                <span class="text-xs sm:text-sm font-medium text-amber-800 leading-tight">
                                     ${rwStatus.message.replace('closed.', '<strong>closed</strong>.')}
                                 </span>
                             </div>`;
@@ -312,7 +312,7 @@ export async function fetchAllBookings(updateFreshnessDisplay) {
 
                 resolve();
             } else {
-                reject(new Error(response.message || "Failed to fetch bookings"));
+                reject(new Error(response.message || "Failed to fetch reservations"));
             }
         };
 

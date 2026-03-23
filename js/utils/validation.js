@@ -75,25 +75,25 @@ export function validateParticipants(count, rules, isAdmin, roomName) {
  * Returns error string or null.
  */
 export function validateBookingTiming(startTime, isAdmin) {
-    if (startTime < DateTime.local()) return 'Cannot create a booking in the past.';
+    if (startTime < DateTime.local()) return 'Cannot create a reservation in the past.';
 
     const now = DateTime.now().setZone(window.APP_CONFIG.TIMEZONE);
     const startZoned = startTime.setZone(window.APP_CONFIG.TIMEZONE);
 
     const diffInDays = startZoned.startOf('day').diff(now.startOf('day'), 'days').days;
     if (!isAdmin && diffInDays > MAX_ADVANCE_DAYS) {
-        return `Regular bookings cannot be made more than ${MAX_ADVANCE_DAYS} days in advance. Please login as Admin.`;
+        return `Regular reservations cannot be made more than ${MAX_ADVANCE_DAYS} days in advance. Please login as Admin.`;
     }
 
     const diffInHours = startZoned.diff(now, 'hours').hours;
     if (!isAdmin && diffInHours > 0 && diffInHours < MIN_NOTICE_HOURS) {
-        return `Regular bookings require at least ${MIN_NOTICE_HOURS} hours notice. Please login as Admin.`;
+        return `Regular reservations require at least ${MIN_NOTICE_HOURS} hours notice. Please login as Admin.`;
     }
 
     if (isAdmin) {
         const maxAdminDate = DateTime.local().plus({ months: MAX_ADMIN_MONTHS });
         if (startTime > maxAdminDate) {
-            return `Admins can only book up to ${MAX_ADMIN_MONTHS} months in advance.`;
+            return `Admins can only reserve up to ${MAX_ADMIN_MONTHS} months in advance.`;
         }
     }
     return null;
@@ -122,7 +122,7 @@ export function getSlotWarning(slotStartTime) {
 
     const diffInHours = target.diff(now, 'hours').hours;
     if (diffInHours < MIN_NOTICE_HOURS && diffInHours > 0) {
-        return `Note: Bookings within ${MIN_NOTICE_HOURS} hours are restricted to Admins.`;
+        return `Note: Reservations within ${MIN_NOTICE_HOURS} hours are restricted to Admins.`;
     }
 
     return null;
@@ -218,7 +218,7 @@ export function isReservationWindowOpen() {
             isOpen: true,
             bookableStart,
             bookableEnd,
-            message: `Reservations are open until ${closeDateTime.toFormat(fmtDate)}. Bookings accepted for ${bookableStart.toFormat(fmtShort)} – ${bookableEnd.toFormat(fmtShort)} only.`
+            message: `Reservations are open until ${closeDateTime.toFormat(fmtDate)}. Reservations accepted for ${bookableStart.toFormat(fmtShort)} – ${bookableEnd.toFormat(fmtShort)} only.`
         };
     } else {
         const nextOpen = getNextOccurrence(openDay, openTime);
@@ -236,7 +236,7 @@ export function isReservationWindowOpen() {
             isOpen: false,
             bookableStart,
             bookableEnd,
-            message: `Reservations are closed. Next opening: ${nextOpen.toFormat(fmtDate)} (for ${bookableStart.toFormat(fmtShort)} – ${bookableEnd.toFormat(fmtShort)}). You may still cancel existing bookings via the link in your email confirmation.`
+            message: `Reservations are closed. Next opening: ${nextOpen.toFormat(fmtDate)} (for ${bookableStart.toFormat(fmtShort)} – ${bookableEnd.toFormat(fmtShort)}). You may still cancel existing reservations via the link in your email confirmation.`
         };
     }
 }

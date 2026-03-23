@@ -42,7 +42,8 @@ export const state = {
     pendingCancelData: null,
     blockedDates: [],
     reservationWindow: null,
-    isAdmin: false
+    isAdmin: false,
+    isAutoUpgradeTableSelect: false
 };
 
 /**

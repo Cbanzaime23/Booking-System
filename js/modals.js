@@ -4,7 +4,7 @@
  *
  * Manages opening, populating, and resetting every modal in the app:
  * time selection, booking form, cancel, move, move summary, duplicate
- * selection, duplicate booking, conflict warning, and My Bookings lookup.
+ * selection, duplicate booking, conflict warning, and My Reservations lookup.
  *
  * Shared helpers (getOverlappingBookings, renderBookingRadioList,
  * populateRoomDropdown) eliminate duplicate logic across modals.
@@ -39,18 +39,22 @@ export function updateParticipantRules(rules, isAdmin) {
         participantsInput.value = minAllowed;
     }
 
-    let helperText = `Group size: ${minAllowed} - ${maxAllowed} participants. `;
-    helperText += `Max groups for this room: ${rules.MAX_CONCURRENT_GROUPS}. `;
+    let helperHTML = `Group size: ${minAllowed} - ${maxAllowed} participants. `;
+    helperHTML += `Max groups for this room: <span class="font-bold">${rules.MAX_CONCURRENT_GROUPS}</span>. `;
+
     const maxDate = DateTime.local().plus(isAdmin ? { months: 6 } : { days: 7 });
-    helperText += `Can book up to ${maxDate.toFormat('LLL d')}.`;
+    helperHTML += `Can reserve up to <span class="font-bold border-b border-gray-400">${maxDate.toFormat('LLL d')}</span>.`;
 
-    document.getElementById('participants-helper-text').textContent = helperText;
+    const newHintEl = document.getElementById('participant-rule-hint');
+    if (newHintEl) {
+        newHintEl.innerHTML = helperHTML;
+    } else {
+        const oldHintEl = document.getElementById('participants-helper-text');
+        if (oldHintEl) oldHintEl.textContent = helperHTML.replace(/<[^>]*>?/gm, '');
+    }
 }
-
 /**
- * Opens the time-selection modal where the user picks an end time
- * before proceeding to the full booking form.
- * Closes the choice modal and sets a default 1-hour duration.
+ * Closes the choice modal and sets a default 1 - hour duration.
  */
 export function openTimeSelectionModal() {
     if (elements.choiceModal) elements.choiceModal.close();
@@ -59,8 +63,45 @@ export function openTimeSelectionModal() {
     const { startTime } = state.selectedSlot;
     elements.displayStartTime.textContent = startTime.toFormat('h:mm a');
 
+    const roomEl = document.getElementById('time-selection-room');
+    if (roomEl) roomEl.textContent = state.selectedRoom;
+
+    const dateEl = document.getElementById('time-selection-date');
+    if (dateEl) dateEl.textContent = startTime.toFormat('ccc, MMM d');
+
+    // Populate dropdown with 30-minute increments up to business end time
+    elements.selectionEndTimeInput.innerHTML = '';
+
+    const dayIndex = startTime.weekday === 7 ? 0 : startTime.weekday;
+    let endOfDayTimeStr = '23:30';
+    if (window.APP_CONFIG && window.APP_CONFIG.BUSINESS_HOURS && window.APP_CONFIG.BUSINESS_HOURS[dayIndex]) {
+        const bhEnd = window.APP_CONFIG.BUSINESS_HOURS[dayIndex].end;
+        if (bhEnd) endOfDayTimeStr = bhEnd;
+    }
+
+    const [eHours, eMins] = endOfDayTimeStr.split(':').map(Number);
+    let endOfDay = startTime.set({ hour: eHours, minute: eMins });
+
+    let currentOptionTime = startTime.plus({ minutes: window.APP_CONFIG.SLOT_DURATION_MINUTES || 30 });
+
+    while (currentOptionTime <= endOfDay) {
+        const option = document.createElement('option');
+        option.value = currentOptionTime.toFormat('HH:mm');
+        option.textContent = currentOptionTime.toFormat('h:mm a');
+        elements.selectionEndTimeInput.appendChild(option);
+        currentOptionTime = currentOptionTime.plus({ minutes: window.APP_CONFIG.SLOT_DURATION_MINUTES || 30 });
+    }
+
     const defaultEndDate = startTime.plus({ hours: 1 });
-    elements.selectionEndTimeInput.value = defaultEndDate.toFormat('HH:mm');
+    if (defaultEndDate <= endOfDay) {
+        elements.selectionEndTimeInput.value = defaultEndDate.toFormat('HH:mm');
+    }
+
+    // Attach change listener safely to update the duration
+    if (!elements.selectionEndTimeInput.hasAttribute('data-listener-attached')) {
+        elements.selectionEndTimeInput.addEventListener('change', updateDurationDisplay);
+        elements.selectionEndTimeInput.setAttribute('data-listener-attached', 'true');
+    }
 
     updateDurationDisplay();
     elements.timeSelectionModal.showModal();
@@ -123,19 +164,17 @@ function renderScheduleInfoHTML(finalStart, finalEnd) {
     const durationText = (durationMin > 0) ? `(${durationHours.toFixed(1)} ${durationHours === 1 ? 'hr' : 'hrs'})` : '';
 
     return `
-        <div class="mb-4 p-3 bg-ccf-blue/5 border border-ccf-blue/10 rounded-lg">
-            <p class="text-xs text-ccf-blue uppercase font-bold tracking-wider mb-1">Selected Schedule</p>
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-lg font-bold text-gray-800">${dateFmt}</p>
-                    <p class="text-md text-ccf-blue font-semibold">
-                        ${startFmt} - ${endFmt}
-                        <span class="ml-2 text-sm text-gray-500 font-normal">${durationText}</span>
-                    </p>
-                </div>
-                <div class="text-right">
-                    <button type="button" id="change-time-btn" class="text-xs text-ccf-red hover:underline font-semibold">Change Time</button>
-                </div>
+        <div class="h-full p-2 sm:p-3 bg-ccf-blue/5 border border-ccf-blue/10 rounded-xl flex flex-col justify-center">
+            <div class="flex items-center justify-between mb-0.5 sm:mb-1">
+                <p class="text-[10px] sm:text-xs text-ccf-blue uppercase font-bold tracking-wider">Selected Schedule</p>
+                <button type="button" id="change-time-btn" class="text-[10px] sm:text-xs text-ccf-red hover:underline font-semibold pr-1">Change Time</button>
+            </div>
+            <div>
+                <p class="text-sm sm:text-lg font-bold text-gray-800 leading-tight">${dateFmt}</p>
+                <p class="text-xs sm:text-sm text-ccf-blue font-semibold mt-0.5">
+                    ${startFmt} - ${endFmt}
+                    <span class="ml-2 text-sm text-gray-500 font-normal">${durationText}</span>
+                </p>
             </div>
         </div>
     `;
@@ -184,7 +223,7 @@ export function openBookingModalForSelectedSlot(customStartTime = null, customEn
     }
 
     updateParticipantRules(rules, false);
-    document.getElementById('modal-title').textContent = `Book ${state.selectedRoom}`;
+    document.getElementById('modal-title').textContent = `Reserve ${state.selectedRoom}`;
     elements.bookingForm.querySelector('#start-iso').value = finalStart.toISO();
     elements.bookingForm.querySelector('#end-time').value = finalEnd;
 
@@ -205,7 +244,7 @@ export function openBookingModalForSelectedSlot(customStartTime = null, customEn
         state.pendingWarning = null;
     }
     if (state.selectedRoom !== 'Main Hall') {
-        appendFormAlert('booking-form-alert', 'Your booking may be <strong>automatically moved to Main Hall</strong> if your time slot is available there, to optimize room usage.', 'info');
+        appendFormAlert('booking-form-alert', 'Your reservation may be <strong>automatically moved to Main Hall</strong> if your time slot is available there, to optimize room usage.', 'info');
     }
 }
 
@@ -237,7 +276,7 @@ function renderBookingRadioList(containerId, bookings, config) {
     container.innerHTML = '';
 
     if (bookings.length === 0) {
-        container.innerHTML = `<p class="text-slate-500 text-center py-4">${config.emptyMessage || 'No bookings found.'}</p>`;
+        container.innerHTML = `<p class="text-slate-500 text-center py-4">${config.emptyMessage || 'No reservations found.'}</p>`;
         return;
     }
 
@@ -287,7 +326,7 @@ export function openCancelModalForSelectedSlot() {
         radioName: 'booking-to-cancel',
         colorClass: 'text-ccf-red focus:ring-ccf-red',
         showParticipants: true,
-        emptyMessage: 'No bookings found in this slot to cancel.',
+        emptyMessage: 'No reservations found in this slot to cancel.',
         onChange: (booking) => {
             document.getElementById('cancel-confirmation-section').classList.remove('hidden');
             document.getElementById('confirm-cancel-btn').disabled = false;
@@ -328,7 +367,7 @@ export function openMoveModalForSelectedSlot(preselectedBookingId = null) {
     renderBookingRadioList('move-booking-list', bookings, {
         radioName: 'booking_to_move',
         colorClass: 'text-ccf-blue focus:ring-ccf-blue',
-        emptyMessage: 'No bookings found to move.',
+        emptyMessage: 'No reservations found to move.',
         onChange: () => {
             document.getElementById('move-details-section').classList.remove('hidden');
             document.getElementById('confirm-move-btn').disabled = false;
@@ -388,7 +427,7 @@ export function openDuplicateSelectionModalForSelectedSlot() {
         return;
     }
     if (bookings.length === 0) {
-        showToast("No bookings found to duplicate.", "error");
+        showToast("No reservations found to duplicate.", "error");
         return;
     }
 
@@ -459,7 +498,7 @@ export function openDuplicateBookingModal(sourceBooking) {
 }
 
 /**
- * Handles the "My Bookings" lookup form submission.
+ * Handles the "My Reservations" lookup form submission.
  * Fetches the user's future bookings by email and displays them,
  * then reveals the GDPR rights section.
  *
@@ -520,18 +559,37 @@ export function handleMyBookingsSubmit(e) {
 }
 // --- Floorplan Modal ---
 
-export function openFloorplanModal() {
-    const startTimeIso = elements.bookingForm.querySelector('#start-iso').value;
-    const endTimeStr = elements.bookingForm.querySelector('#end-time').value;
+export function openFloorplanModal(customPayload = null) {
+    if (customPayload instanceof Event) customPayload = null;
+    let startTimeIso, endTimeStr, startTime, endTime;
 
-    if (!startTimeIso || !endTimeStr) {
-        showFormAlert('booking-form-alert', 'Please select a valid time first.', 'error');
-        return;
+    if (customPayload) {
+        startTime = DateTime.fromISO(customPayload.start_iso);
+        endTime = DateTime.fromISO(customPayload.end_iso);
+    } else {
+        startTimeIso = elements.bookingForm.querySelector('#start-iso').value;
+        endTimeStr = elements.bookingForm.querySelector('#end-time').value;
+
+        if (!startTimeIso || !endTimeStr) {
+            showFormAlert('booking-form-alert', 'Please select a valid time first.', 'error');
+            return;
+        }
+
+        startTime = DateTime.fromISO(startTimeIso);
+        const [endHour, endMinute] = endTimeStr.split(':').map(Number);
+        endTime = startTime.set({ hour: endHour, minute: endMinute });
     }
 
-    const startTime = DateTime.fromISO(startTimeIso);
-    const [endHour, endMinute] = endTimeStr.split(':').map(Number);
-    const endTime = startTime.set({ hour: endHour, minute: endMinute });
+    const instructionEl = document.getElementById('floorplan-instruction');
+    if (instructionEl) {
+        if (customPayload) {
+            instructionEl.className = "bg-amber-100 border border-amber-300 rounded-xl p-3 mb-6 text-amber-800 font-medium text-sm text-center";
+            instructionEl.innerHTML = "To optimize room usage, the room reservation system will move your reservation to the Main Hall. Please select an available table now.";
+        } else {
+            instructionEl.className = "mb-6 text-sm text-gray-600";
+            instructionEl.textContent = "Please choose an available table for your group. Tables shaded in gray are already booked for this time slot.";
+        }
+    }
 
     // Find all overlapping bookings for Main Hall in this exact time span
     const overlapping = state.allBookings.filter(b => {

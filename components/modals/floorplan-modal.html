@@ -1,4 +1,4 @@
-<dialog id="floorplan-modal" class="p-0 rounded-lg shadow-xl max-w-lg w-full">
+<dialog id="floorplan-modal" class="p-0 rounded-2xl shadow-xl max-w-lg w-full">
     <div class="p-6">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-2xl font-bold font-heading text-ccf-blue">Select a Table</h3>
@@ -10,7 +10,8 @@
             </button>
         </div>
 
-        <p class="mb-6 text-sm text-gray-600">Please choose an available table for your group. Tables shaded in gray are
+        <p id="floorplan-instruction" class="mb-6 text-sm text-gray-600">Please choose an available table for your
+            group. Tables shaded in gray are
             already booked for this time slot.</p>
 
         <!-- Floorplan Grid -->
@@ -196,7 +197,7 @@
 
         <div class="flex justify-end mt-6">
             <button type="button" id="floorplan-cancel-btn"
-                class="cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancel</button>
+                class="cancel-btn px-4 py-2 bg-gray-200 rounded-xl hover:bg-gray-300">Cancel</button>
         </div>
     </div>
 </dialog>

@@ -31,7 +31,7 @@ import {
     openFloorplanModal,
     handleEmailCancelDeepLink
 } from './js/modals.js';
-import { handleMoveFormSubmit, handleBookingFormSubmit, handleCancelFormSubmit, submitPendingCancellation } from './js/formHandlers.js';
+import { handleMoveFormSubmit, handleBookingFormSubmit, handleCancelFormSubmit, submitPendingCancellation, resumeBookingSubmit } from './js/formHandlers.js';
 import { loadComponents } from './js/utils/componentLoader.js';
 
 const DateTime = window.luxon.DateTime;
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         clearAllFormAlerts();
 
         if (windowClosed) {
-            showFormAlert('choice-form-alert', 'Reservations are closed. You may only cancel existing bookings.', 'warning');
+            showFormAlert('choice-form-alert', 'Reservations are closed. You may only cancel existing reservations.', 'warning');
         } else if (warningMessage) {
             showFormAlert('choice-form-alert', warningMessage, 'warning');
         }
@@ -267,14 +267,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (duplicateBtn) duplicateBtn.addEventListener('click', openDuplicateSelectionModalForSelectedSlot);
 
         if (elements.btnOpenFloorplan) {
-            elements.btnOpenFloorplan.addEventListener('click', openFloorplanModal);
+            elements.btnOpenFloorplan.addEventListener('click', () => openFloorplanModal());
         }
 
         if (elements.floorplanModal) {
+            const handleCancel = () => {
+                elements.floorplanModal.close();
+                state.isAutoUpgradeTableSelect = false;
+            };
             const closeBtn = elements.floorplanModal.querySelector('#floorplan-close-btn');
             const cancelBtn = elements.floorplanModal.querySelector('#floorplan-cancel-btn');
-            if (closeBtn) closeBtn.addEventListener('click', () => elements.floorplanModal.close());
-            if (cancelBtn) cancelBtn.addEventListener('click', () => elements.floorplanModal.close());
+            if (closeBtn) closeBtn.addEventListener('click', handleCancel);
+            if (cancelBtn) cancelBtn.addEventListener('click', handleCancel);
 
             elements.floorplanModal.querySelectorAll('.table-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -291,6 +295,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         elements.displaySelectedTable.textContent = `Table ${target.dataset.tableId}`;
                         elements.displaySelectedTable.className = 'text-sm font-bold text-ccf-blue';
                         elements.floorplanModal.close();
+
+                        if (state.isAutoUpgradeTableSelect) {
+                            state.isAutoUpgradeTableSelect = false;
+                            state.pendingBookingData.table_id = target.dataset.tableId;
+                            resumeBookingSubmit(state.pendingBookingData, true);
+                        }
                     }
                 });
             });
@@ -351,6 +361,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
+        // Terms and Privacy Modals
+        const termsBtn = document.getElementById('terms-link-btn');
+        if (termsBtn) termsBtn.addEventListener('click', () => document.getElementById('terms-modal').showModal());
+
+        const privacyBtn = document.getElementById('privacy-link-btn');
+        if (privacyBtn) privacyBtn.addEventListener('click', () => document.getElementById('privacy-modal').showModal());
+
+        const termsCloseBtn = document.getElementById('terms-close-btn');
+        if (termsCloseBtn) termsCloseBtn.addEventListener('click', () => document.getElementById('terms-modal').close());
+
+        const privacyCloseBtn = document.getElementById('privacy-close-btn');
+        if (privacyCloseBtn) privacyCloseBtn.addEventListener('click', () => document.getElementById('privacy-modal').close());
+
         // Email Deep Link Cancel Modal Listeners
         const emailCancelYes = document.getElementById('email-cancel-yes-btn');
         if (emailCancelYes) {
@@ -394,7 +417,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     /**
      * Full re-render cycle: rebuilds the calendar shell, fetches fresh
-     * data from the server, and overlays booking statuses.
+     * data from the server, and overlays reservation statuses.
      */
     async function render() {
         setLoading(true, 'page');
@@ -437,6 +460,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             modal.addEventListener('cancel', (e) => e.preventDefault());
 
             userBtn.addEventListener('click', () => {
+                sessionStorage.setItem('ccf_admin_logged_in', 'false');
                 modal.close();
                 resolve({ isAdmin: false });
             });
@@ -480,6 +504,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     submitBtn.textContent = 'Login';
 
                     if (response.success) {
+                        sessionStorage.setItem('ccf_admin_logged_in', 'true');
                         modal.close();
                         resolve({ isAdmin: true, adminPin: pin });
                     } else {

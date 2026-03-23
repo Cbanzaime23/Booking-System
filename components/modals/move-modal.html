@@ -1,6 +1,6 @@
-<dialog id="move-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
-    <div class="p-6">
-        <h3 class="text-2xl font-bold mb-2 font-heading text-ccf-blue">Move a Booking</h3>
+<dialog id="move-modal" class="p-0 rounded-2xl shadow-xl max-w-[95vw] sm:max-w-md md:max-w-xl w-full">
+    <div class="p-4 sm:p-6">
+        <h3 class="text-2xl font-bold mb-2 font-heading text-ccf-blue">Move a Reservation</h3>
         <p class="mb-4 text-gray-600">Select the booking to move and specify the new details.</p>
 
         <form id="move-form" novalidate>
@@ -24,7 +24,7 @@
                                     </svg>
                                 </div>
                                 <input type="date" name="new_date" required
-                                    class="block w-full pl-8 p-2 text-sm border rounded">
+                                    class="block w-full pl-8 p-2 text-sm border rounded-xl">
                             </div>
                         </div>
                         <div>
@@ -38,7 +38,7 @@
                                     </svg>
                                 </div>
                                 <select name="new_room" id="move-new-room"
-                                    class="block w-full pl-8 p-2 text-sm border rounded">
+                                    class="block w-full pl-8 p-2 text-sm border rounded-xl">
                                 </select>
                             </div>
                         </div>
@@ -55,7 +55,7 @@
                                     </svg>
                                 </div>
                                 <input type="time" name="new_start_time" required
-                                    class="block w-full pl-8 p-2 text-sm border rounded">
+                                    class="block w-full pl-8 p-2 text-sm border rounded-xl">
                             </div>
                         </div>
                         <div>
@@ -69,7 +69,7 @@
                                     </svg>
                                 </div>
                                 <input type="time" name="new_end_time" required
-                                    class="block w-full pl-8 p-2 text-sm border rounded">
+                                    class="block w-full pl-8 p-2 text-sm border rounded-xl">
                             </div>
                         </div>
                     </div>
@@ -87,7 +87,7 @@
                         </div>
                         <textarea name="move_reason" required rows="2"
                             placeholder="e.g., Room maintenance, Conflict resolution..."
-                            class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-blue focus:border-ccf-blue"></textarea>
+                            class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-ccf-blue focus:border-ccf-blue"></textarea>
                     </div>
                 </div>
 
@@ -102,24 +102,24 @@
                             </svg>
                         </div>
                         <input type="password" name="admin_pin" placeholder="Required for Admins"
-                            class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-ccf-red focus:border-ccf-red">
+                            class="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-ccf-red focus:border-ccf-red">
                     </div>
                 </div>
             </div>
 
             <div class="flex justify-end gap-3 mt-6">
                 <button type="button"
-                    class="cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancel</button>
+                    class="cancel-btn px-4 py-2 bg-gray-200 rounded-xl hover:bg-gray-300">Cancel</button>
                 <button type="submit" id="confirm-move-btn"
-                    class="px-4 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark disabled:bg-blue-300"
+                    class="px-4 py-2 bg-ccf-blue text-white rounded-xl hover:bg-ccf-blue-dark disabled:bg-blue-300"
                     disabled>Confirm Move</button>
             </div>
         </form>
     </div>
 </dialog>
 
-<dialog id="move-summary-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
-    <div class="p-6">
+<dialog id="move-summary-modal" class="p-0 rounded-2xl shadow-xl max-w-[95vw] sm:max-w-md md:max-w-xl w-full">
+    <div class="p-4 sm:p-6">
         <h3 class="text-2xl font-bold mb-2 font-heading text-ccf-blue">Confirm Schedule Move</h3>
 
         <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-5">
@@ -133,7 +133,7 @@
             </div>
         </div>
 
-        <div class="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4 mb-6">
+        <div class="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4 mb-6">
             <div class="flex justify-between">
                 <span class="text-sm font-medium text-gray-500">Booking:</span>
                 <span id="move-sum-event" class="font-semibold text-gray-800 text-right text-sm"></span>
@@ -159,16 +159,16 @@
 
         <div class="flex justify-end gap-3 mt-6">
             <button type="button" id="move-sum-no-btn"
-                class="px-5 py-2 bg-gray-200 rounded-md hover:bg-gray-300 font-medium">No, Go Back</button>
+                class="px-5 py-2 bg-gray-200 rounded-xl hover:bg-gray-300 font-medium">No, Go Back</button>
             <button type="button" id="move-sum-yes-btn"
-                class="px-5 py-2 bg-ccf-blue text-white rounded-md hover:bg-ccf-blue-dark font-medium">Yes, Confirm
+                class="px-5 py-2 bg-ccf-blue text-white rounded-xl hover:bg-ccf-blue-dark font-medium">Yes, Confirm
                 Move</button>
         </div>
     </div>
 </dialog>
 
-<dialog id="conflict-modal" class="p-0 rounded-lg shadow-xl max-w-md w-full">
-    <div class="p-6">
+<dialog id="conflict-modal" class="p-0 rounded-2xl shadow-xl max-w-[95vw] sm:max-w-md md:max-w-xl w-full">
+    <div class="p-4 sm:p-6">
         <div class="flex items-center gap-3 mb-4 text-amber-600">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor" stroke-width="2">
@@ -178,7 +178,7 @@
             <h3 class="text-2xl font-bold font-heading text-gray-800">Schedule Conflict!</h3>
         </div>
 
-        <p class="mb-4 text-gray-600">The new schedule overlaps with the following existing booking(s):</p>
+        <p class="mb-4 text-gray-600">The new schedule overlaps with the following existing reservation(s):</p>
 
         <div id="conflict-list"
             class="bg-amber-50 border border-amber-200 rounded-md p-3 mb-6 max-h-40 overflow-y-auto text-sm text-gray-700 space-y-2">
@@ -188,9 +188,9 @@
 
         <div class="flex justify-end gap-3">
             <button type="button" id="conflict-cancel-btn"
-                class="cancel-btn px-5 py-2 bg-gray-200 rounded-md hover:bg-gray-300 font-medium">Cancel</button>
+                class="cancel-btn px-5 py-2 bg-gray-200 rounded-xl hover:bg-gray-300 font-medium">Cancel</button>
             <button type="button" id="conflict-proceed-btn"
-                class="px-5 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 font-medium">Yes, Double
+                class="px-5 py-2 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-medium">Yes, Double
                 Book</button>
         </div>
     </div>
