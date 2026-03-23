@@ -85,6 +85,15 @@ function handleCreateBooking(payload) {
             // Check if the validation failed due to a system crash (e.g. Google Sheets API down) vs an actual name mismatch
             const isSystemError = dleaderValidation.reason.includes("System error");
             
+            // Send email only for actual name mismatches
+            if (!isSystemError) {
+                try {
+                    sendDeniedEmail(payload);
+                } catch (emailErr) {
+                    console.error("Failed to send denied email:", emailErr);
+                }
+            }
+            
             return {
                 success: false,
                 message: isSystemError ? dleaderValidation.reason : "Your reservation was denied as the user and/or leader do not exist in the current CCF Manila Dleaders List."

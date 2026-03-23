@@ -140,6 +140,49 @@ function sendBlockedDateCancellationEmail(booking, reason, blockedDate) {
     MailApp.sendEmail({ to: recipient, subject: subject, body: plainBody, htmlBody: htmlBody, name: EMAIL_SENDER_NAME });
 }
 
+function sendDeniedEmail(payload) {
+    const recipient = payload.email;
+    const cleanStartIso = String(payload.start_iso).replace(/Z$/i, '');
+    const cleanEndIso = String(payload.end_iso).replace(/Z$/i, '');
+    const startDate = new Date(cleanStartIso);
+    const endDate = new Date(cleanEndIso);
+    const bookingDateStr = Utilities.formatDate(startDate, SCRIPT_TIMEZONE, "MMMM d, yyyy (EEE)");
+    const startTimeStr = Utilities.formatDate(startDate, SCRIPT_TIMEZONE, "h:mm a");
+    const endTimeStr = Utilities.formatDate(endDate, SCRIPT_TIMEZONE, "h:mm a");
+    const subject = 'Action Required: Room Reservation Denied - CCF Manila';
+    
+    // We don't have a booking code since it was denied, so we pass a placeholder or remove it from the survey link
+    const surveyLink = SURVEY_FORM_URL.replace('${bookingCode}', 'DENIED');
+
+    const htmlBody = '<div style="font-family: Arial, sans-serif; font-size: 16px; line-height: 1.6; max-width: 600px;">' +
+      '<h2 style="color: #b80000;">Room Reservation Denied</h2>' +
+      '<p>Hi <strong>' + payload.first_name + '</strong>,</p>' +
+      '<p>We sincerely apologize, but your recent room reservation request has been <strong>denied</strong>.</p>' +
+      '<div style="background-color: #fef2f2; border-left: 4px solid #b80000; border-radius: 4px; padding: 15px; margin: 20px 0;">' +
+        '<p style="margin: 0 0 8px 0; font-weight: bold; color: #b80000;">Reason for Denial:</p>' +
+        '<p style="margin: 0; color: #7f1d1d;">We are very sorry but currently you are not listed as a Dleader or Timothy. Please update your status with our Discipleship Group Management in CCF Manila.</p>' +
+      '</div>' +
+      '<div style="background-color: #f4f4f4; border-radius: 8px; padding: 20px; margin: 20px 0;">' +
+        '<h3 style="margin-top: 0; color: #333;">Requested Booking Details</h3>' +
+        '<p><strong>Event:</strong> ' + payload.event + '</p>' +
+        '<p><strong>Room:</strong> ' + payload.room + '</p>' +
+        '<p><strong>Date:</strong> ' + bookingDateStr + '</p>' +
+        '<p><strong>Time:</strong> ' + startTimeStr + ' - ' + endTimeStr + '</p>' +
+        (payload.participants ? '<p><strong>Participants:</strong> ' + payload.participants + '</p>' : '') +
+      '</div>' +
+      '<div style="background-color: #e6fffa; border: 1px solid #b2f5ea; border-radius: 8px; padding: 15px; margin-top: 20px;">' +
+        '<h3 style="color: #047857; margin-top: 0;">Need Help or Have Questions?</h3>' +
+        '<p style="color: #065f46; font-size: 14px;">If you believe this is an error or need further assistance, please submit a query via our Survey Google Form.</p>' +
+        '<a href="' + surveyLink + '" style="background-color: #047857; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; font-weight: bold;">Submit Feedback / Query</a>' +
+      '</div>' +
+      '<p style="margin-top: 30px; color: #888; font-size: 12px;">This is an automated no-reply email notification.</p>' +
+      '<p style="color: #555;">God Bless,<br>CCF Manila Admin</p></div>';
+
+    const plainBody = 'Hi ' + payload.first_name + ',\n\nWe sincerely apologize, but your recent room reservation request has been denied.\n\nReason: We are very sorry but currently you are not listed as a Dleader or Timothy. Please update your status with our Discipleship Group Management in CCF Manila.\n\nRequested Booking Details:\nEvent: ' + payload.event + '\nRoom: ' + payload.room + '\nDate: ' + bookingDateStr + '\nTime: ' + startTimeStr + ' - ' + endTimeStr + '\n\nIf you need help, please submit a query via our Survey Form.\n\nGod Bless,\nCCF Manila Admin';
+
+    MailApp.sendEmail({ to: recipient, subject: subject, body: plainBody, htmlBody: htmlBody, name: EMAIL_SENDER_NAME });
+}
+
 function sendGdprExportEmail(email, bookings) {
     const subject = 'Your Data Export Confirmation - CCF Manila Room Reservation System';
     const dateNow = Utilities.formatDate(new Date(), SCRIPT_TIMEZONE, "MMMM d, yyyy 'at' h:mm a");
