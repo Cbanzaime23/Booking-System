@@ -342,3 +342,36 @@ function isReservationWindowCurrentlyOpen(windowSettings) {
         return currentWeekMinute >= openWeekMinute || currentWeekMinute < closeWeekMinute;
     }
 }
+/**
+ * Deletes a matching blocked date entry from the BlockedDates sheet.
+ *
+ * @param {Spreadsheet} ss     - The spreadsheet reference.
+ * @param {string}      date   - The date to match.
+ * @param {string}      room   - The room to match.
+ * @param {string}      reason - The reason to match.
+ * @throws {Error} If the blocked dates sheet is missing or the entry is not found.
+ */
+function deleteBlockedDateRow(ss, date, room, reason) {
+    const sheet = ss.getSheetByName(BLOCKED_SHEET_NAME);
+    if (!sheet) throw new Error("BlockedDates sheet not found.");
+
+    const data = sheet.getDataRange().getValues();
+    // Headers are at data[0]
+    
+    for (let i = 1; i < data.length; i++) {
+        let rowDate = data[i][0];
+        if (rowDate instanceof Date) {
+            rowDate = Utilities.formatDate(rowDate, SCRIPT_TIMEZONE, "yyyy-MM-dd");
+        }
+        
+        const rowRoom = data[i][1];
+        const rowReason = data[i][2];
+
+        if (rowDate === date && rowRoom === room && rowReason === reason) {
+            sheet.deleteRow(i + 1);
+            return;
+        }
+    }
+    
+    throw new Error("Specified blocked date entry not found.");
+}

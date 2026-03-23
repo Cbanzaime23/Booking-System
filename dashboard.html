@@ -161,6 +161,43 @@
                 font-size: 13px;
             }
 
+            /* Blocked Table Responsive Styles */
+            .blocked-table [data-label]::before {
+                content: attr(data-label);
+                font-weight: 700;
+                color: #64748b;
+                font-size: 10px;
+                text-transform: uppercase;
+                width: 80px;
+                flex-shrink: 0;
+            }
+
+            /* Shake Animation */
+            @keyframes shake {
+
+                0%,
+                100% {
+                    transform: translateX(0);
+                }
+
+                25% {
+                    transform: translateX(-5px);
+                }
+
+                50% {
+                    transform: translateX(5px);
+                }
+
+                75% {
+                    transform: translateX(-5px);
+                }
+            }
+
+            .shake {
+                animation: shake 0.4s ease-in-out;
+                border-color: #ef4444 !important;
+            }
+
             .blocked-table tbody td::before {
                 content: attr(data-label);
                 font-weight: 600;
@@ -233,7 +270,8 @@
         <!-- ADMIN TOOLS TOOLBAR — secondary row with icon buttons -->
         <div class="bg-gray-50 border-b border-gray-200 py-2 px-4">
             <div class="flex flex-wrap items-center gap-2 md:gap-3">
-                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mr-1 md:hidden">Admin Tools:</span>
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mr-1 md:hidden">Admin
+                    Tools:</span>
                 <button id="open-blocked-dates-modal" type="button"
                     class="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-2xl hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-colors shadow-sm">
                     <svg class="w-3.5 sm:w-4 h-3.5 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,8 +314,8 @@
                         <button id="room-filter-btn"
                             class="flex items-center justify-between w-28 sm:w-36 md:w-48 px-1.5 sm:px-3 md:px-4 py-1 md:py-2 sm:py-2 text-[10px] sm:text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-2xl shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-ccf-blue">
                             <span id="room-filter-label">All Rooms</span>
-                            <svg class="w-4 sm:w-5 h-4 sm:h-5 ml-2 -mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-                                fill="currentColor">
+                            <svg class="w-4 sm:w-5 h-4 sm:h-5 ml-2 -mr-1" xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd"
                                     d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
                                     clip-rule="evenodd" />
@@ -346,57 +384,60 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Filtered Reservations</p>
+                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Filtered Reservations
+                        </p>
                         <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="total-bookings-count">
                             --
                         </h3>
                     </div>
                 </div>
-                <!-- Card 2: Main Hall -->
+                <!-- Card 2: Headcount -->
                 <div
                     class="bg-white p-2 md:p-6 rounded-lg md:rounded-2xl shadow-sm border border-gray-100 border-t-4 border-t-teal-600 flex flex-col md:flex-row items-center md:items-center text-center md:text-left">
                     <div class="p-2 md:p-4 bg-teal-50 rounded-full text-teal-600 mb-1 md:mb-0 md:mr-4">
                         <svg class="h-5 w-5 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                             stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M3 22v-8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8M3 22h18M6 22v-8M10 22v-8M14 22v-8M18 22v-8M3 12V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 6l9-4 9 4" />
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Main Hall</p>
-                        <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="main-hall-count">--
+                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Total Headcount</p>
+                        <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="total-headcount">--
                         </h3>
                     </div>
                 </div>
-                <!-- Card 3: Mezzanine -->
+                <!-- Card 3: Auto-Upgrades -->
                 <div
                     class="bg-white p-2 md:p-6 rounded-lg md:rounded-2xl shadow-sm border border-gray-100 border-t-4 border-t-orange-500 flex flex-col md:flex-row items-center md:items-center text-center md:text-left">
                     <div class="p-2 md:p-4 bg-orange-50 rounded-full text-orange-500 mb-1 md:mb-0 md:mr-4">
                         <svg class="h-5 w-5 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                             stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" x-description="User Group"
-                                d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Mezzanine</p>
-                        <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="mezzanine-count">--
+                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight"
+                            title="Bookings optimized into Main Hall">Mezzanine to Main Hall</p>
+                        <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="auto-upgraded-count">--
                         </h3>
                     </div>
                 </div>
-                <!-- Card 4: Selected Date -->
+                <!-- Card 4: Busiest Room -->
                 <div
                     class="bg-white p-2 md:p-6 rounded-lg md:rounded-2xl shadow-sm border border-gray-100 border-t-4 border-t-ccf-red flex flex-col md:flex-row items-center md:items-center text-center md:text-left">
                     <div class="p-2 md:p-4 bg-red-50 rounded-full text-ccf-red mb-1 md:mb-0 md:mr-4">
                         <svg class="h-5 w-5 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                             stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M8 2v4M16 2v4M20 21H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2zM3 10h18" />
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                         </svg>
                     </div>
-                    <div>
-                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">By Date</p>
-                        <h3 class="text-lg md:text-3xl font-bold font-heading text-gray-800" id="date-specific-count">--
+                    <div class="min-w-0 flex-1 overflow-hidden">
+                        <p class="text-[10px] md:text-sm font-medium text-gray-500 leading-tight">Busiest Room</p>
+                        <h3 class="text-xs md:text-xl font-bold font-heading text-gray-800 truncate"
+                            id="busiest-room-name">--
                         </h3>
                     </div>
                 </div>
@@ -482,44 +523,44 @@
             <!-- Modal Body (scrollable) -->
             <div class="p-4 md:p-6 overflow-y-auto flex-1">
                 <!-- Block Date Form -->
-                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-                    <form id="block-date-form" class="flex flex-col md:flex-row gap-4 items-end">
-                        <div class="w-full md:w-1/4">
+                <div class="bg-gray-50 p-3 md:p-5 rounded-xl border border-gray-200 mb-6 shadow-inner">
+                    <form id="block-date-form" class="flex flex-wrap gap-3 md:gap-4 items-end">
+                        <div class="w-full sm:w-[calc(50%-0.5rem)] md:w-[150px]">
                             <label
-                                class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Date</label>
+                                class="block text-[10px] md:text-xs font-bold text-gray-400 mb-1 uppercase tracking-widest">Date</label>
                             <input type="date" name="block_date" required
-                                class="w-full p-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                                class="w-full p-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-ccf-red/20 focus:border-ccf-red outline-none shadow-sm transition-all">
                         </div>
-                        <div class="w-full md:w-1/4">
+                        <div class="w-full sm:w-[calc(50%-0.5rem)] md:w-[150px]">
                             <label
-                                class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Room</label>
+                                class="block text-[10px] md:text-xs font-bold text-gray-400 mb-1 uppercase tracking-widest">Room</label>
                             <select name="block_room" id="block-room-select"
-                                class="w-full p-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                                class="w-full p-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-ccf-red/20 focus:border-ccf-red outline-none shadow-sm transition-all bg-white">
                                 <option value="All Rooms">All Rooms</option>
                             </select>
                         </div>
-                        <div class="w-full md:w-1/3">
+                        <div class="w-full sm:w-[calc(70%-0.5rem)] md:flex-1">
                             <label
-                                class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Reason</label>
-                            <input type="text" name="block_reason" placeholder="e.g. Maintenance, Holiday, Church Event"
-                                required
-                                class="w-full p-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                                class="block text-[10px] md:text-xs font-bold text-gray-400 mb-1 uppercase tracking-widest">Reason</label>
+                            <input type="text" name="block_reason" placeholder="e.g. Maintenance" required
+                                class="w-full p-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-ccf-red/20 focus:border-ccf-red outline-none shadow-sm transition-all">
                         </div>
-                        <div class="w-full md:w-1/6">
-                            <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Admin
-                                PIN</label>
+                        <div class="w-full sm:w-[calc(30%-0.5rem)] md:w-[100px]">
+                            <label
+                                class="block text-[10px] md:text-xs font-bold text-gray-400 mb-1 uppercase tracking-widest">PIN</label>
                             <input type="password" name="admin_pin" placeholder="PIN" required
-                                class="w-full p-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-ccf-red focus:border-ccf-red outline-none shadow-sm">
+                                class="w-full p-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-ccf-red/20 focus:border-ccf-red outline-none shadow-sm transition-all text-center">
                         </div>
-                        <button type="submit"
-                            class="bg-ccf-red text-white px-6 py-2 rounded-xl font-bold hover:bg-red-700 transition text-sm shadow-sm flex items-center gap-2 whitespace-nowrap">
-                            <svg class="w-3.5 sm:w-4 h-3.5 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
-                                </path>
-                            </svg>
-                            Block Date
-                        </button>
+                        <div class="w-full sm:w-full md:w-auto">
+                            <button type="submit"
+                                class="w-full bg-ccf-red text-white px-5 py-2.5 rounded-xl font-bold hover:bg-ccf-red-dark transition-all text-sm shadow-md hover:shadow-lg active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                Block Date
+                            </button>
+                        </div>
                     </form>
                 </div>
                 <!-- Blocked Dates Table -->
@@ -626,7 +667,8 @@
                         </div>
                         <button id="rw-save-btn" type="button"
                             class="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-emerald-700 transition text-sm shadow-sm flex items-center gap-2 whitespace-nowrap">
-                            <svg class="w-3.5 sm:w-4 h-3.5 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-3.5 sm:w-4 h-3.5 sm:h-4" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M5 13l4 4L19 7"></path>
                             </svg>
@@ -683,6 +725,40 @@
             </div>
         </div>
     </dialog>
+
+    <!-- ADMIN PIN MODAL — replaces browser prompt() -->
+    <div id="pin-modal-backdrop"
+        class="fixed inset-0 bg-black/60 backdrop-blur-md z-[110] hidden items-center justify-center p-4 transition-all duration-300">
+        <div id="pin-modal"
+            class="bg-white rounded-3xl shadow-2xl max-w-sm w-full mx-auto overflow-hidden transform transition-all scale-95 opacity-0">
+            <!-- Header -->
+            <div class="px-6 pt-8 pb-4 text-center">
+                <div
+                    class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-ccf-blue">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 font-heading">Admin Verification</h3>
+                <p id="pin-modal-message" class="text-sm text-gray-500 mt-2 px-4"></p>
+            </div>
+            <!-- Body -->
+            <div class="px-8 pb-8">
+                <div class="relative">
+                    <input type="password" id="admin-pin-input"
+                        class="w-full px-4 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl text-center text-2xl tracking-[0.5em] font-mono focus:bg-white focus:border-ccf-blue focus:ring-4 focus:ring-ccf-blue/10 outline-none transition-all placeholder:text-gray-300 placeholder:tracking-normal placeholder:text-sm"
+                        placeholder="••••">
+                </div>
+                <div class="flex gap-3 mt-8">
+                    <button onclick="closePinModal()"
+                        class="flex-1 px-4 py-3.5 bg-gray-100 text-gray-600 text-sm font-bold rounded-2xl hover:bg-gray-200 transition-colors">Cancel</button>
+                    <button onclick="handlePinConfirm()"
+                        class="flex-1 px-4 py-3.5 bg-ccf-blue text-white text-sm font-bold rounded-2xl hover:bg-ccf-blue-dark transition-all shadow-lg shadow-ccf-blue/20 active:scale-95">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- RESULT MODAL — replaces browser alert() for blocked date operations -->
     <div id="result-modal-backdrop"
@@ -1216,32 +1292,38 @@
         function processData(bookings) {
             const today = DateTime.now().setZone(APP_CONFIG.TIMEZONE).toISODate();
 
-            let countMain = 0, countMezz = 0, countToday = 0;
+            let totalHeadcount = 0;
+            let autoUpgradedCount = 0;
             const roomCounts = {};
             const eventCounts = {};
 
             bookings.forEach(b => {
-                if (b.room === 'Main Hall') countMain++; else countMezz++;
+                totalHeadcount += parseInt(b.participants || 0, 10);
 
-                const bStart = parseDate(b.start_iso);
-                if (bStart.isValid && bStart.toISODate() === today) countToday++;
+                // Track auto upgrades
+                if (b.original_room && b.original_room !== b.room) {
+                    autoUpgradedCount++;
+                }
 
                 roomCounts[b.room] = (roomCounts[b.room] || 0) + 1;
                 eventCounts[b.event] = (eventCounts[b.event] || 0) + 1;
             });
 
-            document.getElementById('total-bookings-count').textContent = bookings.length;
-            document.getElementById('main-hall-count').textContent = countMain;
-            document.getElementById('mezzanine-count').textContent = countMezz;
-
-            const dateLabel = document.getElementById('date-specific-count').previousElementSibling;
-            if (selectedDate) {
-                dateLabel.textContent = `Reservations on ${DateTime.fromISO(selectedDate).toFormat('MMM d')}`;
-                document.getElementById('date-specific-count').textContent = bookings.length;
-            } else {
-                dateLabel.textContent = "Bookings Today";
-                document.getElementById('date-specific-count').textContent = countToday;
+            // Define Busiest Room
+            let busiestRoom = "--";
+            let maxCount = 0;
+            for (const [room, count] of Object.entries(roomCounts)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    busiestRoom = `${room} (${count})`;
+                }
             }
+
+            // Sync metrics to DOM
+            document.getElementById('total-bookings-count').textContent = bookings.length;
+            document.getElementById('total-headcount').textContent = totalHeadcount;
+            document.getElementById('auto-upgraded-count').textContent = autoUpgradedCount;
+            document.getElementById('busiest-room-name').textContent = maxCount === 0 ? "--" : busiestRoom;
 
             renderD3BarChart(roomCounts);
             renderD3DonutChart(eventCounts);
@@ -1617,7 +1699,7 @@
 
             tbody.innerHTML = '';
             if (!blockedDates || blockedDates.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500 italic">No blocked dates found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-10 text-center text-sm text-gray-400 italic">No blocked dates currently active.</td></tr>';
                 return;
             }
 
@@ -1626,16 +1708,118 @@
 
             sorted.forEach(block => {
                 const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors group";
                 tr.innerHTML = `
-                    <td data-label="Date" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${DateTime.fromISO(block.date).toFormat('MMM d, yyyy (ccc)')}</td>
-                    <td data-label="Room" class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${block.room}</td>
-                    <td data-label="Reason" class="px-6 py-4 text-sm text-gray-500">${block.reason}</td>
-                    <td data-label="Action" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <span class="text-xs text-gray-400 cursor-help" title="To unblock, please edit the Google Sheet manually.">Deletion Manual</span>
+                    <td data-label="Date" class="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 font-semibold">${DateTime.fromISO(block.date).toFormat('MMM d, yyyy (ccc)')}</td>
+                    <td data-label="Room" class="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-600">
+                        <span class="px-2 py-0.5 bg-gray-100 rounded border border-gray-200">${block.room}</span>
+                    </td>
+                    <td data-label="Reason" class="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-500 italic">${block.reason}</td>
+                    <td data-label="Action" class="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap text-right">
+                        <button onclick='requestDeleteBlockedDate(${JSON.stringify(block).replace(/'/g, "\\'")})' 
+                            class="p-1.5 text-gray-400 hover:text-ccf-red hover:bg-red-50 rounded-lg transition-all md:opacity-0 group-hover:opacity-100"
+                            title="Remove this block">
+                            <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        // --- NEW: Blocked Date Deletion ---
+
+        let pinModalCallback = null;
+
+        function showPinModal(message, callback) {
+            const backdrop = document.getElementById('pin-modal-backdrop');
+            const modal = document.getElementById('pin-modal');
+            const messageEl = document.getElementById('pin-modal-message');
+            const input = document.getElementById('admin-pin-input');
+
+            messageEl.textContent = message;
+            input.value = '';
+            pinModalCallback = callback;
+
+            backdrop.classList.remove('hidden');
+            backdrop.classList.add('flex');
+
+            // Trigger animation
+            setTimeout(() => {
+                modal.classList.remove('scale-95', 'opacity-0');
+                modal.classList.add('scale-100', 'opacity-100');
+                input.focus();
+            }, 10);
+        }
+
+        function closePinModal() {
+            const backdrop = document.getElementById('pin-modal-backdrop');
+            const modal = document.getElementById('pin-modal');
+
+            modal.classList.remove('scale-100', 'opacity-100');
+            modal.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                backdrop.classList.remove('flex');
+                backdrop.classList.add('hidden');
+                pinModalCallback = null;
+            }, 200);
+        }
+
+        function handlePinConfirm() {
+            const input = document.getElementById('admin-pin-input');
+            const pin = input.value.trim();
+            if (!pin) {
+                input.classList.add('border-red-300', 'shake');
+                setTimeout(() => input.classList.remove('shake'), 500);
+                return;
+            }
+            if (pinModalCallback) {
+                pinModalCallback(pin);
+            }
+            closePinModal();
+        }
+
+        // Add Enter key support for PIN modal
+        document.getElementById('admin-pin-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handlePinConfirm();
+        });
+
+        function requestDeleteBlockedDate(block) {
+            showPinModal(`To unblock ${block.date} for ${block.room}, please enter the Admin PIN:`, (pin) => {
+                executeDeleteBlockedDate(block, pin);
+            });
+        }
+
+        function executeDeleteBlockedDate(block, pin) {
+            updateStatus('Removing block...', 'text-orange-600');
+
+            const payload = { ...block, adminPin: pin };
+            const callbackName = `delete_block_${Date.now()}`;
+            const script = document.createElement('script');
+
+            window[callbackName] = (response) => {
+                delete window[callbackName];
+                document.body.removeChild(script);
+
+                if (response.success) {
+                    showResultModal('success', 'Block Removed', `${block.date} — ${block.room} is now open.`);
+                    fetchData(); // Refresh list and counts
+                } else {
+                    showResultModal('error', 'Deletion Failed', response.message);
+                    updateStatus('Deletion failed', 'text-red-600');
+                }
+            };
+
+            const url = `${APP_CONFIG.APPS_SCRIPT_URL}?action=delete_block_date&callback=${callbackName}&payload=${encodeURIComponent(JSON.stringify(payload))}`;
+            script.src = url;
+            script.onerror = () => {
+                showResultModal('error', 'Network Error', 'Could not reach server.');
+                updateStatus('Connection failed', 'text-red-600');
+            };
+            document.body.appendChild(script);
         }
 
         function handleBlockDateSubmit(e) {

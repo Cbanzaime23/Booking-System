@@ -55,6 +55,9 @@ function doGet(e) {
                 case 'delete_user_data':
                     result = handleDeleteUserData(payload);
                     break;
+                case 'delete_block_date':
+                    result = handleDeleteBlockedDate(payload);
+                    break;
                 default:
                     throw new Error("Invalid action specified.");
             }

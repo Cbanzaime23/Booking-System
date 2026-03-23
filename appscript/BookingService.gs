@@ -675,3 +675,31 @@ function handleVerifyAdmin(payload) {
     }
     return { success: false, message: "Invalid Admin PIN." };
 }
+/**
+ * Handles the deletion of a blocked date entry.
+ * Validates the Admin PIN and invokes the database deletion function.
+ *
+ * @param {Object} payload - The deletion payload containing date, room, reason, and adminPin.
+ * @returns {Object} Success/error status.
+ */
+function handleDeleteBlockedDate(payload) {
+    if (payload.adminPin !== ADMIN_PIN) {
+        return { success: false, message: "Invalid Admin PIN." };
+    }
+
+    try {
+        const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+        deleteBlockedDateRow(ss, payload.date, payload.room, payload.reason);
+        
+        logActivity('Delete Blocked Date', null, 'ADMIN', {
+            date: payload.date,
+            room: payload.room,
+            reason: payload.reason
+        });
+
+        return { success: true, message: "Blocked date removed successfully." };
+    } catch (error) {
+        Logger.log('Error in handleDeleteBlockedDate: ' + error.toString());
+        return { success: false, message: error.message };
+    }
+}
