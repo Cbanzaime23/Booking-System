@@ -271,6 +271,8 @@ export async function fetchAllBookings(updateFreshnessDisplay) {
                         windowBanner.classList.remove('hidden');
                     } else {
                         // Admin sees a subtle indicator
+                        const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        const rw = state.reservationWindow || window.APP_CONFIG.RESERVATION_WINDOW || { openDay: 0, openTime: '08:00' };
                         windowBanner.className = 'bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded-r-lg';
                         windowBanner.innerHTML = `
                             <div class="flex items-center gap-2">
