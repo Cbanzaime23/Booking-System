@@ -11,7 +11,14 @@ window.APP_CONFIG = {
    * The URL of your deployed Google Apps Script Web App.
    * This is the ONLY gateway to your data — all reads and writes go through here.
    */
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxnSSaIAxKeO6Y9jg5rVY75wTFRqgOLMfspegMoNvM1GINl2ycy_IQTs57F5TMCSa7I/exec',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbznJ000zLBbAaDJIwblZwpyVS1YuErWi6BeyuQBUk_GJMlq9PsgcEfbFHrc__U_3R8x/exec',
+
+  /**
+   * The public URL where the Booking System is hosted.
+   * If set, all confirmation emails will link to this URL for cancellations, even when testing locally.
+   * Leave empty ('') to use the current browser URL.
+   */
+  PUBLIC_APP_URL: 'https://cbanzaime23.github.io/Booking-System/index.html',
 
   // --- Optional Configurations ---
 

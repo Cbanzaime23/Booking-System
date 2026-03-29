@@ -105,7 +105,13 @@ function handleCreateBooking(payload) {
         const freshBookings = getActiveBookings(sheet);
         const freshConcurrent = findConcurrentBookings(newStart, newEnd, freshBookings, requestedRoom);
         const freshPax = freshConcurrent.reduce((sum, b) => sum + b.participantCount, 0);
-        if (freshConcurrent.length + 1 > rules.MAX_CONCURRENT_GROUPS) {
+
+        const hasMaxCapacityEvent = freshConcurrent.some(b => {
+             return b.participantCount >= rules.MAX_TOTAL_PARTICIPANTS || 
+                    (b.event && (b.event === 'Sunday Service' || (b.event.startsWith('Ministry Event') && b.event !== 'Ministry Event - Meeting')));
+        });
+
+        if (hasMaxCapacityEvent || freshConcurrent.length + 1 > rules.MAX_CONCURRENT_GROUPS) {
             throw new Error('Sorry, this slot was just filled by another user. Please choose a different time.');
         }
         if (freshPax + payload.participants > rules.MAX_TOTAL_PARTICIPANTS) {
@@ -220,7 +226,13 @@ function handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoo
 
         const concurrent = findConcurrentBookings(iterStart, iterEnd, allBookings, payload.room);
         const currentPax = concurrent.reduce((sum, b) => sum + b.participantCount, 0);
-        const hasCapacity = (concurrent.length + 1) <= rules.MAX_CONCURRENT_GROUPS && (currentPax + payload.participants) <= rules.MAX_TOTAL_PARTICIPANTS;
+
+        const hasMaxCapacityEvent = concurrent.some(b => {
+             return b.participantCount >= rules.MAX_TOTAL_PARTICIPANTS || 
+                    (b.event && (b.event === 'Sunday Service' || (b.event.startsWith('Ministry Event') && b.event !== 'Ministry Event - Meeting')));
+        });
+
+        const hasCapacity = !hasMaxCapacityEvent && (concurrent.length + 1) <= rules.MAX_CONCURRENT_GROUPS && (currentPax + payload.participants) <= rules.MAX_TOTAL_PARTICIPANTS;
 
         if (hasCapacity) {
             successCount++;

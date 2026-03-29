@@ -24,6 +24,7 @@ function getActiveBookings(sheet) {
     const firstNameIndex = headers.indexOf('first_name');
     const lastNameIndex = headers.indexOf('last_name');
     const roomIndex = headers.indexOf('room');
+    const eventIndex = headers.indexOf('event');
     const emailIndex = headers.indexOf('email');
     const tableIndex = headers.indexOf('table_id');
 
@@ -53,6 +54,7 @@ function getActiveBookings(sheet) {
                 last_name: row[lastNameIndex],
                 participants: row[participantsIndex],
                 room: row[roomIndex],
+                event: eventIndex !== -1 ? row[eventIndex] : '',
                 email: emailIndex !== -1 ? row[emailIndex] : '',
                 table_id: tableIndex !== -1 ? row[tableIndex] : ''
             };

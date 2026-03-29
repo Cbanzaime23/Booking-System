@@ -132,6 +132,10 @@ function validateBookingForm(data, roomRules) {
     if (!data.termsChecked) return 'You must agree to the Terms & Conditions.';
     if (!data.privacyChecked) return 'You must consent to the processing of your personal data.';
 
+    if (state.selectedRoom === 'Main Hall' && !data.tableId) {
+        return 'Please choose a table for your Main Hall reservation.';
+    }
+
     // Duplicate booking requires admin PIN
     if (state.duplicationSource && !data.adminPin) return 'Admin PIN is required for Duplicate Booking.';
 
@@ -198,7 +202,7 @@ function buildBookingPayload(data) {
         terms_accepted: data.termsChecked,
         privacy_accepted: data.privacyChecked,
         consent_timestamp: DateTime.local().setZone(window.APP_CONFIG.TIMEZONE).toISO(),
-        app_url: window.location.origin + window.location.pathname
+        app_url: window.APP_CONFIG.PUBLIC_APP_URL || (window.location.origin + window.location.pathname)
     };
 }
 
@@ -274,10 +278,16 @@ export function handleBookingFormSubmit(e) {
             return startLux < bEnd && endLux > bStart;
         });
 
-        const mainHallCurrentPax = mainHallConcurrent.reduce((sum, b) => sum + parseInt(b.participantCount || 0, 10), 0);
+        // Safety check: if any concurrent booking is a full-room event (like Ministry Events or Sunday Service), block upgrade
+        const hasMaxCapacityEvent = mainHallConcurrent.some(b => {
+             // If a booking already takes up the whole room, its participants were set to max.
+             return parseInt(b.participants || 0, 10) >= mainHallRules.MAX_TOTAL_PARTICIPANTS;
+        });
+
+        const mainHallCurrentPax = mainHallConcurrent.reduce((sum, b) => sum + parseInt(b.participants || 0, 10), 0);
 
         const canFitGroup = (mainHallConcurrent.length + 1) <= mainHallRules.MAX_CONCURRENT_GROUPS;
-        const canFitPax = (mainHallCurrentPax + participants) <= mainHallRules.MAX_TOTAL_PARTICIPANTS;
+        const canFitPax = !hasMaxCapacityEvent && (mainHallCurrentPax + participants) <= mainHallRules.MAX_TOTAL_PARTICIPANTS;
         const meetsSizeRules = (participants >= mainHallRules.MIN_BOOKING_SIZE) && (participants <= mainHallRules.MAX_BOOKING_SIZE);
 
         const isMainHallBlocked = state.blockedDates && state.blockedDates.some(d => {

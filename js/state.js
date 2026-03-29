@@ -77,6 +77,7 @@ export const EVENT_OPTIONS = {
         { name: "Ministry Event - B1G Fridays", setsMaxCapacity: true },
         { name: "Ministry Event - Elevate", setsMaxCapacity: true },
         { name: "Ministry Event - Exalt Rehearsal", setsMaxCapacity: true },
+        { name: "Ministry Event - GLC", setsMaxCapacity: true },
         { name: "Ministry Event - Intercede Prayer Ministry", setsMaxCapacity: true },
         { name: "Ministry Event - Women 2 Women", setsMaxCapacity: true },
         { name: "Ministry Event - MOVEMENT", setsMaxCapacity: true },

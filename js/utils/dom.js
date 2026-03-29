@@ -31,6 +31,7 @@ export function initDOM() {
     elements.loadingModal = document.getElementById('loading-modal');
     elements.successModal = document.getElementById('success-modal');
     elements.deniedModal = document.getElementById('denied-modal');
+    elements.userSlotInfoModal = document.getElementById('user-slot-info-modal');
 
     elements.timeSelectionModal = document.getElementById('time-selection-modal');
     elements.displayStartTime = document.getElementById('display-start-time');

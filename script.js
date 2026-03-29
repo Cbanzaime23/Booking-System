@@ -148,21 +148,51 @@ document.addEventListener('DOMContentLoaded', async () => {
      * a slot that already has bookings. Hides the Book button if the
      * slot is at capacity. When reservation window is closed and user
      * is not admin, hides Book and disables Move with message.
+     *
+     * Non-admin users see a simplified info modal instead.
      */
     function showChoiceModal(roomRules, warningMessage) {
+        const remainingGroups = roomRules.MAX_CONCURRENT_GROUPS - state.selectedSlot.totalGroups;
+        const remainingPax = roomRules.MAX_TOTAL_PARTICIPANTS - state.selectedSlot.totalParticipants;
+        
+        // Use the calendar's exact visual status to ensure Ministry Events correctly flag as Full
+        const isActuallyFull = state.selectedSlot.status === 'full';
+
+        // --- NON-ADMIN: Show simplified info modal ---
+        if (!state.isAdmin) {
+            const statusEl = document.getElementById('user-slot-info-status');
+            const bookBtn = document.getElementById('user-slot-info-book-btn');
+            const startTime = state.selectedSlot.startTime;
+
+            if (isActuallyFull) {
+                statusEl.textContent = `This time slot on ${startTime.toFormat('ccc, MMM d')} at ${startTime.toFormat('h:mm a')} is fully reserved.`;
+                bookBtn.style.display = 'none';
+            } else {
+                statusEl.textContent = `This time slot on ${startTime.toFormat('ccc, MMM d')} at ${startTime.toFormat('h:mm a')} is partially reserved. ${remainingPax} spot${remainingPax !== 1 ? 's' : ''} remaining.`;
+                bookBtn.style.display = 'block';
+            }
+
+            elements.userSlotInfoModal.showModal();
+            return;
+        }
+
+        // --- ADMIN: Show full choice modal ---
         const bookButton = document.getElementById('choice-book-btn');
         const moveButton = document.getElementById('choice-move-btn');
         const duplicateButton = document.getElementById('choice-duplicate-btn');
+        const statusText = document.getElementById('choice-status-text');
 
-        const remainingGroups = roomRules.MAX_CONCURRENT_GROUPS - state.selectedSlot.totalGroups;
-        const remainingPax = roomRules.MAX_TOTAL_PARTICIPANTS - state.selectedSlot.totalParticipants;
+        if (isActuallyFull) {
+             statusText.textContent = 'This time slot is fully reserved. You can cancel, move, or duplicate an existing booking.';
+        } else {
+             statusText.textContent = `This time slot is partially reserved (${remainingPax} spots left). You can reserve a new slot or manage existing ones.`;
+        }
 
         // Check reservation window
         const windowStatus = isReservationWindowOpen();
         const windowClosed = !windowStatus.isOpen && !state.isAdmin;
 
         if (windowClosed) {
-            // Hide Book and Duplicate, disable Move
             bookButton.style.display = 'none';
             if (duplicateButton) duplicateButton.classList.add('hidden');
             if (moveButton) {
@@ -171,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 moveButton.title = 'Moving is unavailable — reservations are closed';
             }
         } else {
-            bookButton.style.display = (remainingGroups <= 0 || remainingPax < roomRules.MIN_BOOKING_SIZE) ? 'none' : 'inline-block';
+            bookButton.style.display = isActuallyFull ? 'none' : 'inline-block';
             if (duplicateButton) duplicateButton.classList.remove('hidden');
             if (moveButton) {
                 moveButton.disabled = false;
@@ -248,6 +278,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('choice-book-btn').addEventListener('click', openTimeSelectionModal);
         document.getElementById('choice-cancel-btn').addEventListener('click', openCancelModalForSelectedSlot);
         document.getElementById('choice-back-btn').addEventListener('click', () => elements.choiceModal.close());
+
+        // User slot info modal buttons
+        document.getElementById('user-slot-info-close-btn').addEventListener('click', () => elements.userSlotInfoModal.close());
+        document.getElementById('user-slot-info-book-btn').addEventListener('click', () => {
+            elements.userSlotInfoModal.close();
+            openTimeSelectionModal();
+        });
 
         elements.selectionEndTimeInput.addEventListener('input', updateDurationDisplay);
         elements.timeSelectionCancelBtn.addEventListener('click', () => elements.timeSelectionModal.close());

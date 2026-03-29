@@ -607,7 +607,7 @@
                         </p>
                     </div>
                     <span id="rw-status-badge"
-                        class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200">Loading...</span>
+                        class="text-[10px] sm:text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap text-center">Loading...</span>
                 </div>
                 <button type="button" onclick="document.getElementById('reservation-window-modal').close()"
                     class="text-gray-400 hover:text-gray-600 p-1">
@@ -620,13 +620,13 @@
             <!-- Modal Body -->
             <div class="p-4 md:p-6 overflow-y-auto flex-1">
                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Window
                                 Opens</label>
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap sm:flex-nowrap gap-2">
                                 <select id="rw-open-day"
-                                    class="flex-1 p-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
+                                    class="w-full sm:flex-1 p-2 border border-gray-300 rounded-xl text-[10px] sm:text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
                                     <option value="0">Sunday</option>
                                     <option value="1">Monday</option>
                                     <option value="2">Tuesday</option>
@@ -636,15 +636,15 @@
                                     <option value="6">Saturday</option>
                                 </select>
                                 <input type="time" id="rw-open-time" value="08:00"
-                                    class="w-[120px] p-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
+                                    class="w-[120px] p-2 border border-gray-300 rounded-xl text-[10px] sm:text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
                             </div>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Window
                                 Closes</label>
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap sm:flex-nowrap gap-2">
                                 <select id="rw-close-day"
-                                    class="flex-1 p-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
+                                    class="w-full sm:flex-1 p-2 border border-gray-300 rounded-xl text-[10px] sm:text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
                                     <option value="0">Sunday</option>
                                     <option value="1">Monday</option>
                                     <option value="2">Tuesday</option>
@@ -654,16 +654,16 @@
                                     <option value="6">Saturday</option>
                                 </select>
                                 <input type="time" id="rw-close-time" value="20:00"
-                                    class="w-[120px] p-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
+                                    class="w-[120px] p-2 border border-gray-300 rounded-xl text-[10px] sm:text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
                             </div>
                         </div>
                     </div>
-                    <div class="flex flex-col md:flex-row gap-4 items-end">
-                        <div class="w-full md:w-1/4">
+                    <div class="flex flex-col lg:flex-row gap-4 items-end">
+                        <div class="w-full lg:w-1/4">
                             <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Admin
                                 PIN</label>
                             <input type="password" id="rw-admin-pin" placeholder="PIN" required
-                                class="w-full p-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
+                                class="w-full p-2 border border-gray-300 rounded-xl text-[10px] sm:text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm">
                         </div>
                         <button id="rw-save-btn" type="button"
                             class="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-emerald-700 transition text-sm shadow-sm flex items-center gap-2 whitespace-nowrap">
@@ -727,8 +727,8 @@
     </dialog>
 
     <!-- ADMIN PIN MODAL — replaces browser prompt() -->
-    <div id="pin-modal-backdrop"
-        class="fixed inset-0 bg-black/60 backdrop-blur-md z-[110] hidden items-center justify-center p-4 transition-all duration-300">
+    <dialog id="pin-modal-backdrop"
+        class="p-4 m-auto w-full h-full max-w-none max-h-none bg-transparent backdrop:bg-black/60 backdrop:backdrop-blur-md open:flex items-center justify-center transition-all duration-300">
         <div id="pin-modal"
             class="bg-white rounded-3xl shadow-2xl max-w-sm w-full mx-auto overflow-hidden transform transition-all scale-95 opacity-0">
             <!-- Header -->
@@ -792,8 +792,23 @@
     <script>
         // Security Check
         if (sessionStorage.getItem('ccf_admin_logged_in') !== 'true') {
-            alert("Unauthorized access. Please login via the main page.");
-            window.location.href = 'index.html';
+            document.body.style.overflow = 'hidden';
+            const wrapper = document.createElement('div');
+            wrapper.className = 'fixed inset-0 z-[9999] bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4';
+            wrapper.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full border border-gray-100 p-6 md:p-8 text-center flex flex-col items-center">
+                    <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold font-heading text-gray-900 mb-2">Unauthorized Access</h3>
+                    <p class="text-gray-500 text-sm mb-6">Please log in securely via the main reservation page to access the Admin Dashboard.</p>
+                    <button onclick="window.location.href='index.html'" class="w-full bg-ccf-blue text-white font-bold py-3 rounded-xl hover:bg-ccf-blue-dark transition-colors shadow-lg shadow-ccf-blue/30 focus:outline-none focus:ring-4 focus:ring-ccf-blue/20">Return to Home</button>
+                </div>
+            `;
+            document.body.appendChild(wrapper);
+            throw new Error("Unauthorized action aborted execution."); // Halts all subsequent data fetching logic
         }
 
         const DateTime = luxon.DateTime; // Define globally
@@ -1106,10 +1121,10 @@
             const badge = document.getElementById('rw-status-badge');
             if (rw.isOpen) {
                 badge.textContent = `Open until ${DAY_NAMES[rw.closeDay]} ${rw.closeTime}`;
-                badge.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200';
+                badge.className = 'text-[10px] sm:text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 whitespace-nowrap text-center';
             } else {
                 badge.textContent = `Closed — Opens ${DAY_NAMES[rw.openDay]} ${rw.openTime}`;
-                badge.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200';
+                badge.className = 'text-[10px] sm:text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap text-center';
             }
         }
 
@@ -1231,10 +1246,13 @@
                     const bEnd = parseDate(b.end_iso);
                     const timeStr = bStart.toFormat('h:mm a') + ' – ' + bEnd.toFormat('h:mm a');
                     const name = [b.first_name, b.last_name].filter(Boolean).join(' ') || '—';
+                    const tableStr = (b.room === 'Main Hall' && b.table_id) 
+                        ? `<br><span class="text-[10px] text-gray-400 font-medium whitespace-nowrap">${b.table_id}</span>` 
+                        : '';
 
                     html += `<tr class="hover:bg-blue-50/50">
                         <td class="px-4 py-2 text-gray-700 whitespace-nowrap">${timeStr}</td>
-                        <td class="px-4 py-2 text-gray-700">${b.room}</td>
+                        <td class="px-4 py-2 text-gray-700">${b.room}${tableStr}</td>
                         <td class="px-4 py-2 text-gray-700">${b.event || '—'}</td>
                         <td class="px-4 py-2 text-gray-700">${name}</td>
                         <td class="px-4 py-2 text-right text-gray-700">${b.participants || '—'}</td>
@@ -1717,7 +1735,7 @@
                     <td data-label="Reason" class="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-500 italic">${block.reason}</td>
                     <td data-label="Action" class="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap text-right">
                         <button onclick='requestDeleteBlockedDate(${JSON.stringify(block).replace(/'/g, "\\'")})' 
-                            class="p-1.5 text-gray-400 hover:text-ccf-red hover:bg-red-50 rounded-lg transition-all md:opacity-0 group-hover:opacity-100"
+                            class="p-1.5 text-gray-400 hover:text-ccf-red hover:bg-red-50 rounded-lg transition-all"
                             title="Remove this block">
                             <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1743,8 +1761,7 @@
             input.value = '';
             pinModalCallback = callback;
 
-            backdrop.classList.remove('hidden');
-            backdrop.classList.add('flex');
+            backdrop.showModal();
 
             // Trigger animation
             setTimeout(() => {
@@ -1762,8 +1779,7 @@
             modal.classList.add('scale-95', 'opacity-0');
 
             setTimeout(() => {
-                backdrop.classList.remove('flex');
-                backdrop.classList.add('hidden');
+                backdrop.close();
                 pinModalCallback = null;
             }, 200);
         }
