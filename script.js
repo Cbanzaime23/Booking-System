@@ -135,11 +135,18 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     function parseSlotData(slot) {
         const roomRules = window.APP_CONFIG.ROOM_CONFIG[state.selectedRoom];
+        
+        let slotStatus = 'available';
+        if (slot.classList.contains('full')) slotStatus = 'full';
+        else if (slot.classList.contains('partial')) slotStatus = 'partial';
+        else if (slot.classList.contains('window-closed') || slot.classList.contains('past')) slotStatus = 'blocked';
+
         return {
             startTime: DateTime.fromISO(slot.dataset.startIso),
             totalParticipants: parseInt(slot.dataset.totalParticipants || '0', 10),
             totalGroups: parseInt(slot.dataset.totalGroups || '0', 10),
-            rules: roomRules
+            rules: roomRules,
+            status: slotStatus
         };
     }
 

@@ -50,9 +50,9 @@ Example: "Refresh Data", "Admin Dashboard"
 
 Cards & Containers
 
-Style: White background, subtle shadow (shadow-sm), rounded corners (rounded-xl), thin gray border (border-gray-100).
+Style: White background, subtle shadow (shadow-sm), highly pronounced rounded corners for a modern aesthetic (rounded-xl, rounded-2xl), thin gray border (border-gray-100).
 
-Usage: Summary cards on Dashboard, Chart containers, Booking Modal.
+Usage: Summary cards on Dashboard, Chart containers, Modals.
 
 Calendar Slots
 
@@ -64,7 +64,9 @@ Partially Booked: Yellow background (bg-yellow-100), "X spots left" text.
 
 Full: Red background (bg-red-100), "Full" text.
 
-Past: Gray background, non-clickable.
+Blocked/Out of Range: Light Gray background (bg-gray-200), "Closed" or "Reservations Closed" text (cursor-not-allowed).
+
+Past: Light Gray background (bg-slate-100), non-clickable.
 
 Visual Hierarchy:
 *   **Sidebar Legend:** A 50px-wide sticky sidebar explicitly marks AM and PM sections.
@@ -73,13 +75,15 @@ Visual Hierarchy:
 
 Modals
 
-All modals use a standardized layout:
+All modals use a standardized layout, strictly leveraging the native HTML `<dialog>` element for robust z-index management and top-layer accessibility:
 
-Overlay: Dark, blurred backdrop (backdrop-blur).
+Overlay: Dark, blurred backdrop (backdrop-blur) via the `::backdrop` pseudo-element.
+
+Sizing: Responsive widths (`w-[95vw]` on mobile, `md:max-w-xl` on desktop).
 
 Header: Large, Serif font title in CCF Blue.
 
-Body: Clear padding, aligned form fields.
+Body: Clear padding (`p-4 sm:p-6`), flexbox-aligned form fields with global curvature (`rounded-2xl`).
 
 Footer: Right-aligned action buttons.
 

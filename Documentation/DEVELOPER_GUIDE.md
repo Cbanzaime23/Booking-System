@@ -52,25 +52,25 @@ handleDeleteUserData(): Anonymizes personal data for a specific email.
 
 3. Key Features & Logic Implementation
 
-A. Booking Prioritization (Waterfall)
+A. Booking Prioritization (Waterfall / Squeeze Logic)
 
 Goal: Fill "Main Hall" before using Mezzanine rooms.
 
-Logic Location: Code.gs -> handleCreateBooking
+Logic Location: `script.js` -> `checkMainHallAvailability` and `Code.gs` -> `handleCreateBooking`
 
-Mechanism: If a User requests a Mezzanine room, the script checks Main Hall capacity. If space exists, it overwrites payload.room to "Main Hall" before saving.
+Mechanism: If a User requests a Mezzanine room, the frontend intercepts the submission. If the Main Hall has capacity, it triggers an Interactive Table Selection Floorplan modal, forcing the user to pick an open table instead. The backend provides a secondary fallback guard for this logic to prevent race conditions.
 
 B. Admin vs. User Roles
 
-User: Restricted to 7-day booking window. Must fill Leader details. Strictly capped at MAX_BOOKING_SIZE.
+User: Restricted to strict advance notice windows (e.g. 72h-180days). Must fill DGroup Leader details. Strictly capped at MAX_BOOKING_SIZE.
 
 Admin: Can book 6 months out. Can bypass participant limits (up to Room Total). Can book recurrent events. Requires ADMIN_PIN.
 
 Implementation:
 
-Frontend: Toggle switch shows/hides fields and removes HTML max attributes on inputs.
+Frontend: The app uses a Global Role Selection Modal upon loading. If the user enters the correct PIN, `state.isAdmin` is set, and the UI dynamically hides DGroup fields, reveals recurring dropdowns, and injects the PIN silently into payloads.
 
-Backend: validateInput function checks the isAdmin flag to relax validation rules.
+Backend: validateInput function checks the `isAdmin` flag to relax validation rules. Failed validations from standard users silently trigger an email to their respective DGroup leader (`sendDeniedEmail`).
 
 C. Recurrent Bookings
 
@@ -96,7 +96,13 @@ Mechanism: Uses D3.js. It calculates "tracks" for overlapping bookings. If Booki
  
  Logic Location: `script.js` -> `openTimeSelectionModal` & `calculateDuration`
  
- Mechanism: An intermediate step between slot-click and booking-form. It calculates the difference between `startTime` and `endTimeStr` using Luxon. The result is displayed in the UI as "(X.X hrs)".
+ Mechanism: An intermediate step between slot-click and booking-form. It employs a dynamic `<select>` dropdown restricted strictly to 30-minute increments extending from the chosen start time up to business closing hours. It calculates the difference between `startTime` and `endTimeStr` using Luxon. The result is displayed in the UI as "(X.X hrs)".
+ 
+ H. Email Deep Link Cancellations
+ 
+ Logic Location: `index.html` (URL Params) -> `script.js` (`handleEmailCancelDeepLink`) -> `Code.gs` (`handleCancelBooking`)
+ 
+ Mechanism: The backend injects a unique deep link into the `sendConfirmationEmail` payload using a `PUBLIC_APP_URL` override setting in `config.js`. Clicking it passes the booking ID and a security code via URL parameters to the frontend, which automatically displays a cancellation confirmation modal, completely bypassing the standard 'My Bookings' login flow.
  
  G. GDPR Compliance & Retention
  

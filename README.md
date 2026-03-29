@@ -24,21 +24,23 @@ A comprehensive, serverless room reservation web application designed for **CCF 
 ### 👤 User Experience & Booking Interface
 *   **Visual Calendar**: Interactive weekly view with sticky headers, clear AM/PM dividers, and a "Last Updated" freshness status bar.
 *   **Multi-Room Support**: Seamless switching between rooms (Main Hall, Jonah, Joseph, Moses) with real-time capacity badges.
-*   **Duration Visibility**: Real-time duration calculation (e.g., "1.5 hrs") displayed during time selection and in the booking modal.
+*   **Duration Visibility**: Real-time duration calculation (e.g., "1.5 hrs") displayed during time selection with strict 30-min intervals.
 *   **Smart Form Validation**:
     *   **Typo Detection**: "Confirm Email" field warns users of common typos (e.g., "gmial.com").
-    *   **Logic Checks**: Prevents invalid times (End < Start), past dates, or exceeding room capacity.
-*   **Consent Management**: Mandatory Terms & Conditions and Privacy Policy checkboxes.
+    *   **Logic Checks**: Prevents invalid times, past dates, or exceeding capacity.
+    *   **Date Window Enforcement**: Blocks bookings less than 72 hours before the event, and caps standard users at 7 or 180 days advance notice.
+*   **Consent Management**: Mandatory Housekeeping Rules and Privacy Policy checkboxes.
 *   **Mobile-First Design**: Fully responsive layout that adapts to desktops, tablets, and mobile phones.
 
 ### 📅 Booking Management (User Side)
 *   **My Bookings Portal**: Secure, email-based lookup for users to view their active schedule.
 *   **Self-Service Actions**: Users can **Cancel** or **Reschedule (Move)** their own bookings without contacting admin.
+*   **Email Cancellation Links**: Users can instantly cancel bookings securely via a direct link embedded in their confirmation email, bypassing the UI flow completely.
 *   **Duplicate Prevention**: System actively prevents users from double-booking themselves for the same slot.
 *   **GDPR Compliance**: Built-in tools for users to **Export** their data or request **Deletion** (Right to be Forgotten).
 
 ### 🛡️ Admin Capabilities & Dashboard
-*   **Secure Admin Mode**: PIN-protected toggle unlocks privileged features.
+*   **Role Selection Auth**: Global Modal intercept prompts for PIN authentication (vs old checkboxes), unlocking hidden forms and full backend bypasses cleanly.
 *   **Analytics Dashboard**:
     *   **Key Metrics**: Real-time counters for Total Bookings, Participants, and Room Utilization.
     *   **Weekly Admin Horizon**: A dedicated scrollable view of upcoming church-led events for the next 7 days.
@@ -54,12 +56,13 @@ A comprehensive, serverless room reservation web application designed for **CCF 
 ### ⚙️ System & Reliability
 *   **Race Condition Guard**: "Optimistic Locking" and double-read logic prevents overbooking when multiple users try to book the same slot simultaneously.
 *   **Network Recovery**: Robust error handling with auto-retry mechanisms and interactive toast notifications for flaky connections.
-*   **Smart Optimization**: "Waterfall" logic suggests moving small groups from large halls to smaller rooms to optimize space usage.
+*   **Smart Optimization**: "Squeeze Logic" intercepts users booking overlapping standard rooms and automatically prompts them to upgrade to the Main Hall via an **Interactive Table Selection Floorplan**.
 *   **Serverless Backend**: Powered entirely by Google Apps Script and Google Sheets.
 
 ### 🔔 Notifications
 *   **Automated Emails**: Instant branding-aware HTML confirmations sent via Google `MailApp`.
 *   **Calendar Integration**: Emails include direct "Add to Google Calendar" links for one-click scheduling.
+*   **Validation Alerts**: The system automatically identifies bookings placed by unauthorized users and emails their DGroup Leaders or Pastors notifying them of the failed attempt.
 *   **Lifecycle Updates**: Automated notifications for Cancellations, Reschedules, or Admin-initiated blocks.
 
 ---
@@ -95,22 +98,25 @@ graph TD
     subgraph User_Admin [User / Admin Interactions]
         direction TB
         Step1[1. Open App URL]:::actor
-        Step7[7. Click Time Slot]:::actor
-        Step9_Dec{9. Action Choice?}:::actor
+        StepRole{2. Select Role}:::actor
+        Step7[3. Click Time Slot]:::actor
+        Step9_Dec{4. Action Choice?}:::actor
         StepGDPR_Btn[Click 'My Bookings']:::actor
         
         %% Create Flow
-        Step12[12. Fill Booking Form]:::actor
-        Step18[18. Confirm Creation]:::actor
+        Step12[5. Fill Booking Form]:::actor
+        StepTable[6. Select Main Hall Table]:::actor
+        Step18[7. Confirm Creation]:::actor
         
         %% Cancel Flow
-        StepC1[C1. Select Booking to Cancel]:::actor
-        StepC2[C2. Verify Email / Admin PIN]:::actor
+        StepC_Deep[C1. Click Email Cancel Link]:::actor
+        StepC1[C2. Select Booking from List]:::actor
+        StepC2[C3. Verify Email / Admin PIN]:::actor
         
         %% Move Flow
         StepM1[M1. Input New Schedule]:::actor
-        StepM3{M3. Proceed w/ Conflict?}:::actor
-        StepM4[M4. Confirm Move Summary]:::actor
+        StepM3{M2. Proceed w/ Conflict?}:::actor
+        StepM4[M3. Confirm Move Summary]:::actor
         
         %% GDPR Flow
         StepGDPR_Action{Action?}:::actor
@@ -118,22 +124,28 @@ graph TD
 
     subgraph Frontend_UI [Frontend Logic]
         direction TB
-        Step2[2. Load UI & Fetch Data]:::frontend
-        Step8{8. Is Slot Empty?}:::frontend
-        Step9[9. Show Choice Modal]:::frontend
+        StepLoad[Load UI & Fetch Data]:::frontend
+        StepRoleModal[Show Role Selection Modal]:::frontend
+        StepSetAdmin[Set Admin Mode / Validate PIN]:::frontend
+        Step8{Is Slot Empty?}:::frontend
+        Step9[Show Choice Modal]:::frontend
         
         %% Create Logic
-        Step10[10. Open Booking Modal]:::frontend
-        Step19{19. Valid Form?}:::frontend
-        Step23[23. Send 'Create' Request]:::frontend
+        StepTime[Show Time Selection]:::frontend
+        Step10[Open Booking Modal]:::frontend
+        Step19{Valid Form?}:::frontend
+        StepSqueeze{Check Squeeze Logic}:::frontend
+        StepTableModal[Show Floorplan Modal]:::frontend
+        Step23[Send 'Create' Request]:::frontend
         
         %% Cancel Logic
+        StepParse[Parse URL Params]:::frontend
         StepC_UI[Open Cancel Modal]:::frontend
         StepC_Send[Send 'Cancel' Request]:::frontend
         
         %% Move Logic
         StepM_UI[Open Move Modal]:::frontend
-        StepM_Check{M2. Conflict Check}:::frontend
+        StepM_Check{Conflict Check}:::frontend
         StepM_Warn[Show Conflict Modal]:::frontend
         StepM_Sum[Show Summary Modal]:::frontend
         StepM_Send[Send 'Move' Request]:::frontend
@@ -150,20 +162,22 @@ graph TD
 
     subgraph Backend_GAS [Backend Google Apps Script]
         direction TB
-        Step24[24. Handle Request Type]:::backend
+        Step24[Handle Request Type]:::backend
         
         %% Create Path
-        Step27[Create: Validate & Append]:::backend
+        Step27[Create: Validate Range & Input]:::backend
+        StepDeny[Send Denied Email to Leader]:::backend
+        StepAppend[Append to Sheet]:::backend
         
         %% Cancel Path
-        StepBackend_Cancel[Cancel: Update Status 'CANCELLED']:::backend
+        StepBackend_Cancel[Cancel: Update Status]:::backend
         
         %% Move Path
         StepBackend_Move[Move: Update Date/Time/Room]:::backend
         
         %% GDPR Path
-        StepBackend_Export[Export: Fetch User Data]:::backend
-        StepBackend_Delete[Delete: Remove/Anonymize User Data]:::backend
+        StepBackend_Export[Export: Fetch Data]:::backend
+        StepBackend_Delete[Delete: Anonymize Data]:::backend
         
         %% Common
         Step32[Build Email Notification]:::backend
@@ -178,29 +192,44 @@ graph TD
 
     %% -- MAIN FLOW --
     Start --> Step1
-    Step1 --> Step2
-    Step2 --> Step7
-    Step2 --> StepGDPR_Btn
-    Step7 --> Step8
+    Step1 --> StepLoad
+    StepLoad --> StepRoleModal
+    StepRoleModal --> StepRole
+    StepRole -- "Enter PIN" --> StepSetAdmin
+    StepRole -- "User" --> StepSetAdmin
+    StepSetAdmin --> Step7
+    StepSetAdmin --> StepGDPR_Btn
     
-    Step8 -- "Empty" --> Step10
+    %% -- EMAIL DEEP LINK BYPASS --
+    Start --> StepC_Deep
+    StepC_Deep --> StepLoad
+    StepLoad --> StepParse
+    StepParse --> StepC_UI
+
+    Step7 --> Step8
+    Step8 -- "Empty" --> StepTime
     Step8 -- "Booked / Partial" --> Step9
     Step9 --> Step9_Dec
 
     %% -- CREATE BRANCH --
-    Step9_Dec -- "Book New" --> Step10
+    Step9_Dec -- "Book New" --> StepTime
+    StepTime --> Step10
     Step10 --> Step12
-    Step12 --> Step18
-    Step18 --> Step19
-    Step19 -- Yes --> Step23
-    Step19 -- No --> Toast
+    Step12 --> Step19
+    Step19 -- "No" --> Toast
+    Step19 -- "Yes" --> StepSqueeze
+    StepSqueeze -- "Eligible for Main Hall" --> StepTableModal
+    StepTableModal --> StepTable
+    StepTable --> Step18
+    StepSqueeze -- "Standard Room" --> Step18
+    Step18 --> Step23
     Step23 --> Step24
 
     %% -- CANCEL BRANCH --
-    Step9_Dec -- "Cancel Booking" --> StepC_UI
-    StepC_UI --> StepC1
+    Step9_Dec -- "Cancel Booking" --> StepC1
     StepC1 --> StepC2
     StepC2 --> StepC_Send
+    StepC_UI --> StepC_Send
     StepC_Send --> Step24
     
     %% -- GDPR BRANCH --
@@ -233,7 +262,10 @@ graph TD
     Step24 -- "Action: Delete" --> StepBackend_Delete
 
     %% -- DB & NOTIFICATIONS --
-    Step27 --> Step31
+    Step27 -- "Validation Failed" --> StepDeny
+    StepDeny --> Step33
+    Step27 -- "Validation Passed" --> StepAppend
+    StepAppend --> Step31
     StepBackend_Cancel --> Step31
     StepBackend_Move --> Step31
     StepBackend_Export --> Step31
