@@ -183,11 +183,11 @@ function checkIsBlocked(dateObj, roomName, blockedDates) {
  * Supports date-ranged announcements with optional start/end dates.
  *
  * @param {Spreadsheet} ss - The spreadsheet reference.
- * @returns {{message: string, isActive: boolean}} Settings object.
+ * @returns {{message: string, isActive: boolean, startDate: string, endDate: string}} Settings object.
  */
 function getGlobalSettings(ss) {
     const sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
-    const settings = { message: '', isActive: false };
+    const settings = { message: '', isActive: false, startDate: '', endDate: '' };
 
     if (!sheet) return settings;
 
@@ -202,9 +202,25 @@ function getGlobalSettings(ss) {
     const rawStart = map['Announcement Start'];
     const rawEnd = map['Announcement End'];
 
+    // Always return the raw message text and dates for the admin form
+    settings.message = rawMessage || '';
+
+    // Format start/end dates for the admin form
+    if (rawStart && rawStart instanceof Date && !isNaN(rawStart.getTime())) {
+        settings.startDate = Utilities.formatDate(rawStart, SCRIPT_TIMEZONE, 'yyyy-MM-dd');
+    } else if (rawStart && rawStart.toString().trim() !== '') {
+        settings.startDate = rawStart.toString().trim();
+    }
+    if (rawEnd && rawEnd instanceof Date && !isNaN(rawEnd.getTime())) {
+        settings.endDate = Utilities.formatDate(rawEnd, SCRIPT_TIMEZONE, 'yyyy-MM-dd');
+    } else if (rawEnd && rawEnd.toString().trim() !== '') {
+        settings.endDate = rawEnd.toString().trim();
+    }
+
     let isActive = false;
     if (rawActive === true) isActive = true;
     if (typeof rawActive === 'string' && rawActive.toUpperCase() === 'TRUE') isActive = true;
+    settings.isActive = isActive;
 
     if (isActive) {
         const now = new Date();
@@ -223,13 +239,69 @@ function getGlobalSettings(ss) {
             }
         }
 
-        if (inRange) {
-            settings.message = rawMessage;
-            settings.isActive = true;
+        // If currently out of range, the banner won't show, but isActive stays true for the admin form
+        if (!inRange) {
+            settings.isActive = false; // Banner not active for public
+            settings.isActiveRaw = true; // But the toggle IS checked in the settings sheet
         }
     }
 
     return settings;
+}
+
+/**
+ * Saves Announcement Settings to the Settings sheet.
+ * Updates existing rows or appends new ones.
+ *
+ * @param {Spreadsheet} ss - The spreadsheet reference.
+ * @param {string} message - The announcement text.
+ * @param {boolean} isActive - Whether the announcement is active.
+ * @param {string} startDate - The announcement start date (yyyy-MM-dd).
+ * @param {string} endDate - The announcement end date (yyyy-MM-dd).
+ */
+function saveGlobalSettings(ss, message, isActive, startDate, endDate) {
+    let sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
+    if (!sheet) {
+        sheet = ss.insertSheet(SETTINGS_SHEET_NAME);
+        sheet.appendRow(['Setting Name', 'Setting Value']);
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const keyMap = {
+        'Announcement Message': message,
+        'Announcement Active': isActive ? 'TRUE' : 'FALSE',
+        'Announcement Start': startDate || '',
+        'Announcement End': endDate || ''
+    };
+
+    // Update existing rows
+    const keysLeft = { ...keyMap };
+    for (let i = 1; i < data.length; i++) {
+        const rowKey = (data[i][0] || '').toString().trim();
+        if (keysLeft[rowKey] !== undefined) {
+            sheet.getRange(i + 1, 2).setValue(keysLeft[rowKey]);
+            delete keysLeft[rowKey];
+        }
+    }
+
+    // Append missing rows
+    for (const [key, value] of Object.entries(keysLeft)) {
+        sheet.appendRow([key, value]);
+    }
+}
+
+/**
+ * Extracts raw data from the Logs sheet.
+ * @param {Spreadsheet} ss - The spreadsheet reference.
+ * @returns {Array<Array<any>>} The raw 2D array of log data.
+ */
+function getRawLogsData(ss) {
+    const sheet = ss.getSheetByName(LOGS_SHEET_NAME);
+    if (!sheet) return [];
+    
+    // We only need the raw data arrays, skipping completely empty rows
+    const rawData = sheet.getDataRange().getDisplayValues();
+    return rawData;
 }
 
 /**

@@ -40,6 +40,7 @@ export function handleAdminLoginSubmit(e) {
 
     if (input === ADMIN_PIN) {
         sessionStorage.setItem('ccf_admin_logged_in', 'true');
+        sessionStorage.setItem('ccf_admin_pin', input);
         window.location.href = 'dashboard.html';
     } else {
         showToast("Incorrect PIN. Access Denied.", "error");

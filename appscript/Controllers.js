@@ -58,6 +58,12 @@ function doGet(e) {
                 case 'delete_block_date':
                     result = handleDeleteBlockedDate(payload);
                     break;
+                case 'update_announcement':
+                    result = handleUpdateAnnouncement(payload);
+                    break;
+                case 'extract_logs':
+                    result = handleExtractLogs(payload);
+                    break;
                 default:
                     throw new Error("Invalid action specified.");
             }
@@ -70,4 +76,19 @@ function doGet(e) {
     }
     return ContentService.createTextOutput(`${callback}(${JSON.stringify(result)})`)
         .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+function handleUpdateAnnouncement(payload) {
+    if (payload.pin !== ADMIN_PIN) {
+        throw new Error("Unauthorized: Invalid PIN");
+    }
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    saveGlobalSettings(ss, payload.message || "", payload.isActive === true || payload.isActive === 'true', payload.startDate || '', payload.endDate || '');
+    return { success: true, message: "Announcement updated successfully." };
+}
+
+function handleExtractLogs(payload) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const data = getRawLogsData(ss);
+    return { success: true, data: data };
 }

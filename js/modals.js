@@ -192,6 +192,13 @@ export function openBookingModalForSelectedSlot(customStartTime = null, customEn
     if (elements.choiceModal) elements.choiceModal.close();
     if (elements.timeSelectionModal) elements.timeSelectionModal.close();
     elements.bookingForm.reset();
+    
+    // Reset checkboxes to disabled state to enforce reading policies
+    const termsCb = document.getElementById('terms-checkbox');
+    if (termsCb) termsCb.disabled = true;
+    const privacyCb = document.getElementById('privacy-checkbox');
+    if (privacyCb) privacyCb.disabled = true;
+
     clearAllFormAlerts();
 
     const isAdmin = state.isAdmin;
@@ -232,6 +239,12 @@ export function openBookingModalForSelectedSlot(customStartTime = null, customEn
         elements.selectedTableId.value = '';
         elements.displaySelectedTable.textContent = 'None';
         elements.displaySelectedTable.className = 'text-sm font-bold text-gray-500';
+        
+        const floorplanBtn = document.getElementById('btn-open-floorplan');
+        if (floorplanBtn) {
+            floorplanBtn.disabled = false;
+            floorplanBtn.className = 'px-2 py-1 bg-ccf-blue text-white rounded-xl text-[10px] sm:text-xs hover:bg-ccf-blue-dark whitespace-nowrap self-start sm:self-auto transition-colors';
+        }
     } else {
         elements.tableSelectionWrapper.classList.add('hidden');
         elements.selectedTableId.value = '';
@@ -454,13 +467,22 @@ export function openDuplicateBookingModal(sourceBooking) {
     state.duplicationSource = sourceBooking;
 
     elements.bookingForm.reset();
+    
+    // Reset checkboxes to disabled state to enforce reading policies
+    const termsCb = document.getElementById('terms-checkbox');
+    if (termsCb) termsCb.disabled = true;
+    const privacyCb = document.getElementById('privacy-checkbox');
+    if (privacyCb) privacyCb.disabled = true;
+
     clearAllFormAlerts();
 
     document.getElementById('first_name').value = sourceBooking.first_name;
     document.getElementById('last_name').value = sourceBooking.last_name;
     document.getElementById('email').value = sourceBooking.email;
     document.getElementById('confirm_email').value = sourceBooking.email;
-    document.getElementById('event').value = sourceBooking.event;
+    const eventEl = document.getElementById('event');
+    eventEl.value = sourceBooking.event;
+    eventEl.dispatchEvent(new Event('change'));
     document.getElementById('participants').value = sourceBooking.participants;
     document.getElementById('notes').value = sourceBooking.notes || '';
 

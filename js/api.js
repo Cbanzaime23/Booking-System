@@ -74,8 +74,16 @@ export function submitRequest(action, payload) {
                 const bookingCode = data.id.substring(0, 12).toUpperCase();
                 const bookedRoom = data.bookedRoom;
                 const requestedRoom = data.requestedRoom;
+                
+                let roomDisplayText = bookedRoom;
+                if (bookedRoom === 'Main Hall' && data.table_id) {
+                    roomDisplayText = (data.table_id === 'Full Hall') 
+                        ? 'Main Hall (Whole Hall)' 
+                        : `Main Hall (Table ${data.table_id})`;
+                }
+                
                 document.getElementById('success-booking-code').textContent = bookingCode;
-                document.getElementById('success-room-name').textContent = bookedRoom;
+                document.getElementById('success-room-name').textContent = roomDisplayText;
 
                 const startDate = window.luxon.DateTime.fromISO(data.start_iso, { zone: window.APP_CONFIG.TIMEZONE || 'Asia/Manila' });
                 const endDate = window.luxon.DateTime.fromISO(data.end_iso, { zone: window.APP_CONFIG.TIMEZONE || 'Asia/Manila' });

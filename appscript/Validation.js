@@ -54,6 +54,39 @@ function calculateSimilarity(a, b) {
 }
 
 /**
+ * Determines the most recent validation sheet based on month name chronological order.
+ * @returns {Object} { sheetObj: Sheet, name: string, id: number }
+ */
+function getActiveValidationSheetInfo() {
+    const ss = SpreadsheetApp.openById(DLEADERS_SPREADSHEET_ID);
+    const sheets = ss.getSheets();
+
+    const monthOrder = {
+        "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+        "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12
+    };
+
+    let latestSheet = null;
+    let maxMonthIndex = 0;
+
+    for (const s of sheets) {
+        const sheetName = s.getName().trim().toLowerCase();
+        const monthIndex = monthOrder[sheetName];
+        if (monthIndex && monthIndex > maxMonthIndex) {
+            maxMonthIndex = monthIndex;
+            latestSheet = s;
+        }
+    }
+
+    const sheet = latestSheet || sheets[0];
+    return {
+        sheetObj: sheet,
+        name: sheet.getName(),
+        id: sheet.getSheetId()
+    };
+}
+
+/**
  * Fetches the Dleaders List from the external Google Sheet and caches it.
  * Uses CacheService for 1 hour to prevent hitting the external spreadsheet
  * API quotas on every booking submission.
@@ -68,17 +101,16 @@ function fetchAndCacheDleadersList() {
     }
 
     try {
-        const ss = SpreadsheetApp.openById(DLEADERS_SPREADSHEET_ID);
-        // Assuming the list is on the first sheet
-        const sheet = ss.getSheets()[0];
+        const activeInfo = getActiveValidationSheetInfo();
+        const sheet = activeInfo.sheetObj;
         const data = sheet.getDataRange().getValues();
 
         if (data.length < 2) return [];
 
         const headers = data[0].map(h => String(h).trim().toLowerCase());
-        const firstNameIdx = headers.indexOf('first name');
-        const lastNameIdx = headers.indexOf('last name');
-        const nickNameIdx = headers.indexOf('nickname');
+        const firstNameIdx = headers.indexOf('first_name');
+        const lastNameIdx = headers.indexOf('last_name');
+        const nickNameIdx = headers.indexOf('nick_name');
 
         if (firstNameIdx === -1 || lastNameIdx === -1) {
             throw new Error("Could not find 'First Name' or 'Last Name' columns in the external Dleaders List.");
@@ -106,7 +138,7 @@ function fetchAndCacheDleadersList() {
 
     } catch (err) {
         Logger.log("Fetching Dleaders List failed: " + err.message);
-        throw new Error("Unable to fetch the Dleaders List for validation.");
+        throw new Error("Unable to fetch the Dleaders List for validation: " + err.message);
     }
 }
 
@@ -121,7 +153,7 @@ function fetchAndCacheDleadersList() {
  */
 function isNameInDleadersList(listData, inputFirst, inputLast) {
     if (!inputFirst || !inputLast) return false;
-    
+
     // Normalize user input
     const submittedFirstLast = (inputFirst + " " + inputLast).toLowerCase().trim().replace(/\s+/g, ' ');
 
@@ -154,7 +186,7 @@ function isNameInDleadersList(listData, inputFirst, inputLast) {
 function validateNamesAgainstList(reserverFirst, reserverLast, leaderFirst, leaderLast) {
     try {
         const listData = fetchAndCacheDleadersList();
-        
+
         // Check standard user (reserver)
         const reserverPasses = isNameInDleadersList(listData, reserverFirst, reserverLast);
         if (!reserverPasses) {
@@ -179,8 +211,6 @@ function validateNamesAgainstList(reserverFirst, reserverLast, leaderFirst, lead
 
     } catch (err) {
         Logger.log("Validation framework encountered an error: " + err.message);
-        // Fail open if the external sheet crashes? Or fail closed?
-        // Given the requirement, we should probably fail closed or throw error.
-        return { passed: false, reason: "System error while verifying the Dleaders List. Please try again in a few minutes." };
+        return { passed: false, reason: "System error: " + err.message };
     }
 }

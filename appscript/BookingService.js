@@ -51,37 +51,39 @@ function handleCreateBooking(payload) {
         const validationError = validateInput(payload, rules, isAdmin);
         if (validationError) throw new Error(validationError);
 
-        // --- NEW: Dleaders Name Validation ---
-        const dleaderValidation = validateNamesAgainstList(
-            payload.first_name, 
-            payload.last_name, 
-            payload.leader_first_name, 
-            payload.leader_last_name
-        );
-        
-        if (!dleaderValidation.passed) {
-            logActivity('Validation Failed', 'N/A', payload.adminPin, {
-                reason: dleaderValidation.reason,
-                user: `${payload.first_name} ${payload.last_name}`,
-                leader: `${payload.leader_first_name} ${payload.leader_last_name}`
-            });
+        // --- NEW: Dleaders Name Validation (Bypass for Admins) ---
+        if (!isAdmin) {
+            const dleaderValidation = validateNamesAgainstList(
+                payload.first_name, 
+                payload.last_name, 
+                payload.leader_first_name, 
+                payload.leader_last_name
+            );
             
-            // Check if the validation failed due to a system crash (e.g. Google Sheets API down) vs an actual name mismatch
-            const isSystemError = dleaderValidation.reason.includes("System error");
-            
-            // Send email only for actual name mismatches
-            if (!isSystemError) {
-                try {
-                    sendDeniedEmail(payload);
-                } catch (emailErr) {
-                    console.error("Failed to send denied email:", emailErr);
+            if (!dleaderValidation.passed) {
+                logActivity('Validation Failed', 'N/A', payload.adminPin, {
+                    reason: dleaderValidation.reason,
+                    user: `${payload.first_name} ${payload.last_name}`,
+                    leader: `${payload.leader_first_name} ${payload.leader_last_name}`
+                });
+                
+                // Check if the validation failed due to a system crash (e.g. Google Sheets API down) vs an actual name mismatch
+                const isSystemError = dleaderValidation.reason.includes("System error");
+                
+                // Send email only for actual name mismatches
+                if (!isSystemError) {
+                    try {
+                        sendDeniedEmail(payload);
+                    } catch (emailErr) {
+                        console.error("Failed to send denied email:", emailErr);
+                    }
                 }
+                
+                return {
+                    success: false,
+                    message: isSystemError ? dleaderValidation.reason : "Your reservation was denied as the user and/or leader do not exist in the current CCF Manila Dleaders List."
+                };
             }
-            
-            return {
-                success: false,
-                message: isSystemError ? dleaderValidation.reason : "Your reservation was denied as the user and/or leader do not exist in the current CCF Manila Dleaders List."
-            };
         }
 
         // Recurrence Logic
@@ -132,6 +134,7 @@ function handleCreateBooking(payload) {
              message: 'Booking confirmed!', 
              id: newId, 
              bookedRoom: requestedRoom, 
+             table_id: payload.table_id,
              requestedRoom: autoUpgradedRoom,
              start_iso: payload.start_iso,
              end_iso: payload.end_iso 
@@ -254,7 +257,7 @@ function handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoo
     } else {
         throw new Error("No recurrent events could be booked due to conflicts or blocked dates.");
     }
-    return { success: true, message: `Recurrent: ${successCount} booked, ${failCount} failed.`, id: firstId, bookedRoom: payload.room, requestedRoom: requestedRoom };
+    return { success: true, message: `Recurrent: ${successCount} booked, ${failCount} failed.`, id: firstId, bookedRoom: payload.room, table_id: payload.table_id, requestedRoom: requestedRoom };
 }
 
 /**
@@ -459,12 +462,24 @@ function handleFetchAllBookings() {
         Logger.log('Reservation window error (non-fatal): ' + rwError.toString());
     }
 
+    let validationSheetData = { name: "Unknown", url: "#" };
+    try {
+        const activeInfo = getActiveValidationSheetInfo();
+        validationSheetData = {
+            name: activeInfo.name,
+            url: `https://docs.google.com/spreadsheets/d/${DLEADERS_SPREADSHEET_ID}/edit#gid=${activeInfo.id}`
+        };
+    } catch (valErr) {
+        Logger.log('Validation sheet info error: ' + valErr.toString());
+    }
+
     return {
         success: true,
         data: bookings,
         blocked_dates: blocked,
         announcement: settings,
-        reservation_window: reservationWindowData
+        reservation_window: reservationWindowData,
+        latest_validation_sheet: validationSheetData
     };
 }
 

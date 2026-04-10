@@ -356,10 +356,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (eventSelector && participantsInput) {
             eventSelector.addEventListener('change', (e) => {
                 const selectedOption = e.target.options[e.target.selectedIndex];
-                if (selectedOption && selectedOption.dataset.setsMaxCapacity === 'true') {
+                const setsMax = selectedOption && selectedOption.dataset.setsMaxCapacity === 'true';
+                
+                if (setsMax) {
                     const roomRules = window.APP_CONFIG.ROOM_CONFIG[state.selectedRoom];
                     const maxCapacity = ROOM_CAPACITIES[state.selectedRoom] || roomRules.MAX_TOTAL_PARTICIPANTS;
                     participantsInput.value = maxCapacity;
+                }
+
+                // Main Hall Table Selection UI logic
+                if (state.selectedRoom === 'Main Hall') {
+                    const floorplanBtn = document.getElementById('btn-open-floorplan');
+                    const tableInput = document.getElementById('selected-table-id');
+                    const tableDisplay = document.getElementById('display-selected-table');
+                    
+                    if (floorplanBtn && tableInput && tableDisplay) {
+                        if (setsMax) {
+                            floorplanBtn.disabled = true;
+                            floorplanBtn.className = 'px-2 py-1 bg-gray-400 text-white rounded-xl text-[10px] sm:text-xs cursor-not-allowed whitespace-nowrap self-start sm:self-auto transition-colors';
+                            tableInput.value = 'Full Hall';
+                            tableDisplay.textContent = 'Whole Hall Occupied';
+                            tableDisplay.className = 'text-xs sm:text-sm font-bold text-ccf-red truncate';
+                        } else {
+                            floorplanBtn.disabled = false;
+                            floorplanBtn.className = 'px-2 py-1 bg-ccf-blue text-white rounded-xl text-[10px] sm:text-xs hover:bg-ccf-blue-dark whitespace-nowrap self-start sm:self-auto transition-colors';
+                            if (tableInput.value === 'Full Hall') {
+                                tableInput.value = '';
+                                tableDisplay.textContent = 'None';
+                                tableDisplay.className = 'text-xs sm:text-sm font-bold text-gray-500 truncate';
+                            }
+                        }
+                    }
                 }
             });
         }
@@ -397,6 +424,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         document.getElementById('success-done-btn').addEventListener('click', () => elements.successModal.close());
 
+        // --- Recurrent Cancellation Modal Listeners ---
+        const cancelSeriesModal = document.getElementById('cancel-user-series-modal');
+        if (cancelSeriesModal) {
+            const singleBtn = document.getElementById('cancel-single-btn');
+            if (singleBtn) singleBtn.addEventListener('click', () => submitPendingCancellation(false));
+            
+            const seriesBtn = document.getElementById('cancel-series-btn');
+            if (seriesBtn) seriesBtn.addEventListener('click', () => {
+                cancelSeriesModal.close();
+                const warningModal = document.getElementById('cancel-series-warning-modal');
+                if (warningModal) warningModal.showModal();
+            });
+        }
+
+        const finalWarningModal = document.getElementById('cancel-series-warning-modal');
+        if (finalWarningModal) {
+            const confirmSeriesBtn = document.getElementById('confirm-series-cancel-btn');
+            if (confirmSeriesBtn) confirmSeriesBtn.addEventListener('click', () => {
+                finalWarningModal.close();
+                submitPendingCancellation(true);
+            });
+        }
+
         document.querySelectorAll('.cancel-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const dialog = btn.closest('dialog');
@@ -413,10 +463,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (privacyBtn) privacyBtn.addEventListener('click', () => document.getElementById('privacy-modal').showModal());
 
         const termsCloseBtn = document.getElementById('terms-close-btn');
-        if (termsCloseBtn) termsCloseBtn.addEventListener('click', () => document.getElementById('terms-modal').close());
+        if (termsCloseBtn) termsCloseBtn.addEventListener('click', () => {
+            document.getElementById('terms-modal').close();
+            const checkbox = document.getElementById('terms-checkbox');
+            if (checkbox) {
+                checkbox.disabled = false;
+                checkbox.checked = true;
+            }
+        });
 
         const privacyCloseBtn = document.getElementById('privacy-close-btn');
-        if (privacyCloseBtn) privacyCloseBtn.addEventListener('click', () => document.getElementById('privacy-modal').close());
+        if (privacyCloseBtn) privacyCloseBtn.addEventListener('click', () => {
+            document.getElementById('privacy-modal').close();
+            const checkbox = document.getElementById('privacy-checkbox');
+            if (checkbox) {
+                checkbox.disabled = false;
+                checkbox.checked = true;
+            }
+        });
 
         // Email Deep Link Cancel Modal Listeners
         const emailCancelYes = document.getElementById('email-cancel-yes-btn');

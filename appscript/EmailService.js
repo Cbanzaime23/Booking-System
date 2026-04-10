@@ -29,22 +29,26 @@ function sendConfirmationEmail(payload, newId, newStart, newEnd, requestedRoom, 
         greeting += `<p>Your reservation for <strong>${payload.room}</strong> is confirmed! Please review the details below.</p>`;
     }
 
+    const roomDisplay = (payload.room === 'Main Hall' && payload.table_id) 
+        ? (payload.table_id === 'Full Hall' ? 'Main Hall (Whole Hall)' : 'Main Hall (Table ' + payload.table_id + ')')
+        : payload.room;
+
     const htmlBody = '<div style="font-family: Arial, sans-serif; font-size: 16px; line-height: 1.6;">' +
       greeting +
       '<div style="background-color: #f4f4f4; border-radius: 8px; padding: 20px; margin: 20px 0;">' +
         '<h3 style="margin-top: 0;">Booking Summary</h3>' +
         '<p><strong>Booking Code:</strong> <span style="font-family: \'Courier New\', monospace; font-size: 18px; color: #000;">' + bookingCode + '</span></p>' +
         '<hr style="border: 0; border-top: 1px solid #ddd;">' +
-        '<p><strong>Room:</strong> ' + payload.room + '</p>' +
+        '<p><strong>Room:</strong> ' + roomDisplay + '</p>' +
         '<p><strong>Name:</strong> ' + payload.first_name + ' ' + payload.last_name + '</p>' +
         '<p><strong>Event:</strong> ' + payload.event + '</p>' +
         '<p><strong>Date:</strong> ' + dateStr + '</p>' +
         '<p><strong>Time:</strong> ' + timeStr + '</p>' +
         '<p><strong>Participants:</strong> ' + payload.participants + '</p>' +
         (payload.notes ? '<p><strong>Notes:</strong> ' + payload.notes + '</p>' : '') +
-        '<div style="margin-top: 25px; text-align: left; display: flex; gap: 10px; flex-wrap: wrap;">' +
-           (cancelLink ? '<a href="' + cancelLink + '" style="background-color: #b91c1c; color: white; padding: 12px 18px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; border: 1px solid #991b1b;">❌ Cancel My Reservation</a>' : '') +
-           '<a href="' + gCalLink + '" style="background-color: #004d60; color: white; padding: 12px 18px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px;">📅 Add to Google Calendar</a>' +
+        '<div style="margin-top: 25px; text-align: left;">' +
+           (cancelLink ? '<a href="' + cancelLink + '" style="background-color: #b91c1c; color: white; padding: 12px 18px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; border: 1px solid #991b1b; display: inline-block; margin-right: 15px; margin-bottom: 10px;">❌ Cancel My Reservation</a>' : '') +
+           '<a href="' + gCalLink + '" style="background-color: #004d60; color: white; padding: 12px 18px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; display: inline-block; margin-bottom: 10px;">📅 Add to Google Calendar</a>' +
         '</div>' +
       '</div>' +
       '<div style="background-color: #e6fffa; border: 1px solid #b2f5ea; border-radius: 8px; padding: 15px; margin-top: 20px;">' +

@@ -31,8 +31,8 @@ const SURVEY_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfEZsWJRYGRh0J
 /** @const {string} Admin PIN required for privileged operations. */
 const ADMIN_PIN = "CCFManila@2025";
 
-/** @const {number} Number of days after which personal booking data is auto-anonymized. */
-const RETENTION_DAYS = 365;
+/** @const {number} Number of days after which personal booking data is auto-anonymized (5 years). */
+const RETENTION_DAYS = 1825;
 
 /**
  * Room-level rules for capacity, concurrency, and group size.
