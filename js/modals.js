@@ -689,8 +689,8 @@ export function handleEmailCancelDeepLink(bookingId, bookingCode) {
         const modal = document.getElementById('cancel-user-series-modal');
         if (modal) modal.showModal();
     } else {
-        const start = window.luxon.DateTime.fromISO(booking.start_iso);
-        const end = window.luxon.DateTime.fromISO(booking.end_iso);
+        const start = parseDate(booking.start_iso);
+        const end = parseDate(booking.end_iso);
         document.getElementById('email-cancel-event-name').textContent = booking.event;
         document.getElementById('email-cancel-date').textContent = start.toFormat('MMM d, yyyy (ccc)');
         document.getElementById('email-cancel-time').textContent = `${start.toFormat('h:mm a')} - ${end.toFormat('h:mm a')}`;

@@ -567,8 +567,12 @@ function findConcurrentBookings(newStart, newEnd, allBookings, roomName) {
     const newEndTime = newEnd.getTime();
     return allBookings.filter(booking => {
         if (booking.room !== roomName) return false;
-        const existingStartTime = new Date(booking.start_iso).getTime();
-        const existingEndTime = new Date(booking.end_iso).getTime();
+        // Fix: Strip misleading 'Z' suffix — stored times are Manila local, not UTC.
+        // Append the correct +08:00 offset so they are parsed as Asia/Manila.
+        const cleanStart = String(booking.start_iso).replace(/Z$/i, '');
+        const cleanEnd = String(booking.end_iso).replace(/Z$/i, '');
+        const existingStartTime = new Date(cleanStart + '+08:00').getTime();
+        const existingEndTime = new Date(cleanEnd + '+08:00').getTime();
         return newStartTime < existingEndTime && newEndTime > existingStartTime;
     });
 }

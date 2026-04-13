@@ -260,8 +260,8 @@ export function renderCalendarButtons(booking) {
     if (!container) return;
 
     const fmt = "yyyyMMdd'T'HHmmss";
-    const startObj = DateTime.fromISO(booking.start_iso).setZone('Asia/Manila');
-    const endObj = DateTime.fromISO(booking.end_iso).setZone('Asia/Manila');
+    const startObj = parseDate(booking.start_iso);
+    const endObj = parseDate(booking.end_iso);
 
     const startStr = startObj.toFormat(fmt);
     const endStr = endObj.toFormat(fmt);
