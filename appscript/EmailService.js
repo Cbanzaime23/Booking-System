@@ -164,7 +164,7 @@ function sendDeniedEmail(payload) {
       '<p>We sincerely apologize, but your recent room reservation request has been <strong>denied</strong>.</p>' +
       '<div style="background-color: #fef2f2; border-left: 4px solid #b80000; border-radius: 4px; padding: 15px; margin: 20px 0;">' +
         '<p style="margin: 0 0 8px 0; font-weight: bold; color: #b80000;">Reason for Denial:</p>' +
-        '<p style="margin: 0; color: #7f1d1d;">Apologies but currently you or your discipleship group leader is not listed as a Discipleship Leader or Timothy database. Please update your status with our Discipleship Group Management in CCF Manila.</p>' +
+        '<p style="margin: 0; color: #7f1d1d;">Apologies but currently you are not listed as a Discipleship Leader or Timothy in the database. Please update your status with our Discipleship Group Management in CCF Manila.</p>' +
       '</div>' +
       '<div style="background-color: #f4f4f4; border-radius: 8px; padding: 20px; margin: 20px 0;">' +
         '<h3 style="margin-top: 0; color: #333;">Requested Booking Details</h3>' +

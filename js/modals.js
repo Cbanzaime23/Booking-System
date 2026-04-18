@@ -42,7 +42,7 @@ export function updateParticipantRules(rules, isAdmin) {
     let helperHTML = `Group size: ${minAllowed} - ${maxAllowed} participants. `;
     helperHTML += `Max groups for this room: <span class="font-bold">${rules.MAX_CONCURRENT_GROUPS}</span>. `;
 
-    const maxDate = DateTime.local().plus(isAdmin ? { months: 6 } : { days: 7 });
+    const maxDate = DateTime.local().plus({ months: 6 });
     helperHTML += `Can reserve up to <span class="font-bold border-b border-gray-400">${maxDate.toFormat('LLL d')}</span>.`;
 
     const newHintEl = document.getElementById('participant-rule-hint');
@@ -203,7 +203,7 @@ export function openBookingModalForSelectedSlot(customStartTime = null, customEn
 
     const isAdmin = state.isAdmin;
 
-    document.getElementById('user-fields').classList.toggle('hidden', isAdmin);
+
     document.getElementById('admin-fields').classList.toggle('hidden', !isAdmin);
 
     // Hide email confirmation field for admins
@@ -486,10 +486,7 @@ export function openDuplicateBookingModal(sourceBooking) {
     document.getElementById('participants').value = sourceBooking.participants;
     document.getElementById('notes').value = sourceBooking.notes || '';
 
-    document.getElementById('leader_first_name').value = sourceBooking.leader_first_name || '';
-    document.getElementById('leader_last_name').value = sourceBooking.leader_last_name || '';
 
-    document.getElementById('user-fields').classList.add('hidden');
     document.getElementById('admin-fields').classList.remove('hidden');
 
     const dateWrapper = document.getElementById('duplicate-date-wrapper');

@@ -55,16 +55,13 @@ function handleCreateBooking(payload) {
         if (!isAdmin) {
             const dleaderValidation = validateNamesAgainstList(
                 payload.first_name, 
-                payload.last_name, 
-                payload.leader_first_name, 
-                payload.leader_last_name
+                payload.last_name
             );
             
             if (!dleaderValidation.passed) {
                 logActivity('Validation Failed', 'N/A', payload.adminPin, {
                     reason: dleaderValidation.reason,
-                    user: `${payload.first_name} ${payload.last_name}`,
-                    leader: `${payload.leader_first_name} ${payload.leader_last_name}`
+                    user: `${payload.first_name} ${payload.last_name}`
                 });
                 
                 // Check if the validation failed due to a system crash (e.g. Google Sheets API down) vs an actual name mismatch
@@ -85,6 +82,9 @@ function handleCreateBooking(payload) {
                 };
             }
         }
+
+        // Set is_admin_booking flag on payload for database storage
+        payload.is_admin_booking = isAdmin;
 
         // Recurrence Logic
         if (isAdmin && payload.recurrence && payload.recurrence !== 'none') {
@@ -293,9 +293,17 @@ function handleCancelBooking(payload) {
                 if (data[i][statusIndex] === 'cancelled') throw new Error("Already cancelled.");
 
                 // Detect admin booking
-                const leaderFirstIndex = headers.indexOf('leader_first_name');
-                const leaderFirstName = (leaderFirstIndex !== -1) ? data[i][leaderFirstIndex] : 'Unknown';
-                const isAdminBooking = (leaderFirstName === '' || leaderFirstName === null);
+                const isAdminCol = headers.indexOf('is_admin_booking');
+                const isAdminFlag = (isAdminCol !== -1) ? data[i][isAdminCol] : '';
+                // Backward compatibility: if is_admin_booking column doesn't exist, fall back to empty leader name
+                let isAdminBooking;
+                if (isAdminCol !== -1) {
+                    isAdminBooking = (isAdminFlag === true || isAdminFlag === 'TRUE' || isAdminFlag === 'true');
+                } else {
+                    const leaderFirstIndex = headers.indexOf('leader_first_name');
+                    const leaderFirstName = (leaderFirstIndex !== -1) ? data[i][leaderFirstIndex] : 'Unknown';
+                    isAdminBooking = (leaderFirstName === '' || leaderFirstName === null);
+                }
 
                 if (isAdminBooking) {
                     if (!isAuthAdmin) {
@@ -424,7 +432,8 @@ function handleFetchAllBookings() {
             event: headers.indexOf('event'), room: headers.indexOf('room'),
             pax: headers.indexOf('participants'), status: headers.indexOf('status'),
             email: headers.indexOf('email'), recurrence: headers.indexOf('recurrence_id'),
-            leader_first: headers.indexOf('leader_first_name'), table: headers.indexOf('table_id')
+            leader_first: headers.indexOf('leader_first_name'), table: headers.indexOf('table_id'),
+                        is_admin: headers.indexOf('is_admin_booking')
         };
 
         if (idx.id !== -1 && idx.status !== -1) {
@@ -443,7 +452,8 @@ function handleFetchAllBookings() {
                         status: row[idx.status],
                         recurrence_id: idx.recurrence !== -1 ? row[idx.recurrence] : null,
                         leader_first_name: idx.leader_first !== -1 ? row[idx.leader_first] : '',
-                        table_id: idx.table !== -1 ? row[idx.table] : null
+                        table_id: idx.table !== -1 ? row[idx.table] : null,
+                        is_admin_booking: idx.is_admin !== -1 ? (row[idx.is_admin] === true || row[idx.is_admin] === 'TRUE' || row[idx.is_admin] === 'true') : (idx.leader_first !== -1 ? (!row[idx.leader_first] || String(row[idx.leader_first]).trim() === '') : false)
                     };
                 });
         }

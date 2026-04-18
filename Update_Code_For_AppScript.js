@@ -526,7 +526,7 @@ function validateInput(data, rules, isAdmin) {
     if (isAdmin) {
         requiredFields = ['first_name', 'last_name', 'email', 'event', 'participants', 'start_iso', 'end_iso', 'room'];
     } else {
-        requiredFields = ['first_name', 'last_name', 'email', 'leader_first_name', 'leader_last_name', 'event', 'participants', 'start_iso', 'end_iso', 'room'];
+        requiredFields = ['first_name', 'last_name', 'email', 'event', 'participants', 'start_iso', 'end_iso', 'room'];
     }
     for (const field of requiredFields) {
         if (!data[field]) { return `Missing required field: ${field}.`; }
@@ -552,13 +552,9 @@ function validateInput(data, rules, isAdmin) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const maxDate = new Date(today);
-    if (isAdmin) {
-        maxDate.setMonth(maxDate.getMonth() + 6);
-    } else {
-        maxDate.setDate(maxDate.getDate() + 7);
-    }
+    maxDate.setMonth(maxDate.getMonth() + 6);
     if (start < today) return "Cannot create a booking in the past.";
-    if (start > maxDate) return isAdmin ? "Admins can only book up to 6 months in advance." : "Users can only book up to 7 days in advance.";
+    if (start > maxDate) return "Reservations can only be made up to 6 months in advance.";
     return null;
 }
 
@@ -712,19 +708,18 @@ function appendBookingRow(sheet, id, payload, startDate, endDate, recurrenceId =
     // We check if the last column header is 'recurrence_id'. If not, we append it.
     // This is a simple check to avoid reading all headers every time.
     // A better approach in production is to run a one-time setup script, but this works for auto-migration.
+    // Ensure required headers exist (auto-migration)
     const lastColCtx = sheet.getLastColumn();
     if (lastColCtx > 0) {
-        const headerVal = sheet.getRange(1, lastColCtx).getValue();
-        if (headerVal !== 'recurrence_id' && headerVal !== 'consent_timestamp') {
-            // If the last column isn't what we expect, maybe check if recurrence_id is missing
-            const headers = sheet.getRange(1, 1, 1, lastColCtx).getValues()[0];
-            if (headers.indexOf('recurrence_id') === -1) {
-                sheet.getRange(1, lastColCtx + 1).setValue('recurrence_id');
+        const headers = sheet.getRange(1, 1, 1, lastColCtx).getValues()[0];
+        const requiredHeaders = ['recurrence_id', 'table_id', 'is_admin_booking'];
+        let nextCol = lastColCtx + 1;
+        requiredHeaders.forEach(h => {
+            if (headers.indexOf(h) === -1) {
+                sheet.getRange(1, nextCol).setValue(h);
+                nextCol++;
             }
-        } else if (headerVal === 'consent_timestamp') {
-            // If consent_timestamp is last, append recurrence_id
-            sheet.getRange(1, lastColCtx + 1).setValue('recurrence_id');
-        }
+        });
     }
 
     const newRow = [
@@ -733,7 +728,7 @@ function appendBookingRow(sheet, id, payload, startDate, endDate, recurrenceId =
         formattedStartIso,
         formattedEndIso,
         payload.first_name, payload.last_name, payload.email,
-        payload.leader_first_name || '', payload.leader_last_name || '',
+        '', '', // leader_first_name, leader_last_name — deprecated, kept for backward compat
         payload.event, payload.room, payload.participants, 'confirmed',
         new Date(), payload.notes || '',
         payload.terms_accepted ? "TRUE" : "FALSE",
@@ -776,10 +771,16 @@ function handleCancelBooking(payload) {
                 if (data[i][statusIndex] === 'cancelled') throw new Error("Already cancelled.");
 
                 // --- DETECT ADMIN BOOKING ---
-                const leaderFirstIndex = headers.indexOf('leader_first_name');
-                const leaderFirstName = (leaderFirstIndex !== -1) ? data[i][leaderFirstIndex] : 'Unknown';
-                // Admin bookings have empty leader names
-                const isAdminBooking = (leaderFirstName === '' || leaderFirstName === null);
+                const isAdminCol = headers.indexOf('is_admin_booking');
+                const isAdminFlag = (isAdminCol !== -1) ? data[i][isAdminCol] : '';
+                let isAdminBooking;
+                if (isAdminCol !== -1) {
+                    isAdminBooking = (isAdminFlag === true || isAdminFlag === 'TRUE' || isAdminFlag === 'true');
+                } else {
+                    const leaderFirstIndex = headers.indexOf('leader_first_name');
+                    const leaderFirstName = (leaderFirstIndex !== -1) ? data[i][leaderFirstIndex] : 'Unknown';
+                    isAdminBooking = (leaderFirstName === '' || leaderFirstName === null);
+                }
 
                 if (isAdminBooking) {
                     // Admin Booking: MUST have Admin PIN. Ignore Booking Code.
@@ -849,7 +850,8 @@ function handleFetchAllBookings() {
             pax: headers.indexOf('participants'), status: headers.indexOf('status'),
             pax: headers.indexOf('participants'), status: headers.indexOf('status'),
             email: headers.indexOf('email'), recurrence: headers.indexOf('recurrence_id'),
-            leader_first: headers.indexOf('leader_first_name')
+            leader_first: headers.indexOf('leader_first_name'), table: headers.indexOf('table_id'),
+            is_admin: headers.indexOf('is_admin_booking')
         };
 
         if (idx.id !== -1 && idx.status !== -1) {
@@ -867,7 +869,9 @@ function handleFetchAllBookings() {
                         participants: row[idx.pax], // Return as participants
                         status: row[idx.status],
                         recurrence_id: idx.recurrence !== -1 ? row[idx.recurrence] : null,
-                        leader_first_name: idx.leader_first !== -1 ? row[idx.leader_first] : ''
+                        leader_first_name: idx.leader_first !== -1 ? row[idx.leader_first] : '',
+                        table_id: idx.table !== -1 ? row[idx.table] : null,
+                        is_admin_booking: idx.is_admin !== -1 ? (row[idx.is_admin] === true || row[idx.is_admin] === 'TRUE' || row[idx.is_admin] === 'true') : (idx.leader_first !== -1 ? (!row[idx.leader_first] || String(row[idx.leader_first]).trim() === '') : false)
                     };
                 });
         }

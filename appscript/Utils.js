@@ -31,7 +31,7 @@ function validateInput(data, rules, isAdmin) {
     if (isAdmin) {
         requiredFields = ['first_name', 'last_name', 'email', 'event', 'participants', 'start_iso', 'end_iso', 'room'];
     } else {
-        requiredFields = ['first_name', 'last_name', 'email', 'leader_first_name', 'leader_last_name', 'event', 'participants', 'start_iso', 'end_iso', 'room'];
+        requiredFields = ['first_name', 'last_name', 'email', 'event', 'participants', 'start_iso', 'end_iso', 'room'];
     }
     for (const field of requiredFields) {
         if (!data[field]) { return `Missing required field: ${field}.`; }
@@ -56,13 +56,9 @@ function validateInput(data, rules, isAdmin) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const maxDate = new Date(today);
-    if (isAdmin) {
-        maxDate.setMonth(maxDate.getMonth() + 6);
-    } else {
-        maxDate.setDate(maxDate.getDate() + 7);
-    }
+    maxDate.setMonth(maxDate.getMonth() + 6);
     if (start < today) return "Cannot create a booking in the past.";
-    if (start > maxDate) return isAdmin ? "Admins can only book up to 6 months in advance." : "Users can only book up to 7 days in advance.";
+    if (start > maxDate) return "Reservations can only be made up to 6 months in advance.";
     return null;
 }
 

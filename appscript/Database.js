@@ -76,24 +76,18 @@ function appendBookingRow(sheet, id, payload, startDate, endDate, recurrenceId =
     const formattedStartIso = Utilities.formatDate(startDate, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
     const formattedEndIso = Utilities.formatDate(endDate, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
 
-    // Ensure recurrence_id header exists (auto-migration)
+    // Ensure required headers exist (auto-migration)
     const lastColCtx = sheet.getLastColumn();
     if (lastColCtx > 0) {
-        const headerVal = sheet.getRange(1, lastColCtx).getValue();
-        if (headerVal !== 'recurrence_id' && headerVal !== 'consent_timestamp' && headerVal !== 'table_id') {
-            const headers = sheet.getRange(1, 1, 1, lastColCtx).getValues()[0];
-            if (headers.indexOf('recurrence_id') === -1) {
-                sheet.getRange(1, lastColCtx + 1).setValue('recurrence_id');
-                sheet.getRange(1, lastColCtx + 2).setValue('table_id');
-            } else if (headers.indexOf('table_id') === -1) {
-                sheet.getRange(1, lastColCtx + 1).setValue('table_id');
+        const headers = sheet.getRange(1, 1, 1, lastColCtx).getValues()[0];
+        const requiredHeaders = ['recurrence_id', 'table_id', 'is_admin_booking'];
+        let nextCol = lastColCtx + 1;
+        requiredHeaders.forEach(h => {
+            if (headers.indexOf(h) === -1) {
+                sheet.getRange(1, nextCol).setValue(h);
+                nextCol++;
             }
-        } else if (headerVal === 'consent_timestamp') {
-            sheet.getRange(1, lastColCtx + 1).setValue('recurrence_id');
-            sheet.getRange(1, lastColCtx + 2).setValue('table_id');
-        } else if (headerVal === 'recurrence_id') {
-            sheet.getRange(1, lastColCtx + 1).setValue('table_id');
-        }
+        });
     }
 
     const newRow = [
@@ -102,14 +96,15 @@ function appendBookingRow(sheet, id, payload, startDate, endDate, recurrenceId =
         formattedStartIso,
         formattedEndIso,
         payload.first_name, payload.last_name, payload.email,
-        payload.leader_first_name || '', payload.leader_last_name || '',
+        '', '', // leader_first_name, leader_last_name — deprecated, kept for backward compat
         payload.event, payload.room, payload.participants, 'confirmed',
         new Date(), payload.notes || '',
         payload.terms_accepted ? "TRUE" : "FALSE",
         payload.privacy_accepted ? "TRUE" : "FALSE",
         payload.consent_timestamp || '',
         recurrenceId || '',
-        payload.table_id || ''
+        payload.table_id || '',
+        payload.is_admin_booking ? "TRUE" : "FALSE"
     ];
     sheet.appendRow(newRow);
 }

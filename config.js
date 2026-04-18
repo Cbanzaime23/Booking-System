@@ -11,7 +11,7 @@ window.APP_CONFIG = {
    * The URL of your deployed Google Apps Script Web App.
    * This is the ONLY gateway to your data — all reads and writes go through here.
    */
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxomdnHqbAr1EbccA0Obx1hnnU_RicctThe7dF03QSchomgGjzxrO4V97aka_VerUy2/exec',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxJZ_FOVe_kvUjiSwLtIeX4Gmz6l6rqL3xJ_SrQF_812hf0tQ2_b4VkMGo54hrPfbbB/exec',
 
   /**
    * The public URL where the Booking System is hosted.

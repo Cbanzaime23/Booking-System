@@ -175,15 +175,13 @@ function isNameInDleadersList(listData, inputFirst, inputLast) {
 
 /**
  * High-level orchestration function called prior to booking creation.
- * Validates BOTH the Reserver and the stated DGroup Leader against the external list.
+ * Validates the Reserver's name against the external DLeaders list.
  *
  * @param {string} reserverFirst - The user's first name.
  * @param {string} reserverLast - The user's last name.
- * @param {string} leaderFirst - The user's stated DGroup Leader's first name.
- * @param {string} leaderLast - The user's stated DGroup Leader's last name.
  * @returns {Object} { passed: boolean, reason?: string }
  */
-function validateNamesAgainstList(reserverFirst, reserverLast, leaderFirst, leaderLast) {
+function validateNamesAgainstList(reserverFirst, reserverLast) {
     try {
         const listData = fetchAndCacheDleadersList();
 
@@ -194,17 +192,6 @@ function validateNamesAgainstList(reserverFirst, reserverLast, leaderFirst, lead
                 passed: false,
                 reason: `Reserver '${reserverFirst} ${reserverLast}' does not match the CCF Manila Dleaders List.`
             };
-        }
-
-        // Check leader if provided (Non-Admins must provide leader first/last)
-        if (leaderFirst && leaderLast) {
-            const leaderPasses = isNameInDleadersList(listData, leaderFirst, leaderLast);
-            if (!leaderPasses) {
-                return {
-                    passed: false,
-                    reason: `Stated Leader '${leaderFirst} ${leaderLast}' does not match the CCF Manila Dleaders List.`
-                };
-            }
         }
 
         return { passed: true };

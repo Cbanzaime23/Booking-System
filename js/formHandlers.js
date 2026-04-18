@@ -104,8 +104,7 @@ function extractBookingFormData(formElement) {
         lastName: sanitizeInput(formData.get('last_name')),
         email: sanitizeInput(formData.get('email')),
         confirmEmail: sanitizeInput(formData.get('confirm_email')),
-        leaderFirstName: sanitizeInput(formData.get('leader_first_name')),
-        leaderLastName: sanitizeInput(formData.get('leader_last_name')),
+
         event: sanitizeInput(formData.get('event')),
         participants: parseInt(formData.get('participants'), 10),
         endTimeStr: formData.get('end-time'),
@@ -189,8 +188,7 @@ function buildBookingPayload(data) {
         first_name: data.firstName,
         last_name: data.lastName,
         email: data.email,
-        leader_first_name: data.isAdmin ? '' : data.leaderFirstName,
-        leader_last_name: data.isAdmin ? '' : data.leaderLastName,
+
         event: data.event,
         participants: data.participants,
         notes: data.notes,
@@ -235,9 +233,7 @@ function populateBookingSummary(payload) {
         document.getElementById('summary-table-row').classList.remove('flex');
     }
 
-    document.getElementById('summary-leader').textContent = payload.leader_first_name
-        ? `${payload.leader_first_name} ${payload.leader_last_name}`
-        : 'N/A (Admin)';
+
     document.getElementById('summary-date').textContent = startTime.toFormat('DDD');
     document.getElementById('summary-time').textContent = `${startTime.toFormat('h:mm a')} - ${endTime.toFormat('h:mm a')} (${durationText})`;
     document.getElementById('summary-participants').textContent = `${payload.participants} participants`;
@@ -370,7 +366,7 @@ export function handleCancelFormSubmit(e) {
     }
 
     const booking = state.allBookings.find(b => b.id == bookingId);
-    const isAdminBooking = booking && !booking.leader_first_name;
+    const isAdminBooking = booking && booking.is_admin_booking;
 
     if (isAdminBooking) {
         if (!adminPin) {

@@ -1824,13 +1824,13 @@
             const now = DateTime.now().setZone(APP_CONFIG.TIMEZONE);
             const horizonEnd = now.plus({ days: 7 }).endOf('day');
 
-            // Filter: Next 7 days + Admin Bookings (leader_first_name is empty)
+            // Filter: Next 7 days + Admin Bookings (is_admin_booking flag)
             const adminEvents = data.filter(b => {
                 const bStart = parseDate(b.start_iso);
                 if (!bStart.isValid) return false;
 
-                // Admin check: No leader first name
-                const isAdminBooking = !b.leader_first_name || b.leader_first_name.trim() === '';
+                // Admin check: uses the is_admin_booking flag
+                const isAdminBooking = b.is_admin_booking === true || b.is_admin_booking === 'TRUE' || b.is_admin_booking === 'true' || (!b.leader_first_name || (typeof b.leader_first_name === 'string' && b.leader_first_name.trim() === ''));
 
                 return isAdminBooking && bStart >= now.startOf('day') && bStart <= horizonEnd;
             }).sort((a, b) => parseDate(a.start_iso) - parseDate(b.start_iso));
