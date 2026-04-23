@@ -40,7 +40,7 @@ function handleCreateBooking(payload) {
 
         // Check blocked dates
         const blockedDates = getBlockedDates(ss);
-        const isBlocked = checkIsBlocked(newStart, requestedRoom, blockedDates);
+        const isBlocked = checkIsBlocked(newStart, requestedRoom, blockedDates, newEnd);
         if (isBlocked) throw new Error(`The room ${requestedRoom} is closed on this date: ${isBlocked.reason}`);
 
         const allBookings = getActiveBookings(sheet);
@@ -209,7 +209,7 @@ function handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoo
             if (i > 0) { failCount++; continue; }
         }
 
-        if (checkIsBlocked(iterStart, payload.room, blockedDates)) {
+        if (checkIsBlocked(iterStart, payload.room, blockedDates, iterEnd)) {
             failCount++;
             continue;
         }
@@ -553,6 +553,7 @@ function handleFetchUserBookings(payload) {
 
 /**
  * Blocks a date and auto-cancels all existing bookings on that date.
+ * Supports multi-room (rooms array) and optional time range.
  */
 function handleBlockDate(payload) {
     if (payload.adminPin !== ADMIN_PIN) {
@@ -561,15 +562,37 @@ function handleBlockDate(payload) {
 
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
-    // Add blocked date entry
+    // Resolve rooms: accept 'rooms' array or single 'room' string for backward compat
+    let roomList;
+    if (payload.rooms && Array.isArray(payload.rooms) && payload.rooms.length > 0) {
+        roomList = payload.rooms;
+    } else {
+        roomList = [payload.room || 'All Rooms'];
+    }
+
+    // Optional time range
+    const startTime = (payload.start_time || '').trim();
+    const endTime = (payload.end_time || '').trim();
+
+    // Add blocked date entries (one row per room)
     let blockedSheet = ss.getSheetByName(BLOCKED_SHEET_NAME);
     if (!blockedSheet) {
         blockedSheet = ss.insertSheet(BLOCKED_SHEET_NAME);
-        blockedSheet.appendRow(["Date", "Room", "Reason"]);
+        blockedSheet.appendRow(["Date", "Room", "Reason", "Start Time", "End Time"]);
+    } else {
+        // Auto-migrate: add Start Time / End Time headers if missing
+        const headers = blockedSheet.getRange(1, 1, 1, blockedSheet.getLastColumn()).getValues()[0];
+        if (headers.indexOf('Start Time') === -1) {
+            blockedSheet.getRange(1, headers.length + 1).setValue('Start Time');
+            blockedSheet.getRange(1, headers.length + 2).setValue('End Time');
+        }
     }
-    blockedSheet.appendRow([payload.date, payload.room, payload.reason]);
 
-    // Find and cancel all confirmed bookings on this date
+    roomList.forEach(room => {
+        blockedSheet.appendRow([payload.date, room, payload.reason, startTime, endTime]);
+    });
+
+    // Find and cancel all confirmed bookings on this date for the blocked rooms/times
     const bookingsSheet = ss.getSheetByName(SHEET_NAME);
     if (!bookingsSheet) {
         return { success: true, message: "Date blocked successfully. No bookings sheet found to check.", cancelledCount: 0 };
@@ -594,8 +617,20 @@ function handleBlockDate(payload) {
     }
 
     const blockedDateStr = payload.date;
-    const blockedRoom = payload.room;
     const reason = payload.reason;
+    const isAllRooms = roomList.includes('All Rooms');
+
+    // Parse blocked time range into minutes for overlap checking
+    let blockedStartMinutes = 0;
+    let blockedEndMinutes = 1440; // full day by default
+    const hasTimeRange = startTime && endTime;
+    if (hasTimeRange) {
+        const [sH, sM] = startTime.split(':').map(Number);
+        const [eH, eM] = endTime.split(':').map(Number);
+        blockedStartMinutes = sH * 60 + sM;
+        blockedEndMinutes = eH * 60 + eM;
+    }
+
     const cancelledBookings = [];
 
     for (let i = 1; i < data.length; i++) {
@@ -604,21 +639,41 @@ function handleBlockDate(payload) {
 
         let bookingStartIso = row[startIsoIndex];
         let bookingDateStr;
+        let bookingStartDate;
         if (bookingStartIso instanceof Date) {
+            bookingStartDate = bookingStartIso;
             bookingDateStr = Utilities.formatDate(bookingStartIso, SCRIPT_TIMEZONE, "yyyy-MM-dd");
             bookingStartIso = Utilities.formatDate(bookingStartIso, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss");
         } else {
             const cleanIso = String(bookingStartIso).replace(/Z$/i, '');
-            const parsed = new Date(cleanIso);
-            if (!isNaN(parsed.getTime())) {
-                bookingDateStr = Utilities.formatDate(parsed, SCRIPT_TIMEZONE, "yyyy-MM-dd");
+            bookingStartDate = new Date(cleanIso);
+            if (!isNaN(bookingStartDate.getTime())) {
+                bookingDateStr = Utilities.formatDate(bookingStartDate, SCRIPT_TIMEZONE, "yyyy-MM-dd");
             } else {
                 bookingDateStr = String(bookingStartIso).substring(0, 10);
             }
         }
 
         if (bookingDateStr !== blockedDateStr) continue;
-        if (blockedRoom !== 'All Rooms' && row[roomIndex] !== blockedRoom) continue;
+        if (!isAllRooms && !roomList.includes(row[roomIndex])) continue;
+
+        // Time overlap check when time range is specified
+        if (hasTimeRange) {
+            let bookingEndIso = row[endIsoIndex];
+            let bookingEndDate;
+            if (bookingEndIso instanceof Date) {
+                bookingEndDate = bookingEndIso;
+            } else {
+                bookingEndDate = new Date(String(bookingEndIso).replace(/Z$/i, ''));
+            }
+
+            const bStartMin = bookingStartDate.getHours() * 60 + bookingStartDate.getMinutes();
+            let bEndMin = bookingEndDate.getHours() * 60 + bookingEndDate.getMinutes();
+            if (bEndMin === 0) bEndMin = 1440; // midnight = end of day
+
+            // No overlap → skip
+            if (!(bStartMin < blockedEndMinutes && blockedStartMinutes < bEndMin)) continue;
+        }
 
         // Cancel this booking
         bookingsSheet.getRange(i + 1, statusIndex + 1).setValue('cancelled');
@@ -630,8 +685,9 @@ function handleBlockDate(payload) {
 
         logActivity('Auto-Cancel (Blocked Date)', row[idIndex], 'SYSTEM', {
             reason: reason,
-            blockedRoom: blockedRoom,
-            blockedDate: blockedDateStr
+            blockedRooms: roomList.join(', '),
+            blockedDate: blockedDateStr,
+            blockedTime: hasTimeRange ? `${startTime}-${endTime}` : 'All Day'
         });
 
         let endIsoVal = row[endIsoIndex];
@@ -665,6 +721,7 @@ function handleBlockDate(payload) {
 
     const cancelledCount = cancelledBookings.length;
     const cancelledEvents = cancelledBookings.map(b => b.event);
+    const roomsLabel = roomList.join(', ');
     let message = "Date blocked successfully.";
     if (cancelledCount > 0) {
         message += ` ${cancelledCount} existing booking(s) were automatically cancelled and affected users have been notified via email.`;
@@ -726,12 +783,14 @@ function handleDeleteBlockedDate(payload) {
 
     try {
         const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-        deleteBlockedDateRow(ss, payload.date, payload.room, payload.reason);
+        deleteBlockedDateRow(ss, payload.date, payload.room, payload.reason, payload.start_time || '', payload.end_time || '');
         
         logActivity('Delete Blocked Date', null, 'ADMIN', {
             date: payload.date,
             room: payload.room,
-            reason: payload.reason
+            reason: payload.reason,
+            start_time: payload.start_time || '',
+            end_time: payload.end_time || ''
         });
 
         return { success: true, message: "Blocked date removed successfully." };

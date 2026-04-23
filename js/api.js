@@ -236,7 +236,9 @@ export async function fetchAllBookings(updateFreshnessDisplay) {
                 state.blockedDates = (response.blocked_dates || []).map(d => ({
                     date: d.date,
                     room: d.room,
-                    reason: d.reason
+                    reason: d.reason,
+                    start_time: d.start_time || '',
+                    end_time: d.end_time || ''
                 }));
 
                 // Store reservation window settings

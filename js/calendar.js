@@ -181,7 +181,20 @@ export function renderBookingsForSelectedRoom() {
         const blockedInfo = state.blockedDates && state.blockedDates.find(d => {
             const dateMatch = d.date === slotDateStr;
             const roomMatch = d.room === "All Rooms" || d.room === state.selectedRoom;
-            return dateMatch && roomMatch;
+            if (!dateMatch || !roomMatch) return false;
+
+            // Time-range check: if the block has start/end times, only block overlapping slots
+            if (d.start_time && d.end_time) {
+                const slotStartMinutes = slotStart.hour * 60 + slotStart.minute;
+                const slotEndMinutes = slotEnd.hour * 60 + slotEnd.minute;
+                const [bStartH, bStartM] = d.start_time.split(':').map(Number);
+                const [bEndH, bEndM] = d.end_time.split(':').map(Number);
+                const blockedStartMin = bStartH * 60 + bStartM;
+                const blockedEndMin = bEndH * 60 + bEndM;
+                // Overlap: slot_start < blocked_end AND blocked_start < slot_end
+                return slotStartMinutes < blockedEndMin && blockedStartMin < slotEndMinutes;
+            }
+            return true; // No times = all day blocked
         });
 
         if (blockedInfo) {

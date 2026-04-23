@@ -83,6 +83,8 @@ export const EVENT_OPTIONS = {
         { name: "Ministry Event - MOVEMENT", setsMaxCapacity: true },
         { name: "Ministry Event - ACROSS Family Ministry", setsMaxCapacity: true },
         { name: "Ministry Event - NXTGEN", setsMaxCapacity: true },
+        { name: "Ministry Event - Ad Hoc Event", setsMaxCapacity: true },
+        { name: "Ministry Event - Sports", setsMaxCapacity: true },
         { name: "Sunday Service", setsMaxCapacity: true }
     ]
 };

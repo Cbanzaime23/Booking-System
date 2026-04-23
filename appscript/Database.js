@@ -136,9 +136,10 @@ function findConcurrentBookings(newStart, newEnd, allBookings, roomName) {
 
 /**
  * Reads all blocked date entries from the BlockedDates sheet.
+ * Supports optional Start Time and End Time columns (backward-compatible).
  *
  * @param {Spreadsheet} ss - The spreadsheet reference.
- * @returns {Array<{date: string, room: string, reason: string}>} Array of blocked date objects.
+ * @returns {Array<{date: string, room: string, reason: string, start_time: string, end_time: string}>} Array of blocked date objects.
  */
 function getBlockedDates(ss) {
     const sheet = ss.getSheetByName(BLOCKED_SHEET_NAME);
@@ -152,28 +153,72 @@ function getBlockedDates(ss) {
         if (dateStr instanceof Date) {
             dateStr = Utilities.formatDate(dateStr, SCRIPT_TIMEZONE, "yyyy-MM-dd");
         }
+
+        // Read optional time columns (col 3 = Start Time, col 4 = End Time)
+        let startTime = row[3] || '';
+        let endTime = row[4] || '';
+        if (startTime instanceof Date) {
+            startTime = Utilities.formatDate(startTime, SCRIPT_TIMEZONE, "HH:mm");
+        } else {
+            startTime = String(startTime).trim();
+        }
+        if (endTime instanceof Date) {
+            endTime = Utilities.formatDate(endTime, SCRIPT_TIMEZONE, "HH:mm");
+        } else {
+            endTime = String(endTime).trim();
+        }
+
         return {
             date: dateStr,
             room: row[1],
-            reason: row[2]
+            reason: row[2],
+            start_time: startTime,
+            end_time: endTime
         };
     });
 }
 
 /**
- * Checks if a specific date and room combination is blocked.
+ * Checks if a specific date/time and room combination is blocked.
+ * If the blocked entry has start_time/end_time, checks for time overlap.
+ * If no times are set, the entire day is blocked.
  *
- * @param {Date}   dateObj      - The date to check.
+ * @param {Date}   dateObj      - The booking start date/time to check.
  * @param {string} roomName     - The room to check.
  * @param {Array}  blockedDates - Array of blocked date objects from getBlockedDates.
+ * @param {Date}   [endDateObj] - Optional booking end date/time for time-range overlap check.
  * @returns {Object|undefined} The matching blocked date entry, or undefined if not blocked.
  */
-function checkIsBlocked(dateObj, roomName, blockedDates) {
+function checkIsBlocked(dateObj, roomName, blockedDates, endDateObj) {
     const dateStr = Utilities.formatDate(dateObj, SCRIPT_TIMEZONE, "yyyy-MM-dd");
     return blockedDates.find(b => {
         if (b.date !== dateStr) return false;
-        if (b.room === "All Rooms" || b.room === roomName) return true;
-        return false;
+        if (b.room !== "All Rooms" && b.room !== roomName) return false;
+
+        // If the blocked entry has time range, check for overlap
+        if (b.start_time && b.end_time) {
+            const bookingStartMinutes = dateObj.getHours() * 60 + dateObj.getMinutes();
+            const [bStartH, bStartM] = b.start_time.split(':').map(Number);
+            const [bEndH, bEndM] = b.end_time.split(':').map(Number);
+            const blockedStartMinutes = bStartH * 60 + bStartM;
+            const blockedEndMinutes = bEndH * 60 + bEndM;
+
+            let bookingEndMinutes;
+            if (endDateObj) {
+                bookingEndMinutes = endDateObj.getHours() * 60 + endDateObj.getMinutes();
+                // Handle midnight crossover
+                if (bookingEndMinutes === 0) bookingEndMinutes = 1440;
+            } else {
+                // If no end time provided, assume 1-hour booking
+                bookingEndMinutes = bookingStartMinutes + 60;
+            }
+
+            // Standard overlap check: two ranges overlap if start1 < end2 AND start2 < end1
+            return bookingStartMinutes < blockedEndMinutes && blockedStartMinutes < bookingEndMinutes;
+        }
+
+        // No time range = entire day is blocked
+        return true;
     });
 }
 
@@ -417,14 +462,17 @@ function isReservationWindowCurrentlyOpen(windowSettings) {
 }
 /**
  * Deletes a matching blocked date entry from the BlockedDates sheet.
+ * Matches on date, room, reason, and optionally start_time/end_time.
  *
- * @param {Spreadsheet} ss     - The spreadsheet reference.
- * @param {string}      date   - The date to match.
- * @param {string}      room   - The room to match.
- * @param {string}      reason - The reason to match.
+ * @param {Spreadsheet} ss         - The spreadsheet reference.
+ * @param {string}      date       - The date to match.
+ * @param {string}      room       - The room to match.
+ * @param {string}      reason     - The reason to match.
+ * @param {string}      [startTime] - The start time to match (optional).
+ * @param {string}      [endTime]   - The end time to match (optional).
  * @throws {Error} If the blocked dates sheet is missing or the entry is not found.
  */
-function deleteBlockedDateRow(ss, date, room, reason) {
+function deleteBlockedDateRow(ss, date, room, reason, startTime, endTime) {
     const sheet = ss.getSheetByName(BLOCKED_SHEET_NAME);
     if (!sheet) throw new Error("BlockedDates sheet not found.");
 
@@ -440,7 +488,24 @@ function deleteBlockedDateRow(ss, date, room, reason) {
         const rowRoom = data[i][1];
         const rowReason = data[i][2];
 
-        if (rowDate === date && rowRoom === room && rowReason === reason) {
+        // Normalize time values for comparison
+        let rowStartTime = data[i][3] || '';
+        let rowEndTime = data[i][4] || '';
+        if (rowStartTime instanceof Date) {
+            rowStartTime = Utilities.formatDate(rowStartTime, SCRIPT_TIMEZONE, "HH:mm");
+        } else {
+            rowStartTime = String(rowStartTime).trim();
+        }
+        if (rowEndTime instanceof Date) {
+            rowEndTime = Utilities.formatDate(rowEndTime, SCRIPT_TIMEZONE, "HH:mm");
+        } else {
+            rowEndTime = String(rowEndTime).trim();
+        }
+
+        const matchStartTime = (startTime || '') === rowStartTime;
+        const matchEndTime = (endTime || '') === rowEndTime;
+
+        if (rowDate === date && rowRoom === room && rowReason === reason && matchStartTime && matchEndTime) {
             sheet.deleteRow(i + 1);
             return;
         }

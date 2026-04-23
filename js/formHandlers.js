@@ -287,7 +287,17 @@ export function handleBookingFormSubmit(e) {
         const meetsSizeRules = (participants >= mainHallRules.MIN_BOOKING_SIZE) && (participants <= mainHallRules.MAX_BOOKING_SIZE);
 
         const isMainHallBlocked = state.blockedDates && state.blockedDates.some(d => {
-            return d.date === startLux.toISODate() && (d.room === "All Rooms" || d.room === "Main Hall");
+            if (d.date !== startLux.toISODate()) return false;
+            if (d.room !== "All Rooms" && d.room !== "Main Hall") return false;
+            // Time-range check
+            if (d.start_time && d.end_time) {
+                const bookStartMin = startLux.hour * 60 + startLux.minute;
+                const bookEndMin = endLux.hour * 60 + endLux.minute;
+                const [bsH, bsM] = d.start_time.split(':').map(Number);
+                const [beH, beM] = d.end_time.split(':').map(Number);
+                return bookStartMin < (beH * 60 + beM) && (bsH * 60 + bsM) < bookEndMin;
+            }
+            return true; // All day block
         });
 
         if (canFitGroup && canFitPax && meetsSizeRules && !isMainHallBlocked) {
