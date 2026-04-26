@@ -1,6 +1,6 @@
 # CCF Manila Room Reservation System
 
-![Version](https://img.shields.io/badge/version-1.6-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 ![Tech](https://img.shields.io/badge/stack-HTML%20%7C%20JS%20%7C%20Google%20Apps%20Script-orange)
 
@@ -28,7 +28,7 @@ A comprehensive, serverless room reservation web application designed for **CCF 
 *   **Smart Form Validation**:
     *   **Typo Detection**: "Confirm Email" field warns users of common typos (e.g., "gmial.com").
     *   **Logic Checks**: Prevents invalid times, past dates, or exceeding capacity.
-    *   **Date Window Enforcement**: Blocks bookings less than 72 hours before the event, and caps standard users at 7 or 180 days advance notice.
+    *   **Date Window Enforcement**: Enforces advance booking limits and reservation window scheduling.
 *   **Consent Management**: Mandatory Housekeeping Rules and Privacy Policy checkboxes.
 *   **Mobile-First Design**: Fully responsive layout that adapts to desktops, tablets, and mobile phones.
 
@@ -286,9 +286,24 @@ graph TD
 
 ## 📖 Documentation
 
-*   **User Manual (Text Version)**: [User Manual/USER_MANUAL.md](./User%20Manual/USER_MANUAL.md)
+> **📚 Full Documentation Hub:** [project-docs/index.md](./project-docs/index.md)
+
+### For Users
+*   **User Manual**: [project-docs/user/USER_MANUAL.md](./project-docs/user/USER_MANUAL.md)
 *   **User Guide (Presentation)**: [Google Slides Version](https://docs.google.com/presentation/d/1oNwuIu89BxDH1aAoz8RPQeR73xltX3wS6vVrT3Pdvnc/edit?slide=id.g3bf48505da8_0_25#slide=id.g3bf48505da8_0_25)
-*   **Developer Guide**: [Documentation/DEVELOPER_GUIDE.md](./Documentation/DEVELOPER_GUIDE.md)
+
+### For Developers
+*   **Developer Guide**: [project-docs/developer/DEVELOPER_GUIDE.md](./project-docs/developer/DEVELOPER_GUIDE.md)
+*   **API Reference**: [project-docs/developer/API_REFERENCE.md](./project-docs/developer/API_REFERENCE.md)
+*   **Deployment Guide**: [project-docs/developer/DEPLOYMENT_GUIDE.md](./project-docs/developer/DEPLOYMENT_GUIDE.md)
+*   **Design System**: [project-docs/developer/DESIGN_SYSTEM.md](./project-docs/developer/DESIGN_SYSTEM.md)
+
+### Architecture
+*   **Process Flow (Diagram)**: [project-docs/architecture/PROCESS_FLOW_DIAGRAM.md](./project-docs/architecture/PROCESS_FLOW_DIAGRAM.md)
+*   **Process Flow (Table)**: [project-docs/architecture/PROCESS_FLOW_TABLE.md](./project-docs/architecture/PROCESS_FLOW_TABLE.md)
+
+### Changelog
+*   **Version History**: [project-docs/CHANGELOG.md](./project-docs/CHANGELOG.md)
 
 ### 📲 QR Codes
 You can find scannable QR codes for the system in the `img/` directory:
