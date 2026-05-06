@@ -85,12 +85,43 @@ export function submitRequest(action, payload) {
                 document.getElementById('success-booking-code').textContent = bookingCode;
                 document.getElementById('success-room-name').textContent = roomDisplayText;
 
-                const startDate = window.luxon.DateTime.fromISO(data.start_iso, { zone: window.APP_CONFIG.TIMEZONE || 'Asia/Manila' });
-                const endDate = window.luxon.DateTime.fromISO(data.end_iso, { zone: window.APP_CONFIG.TIMEZONE || 'Asia/Manila' });
+                const startDate = window.luxon.DateTime.fromISO(data.start_iso || payload?.start_iso, { zone: window.APP_CONFIG.TIMEZONE || 'Asia/Manila' });
+                const endDate = window.luxon.DateTime.fromISO(data.end_iso || payload?.end_iso, { zone: window.APP_CONFIG.TIMEZONE || 'Asia/Manila' });
 
-                document.getElementById('success-date').textContent = startDate.toFormat('MMMM d, yyyy');
-                document.getElementById('success-day').textContent = startDate.toFormat('cccc');
-                document.getElementById('success-time').textContent = `${startDate.toFormat('h:mm a')} - ${endDate.toFormat('h:mm a')}`;
+                if (startDate.isValid && endDate.isValid) {
+                    document.getElementById('success-date').textContent = startDate.toFormat('MMMM d, yyyy');
+                    document.getElementById('success-day').textContent = startDate.toFormat('cccc');
+                    const diffMinutes = endDate.diff(startDate, 'minutes').minutes;
+                    const hours = Math.floor(diffMinutes / 60);
+                    const minutes = Math.floor(diffMinutes % 60);
+                    let durationStr = '';
+                    if (hours > 0 && minutes > 0) {
+                        durationStr = ` (${hours} hour${hours > 1 ? 's' : ''} ${minutes} min${minutes > 1 ? 's' : ''})`;
+                    } else if (hours > 0) {
+                        durationStr = ` (${hours} hour${hours > 1 ? 's' : ''})`;
+                    } else {
+                        durationStr = ` (${minutes} min${minutes > 1 ? 's' : ''})`;
+                    }
+
+                    document.getElementById('success-time').textContent = `${startDate.toFormat('h:mm a')} - ${endDate.toFormat('h:mm a')}${durationStr}`;
+                } else {
+                    document.getElementById('success-date').textContent = 'Date varies';
+                    document.getElementById('success-day').textContent = '-';
+                    document.getElementById('success-time').textContent = 'Time varies';
+                }
+
+                const fullName = payload?.first_name ? `${payload.first_name} ${payload.last_name}` : (data.name || document.getElementById('first_name')?.value + ' ' + document.getElementById('last_name')?.value);
+                const eventName = payload?.event || data.event || document.getElementById('event')?.value;
+                const groupSize = payload?.participants || data.participants || document.getElementById('participants')?.value;
+
+                const successNameEl = document.getElementById('success-name');
+                if (successNameEl) successNameEl.textContent = fullName;
+                
+                const successEventEl = document.getElementById('success-event');
+                if (successEventEl) successEventEl.textContent = eventName;
+                
+                const successGroupSizeEl = document.getElementById('success-group-size');
+                if (successGroupSizeEl) successGroupSizeEl.textContent = groupSize ? `${groupSize} participants` : '';
 
                 const redirectMsgEl = document.getElementById('success-redirect-message');
                 if (data.message.includes('Recurrent')) {
@@ -102,12 +133,12 @@ export function submitRequest(action, payload) {
                 }
 
                 onRenderCalendarButtons({
-                    id: data.id,
-                    event: data.event || document.getElementById('event').value,
-                    room: data.room,
-                    start_iso: data.start_iso,
-                    end_iso: data.end_iso,
-                    notes: document.getElementById('notes')?.value || ''
+                    id: data.id || payload?.id,
+                    event: data.event || payload?.event || document.getElementById('event')?.value,
+                    room: data.room || payload?.room,
+                    start_iso: data.start_iso || payload?.start_iso,
+                    end_iso: data.end_iso || payload?.end_iso,
+                    notes: payload?.notes || document.getElementById('notes')?.value || ''
                 });
 
                 if (elements.successModal) elements.successModal.showModal();
