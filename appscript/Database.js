@@ -80,7 +80,7 @@ function appendBookingRow(sheet, id, payload, startDate, endDate, recurrenceId =
     const lastColCtx = sheet.getLastColumn();
     if (lastColCtx > 0) {
         const headers = sheet.getRange(1, 1, 1, lastColCtx).getValues()[0];
-        const requiredHeaders = ['recurrence_id', 'table_id', 'is_admin_booking'];
+        const requiredHeaders = ['recurrence_id', 'table_id', 'is_admin_booking', 'idempotency_key'];
         let nextCol = lastColCtx + 1;
         requiredHeaders.forEach(h => {
             if (headers.indexOf(h) === -1) {
@@ -104,7 +104,8 @@ function appendBookingRow(sheet, id, payload, startDate, endDate, recurrenceId =
         payload.consent_timestamp || '',
         recurrenceId || '',
         payload.table_id || '',
-        payload.is_admin_booking ? "TRUE" : "FALSE"
+        payload.is_admin_booking ? "TRUE" : "FALSE",
+        payload.idempotency_key || ''
     ];
     sheet.appendRow(newRow);
 }

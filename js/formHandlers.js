@@ -200,7 +200,8 @@ function buildBookingPayload(data) {
         terms_accepted: data.termsChecked,
         privacy_accepted: data.privacyChecked,
         consent_timestamp: DateTime.local().setZone(window.APP_CONFIG.TIMEZONE).toISO(),
-        app_url: window.APP_CONFIG.PUBLIC_APP_URL || (window.location.origin + window.location.pathname)
+        app_url: window.APP_CONFIG.PUBLIC_APP_URL || (window.location.origin + window.location.pathname),
+        idempotency_key: crypto.randomUUID()
     };
 }
 

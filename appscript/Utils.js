@@ -17,6 +17,61 @@ function generateUUID() {
 }
 
 /**
+ * Parses any ISO date string into a millisecond timestamp for reliable comparison.
+ * Handles the format mismatch between frontend Luxon ISO strings
+ * (e.g. '2026-05-19T19:30:00.000+08:00') and backend-stored strings
+ * (e.g. '2026-05-19T19:30:00Z' where Z is actually Manila local time).
+ *
+ * @param {string|Date} isoValue - The ISO string or Date object to parse.
+ * @returns {number} Millisecond timestamp, or NaN if unparseable.
+ */
+function parseIsoToTimestamp(isoValue) {
+    if (isoValue instanceof Date) return isoValue.getTime();
+    const str = String(isoValue);
+
+    // If the string has a real timezone offset (e.g. +08:00), parse directly
+    if (/[+-]\d{2}:\d{2}$/.test(str)) {
+        return new Date(str).getTime();
+    }
+
+    // Otherwise strip the misleading 'Z' suffix and treat as Manila local (+08:00)
+    const cleaned = str.replace(/Z$/i, '');
+    return new Date(cleaned + '+08:00').getTime();
+}
+
+/**
+ * Scans the Bookings sheet for an existing row with the given idempotency key.
+ * Used to prevent retry-induced duplicate bookings.
+ *
+ * @param {Sheet}  sheet          - The Bookings sheet reference.
+ * @param {string} idempotencyKey - The unique key to search for.
+ * @returns {Object|null} Matching booking data {id, room, table_id}, or null if not found.
+ */
+function findIdempotencyKey(sheet, idempotencyKey) {
+    if (!idempotencyKey) return null;
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const keyCol = headers.indexOf('idempotency_key');
+    if (keyCol === -1) return null;
+
+    const idCol = headers.indexOf('id');
+    const roomCol = headers.indexOf('room');
+    const statusCol = headers.indexOf('status');
+    const tableCol = headers.indexOf('table_id');
+
+    for (let i = 1; i < data.length; i++) {
+        if (data[i][keyCol] === idempotencyKey && data[i][statusCol] === 'confirmed') {
+            return {
+                id: data[i][idCol],
+                room: data[i][roomCol],
+                table_id: tableCol !== -1 ? data[i][tableCol] : ''
+            };
+        }
+    }
+    return null;
+}
+
+/**
  * Server-side input validation for booking payloads.
  * Checks required fields, group size limits, email format, date validity,
  * and advance-booking restrictions (7 days for users, 6 months for admins).

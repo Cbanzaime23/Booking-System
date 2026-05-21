@@ -38,6 +38,24 @@ function handleCreateBooking(payload) {
         const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
         const sheet = ss.getSheetByName(SHEET_NAME);
 
+        // Idempotency guard: reject duplicate submissions from frontend retries
+        if (payload.idempotency_key) {
+            const idempotencyMatch = findIdempotencyKey(sheet, payload.idempotency_key);
+            if (idempotencyMatch) {
+                // Return success with the original booking data so the UI behaves correctly
+                return {
+                    success: true,
+                    message: 'Booking confirmed!',
+                    id: idempotencyMatch.id,
+                    bookedRoom: idempotencyMatch.room,
+                    table_id: idempotencyMatch.table_id,
+                    requestedRoom: payload.original_room || idempotencyMatch.room,
+                    start_iso: payload.start_iso,
+                    end_iso: payload.end_iso
+                };
+            }
+        }
+
         // Check blocked dates
         const blockedDates = getBlockedDates(ss);
         const isBlocked = checkIsBlocked(newStart, requestedRoom, blockedDates, newEnd);
@@ -91,12 +109,12 @@ function handleCreateBooking(payload) {
             return handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoom, blockedDates);
         }
 
-        // Duplicate booking detection
-        const payloadStartIso = String(payload.start_iso).replace(/Z$/i, '');
+        // Duplicate booking detection (timestamp-based, not string-based)
+        const payloadStartTime = parseIsoToTimestamp(payload.start_iso);
         const existingDuplicate = allBookings.find(b => {
-            const bStartClean = String(b.start_iso).replace(/Z$/i, '');
+            const bStartTime = parseIsoToTimestamp(b.start_iso);
             return b.email && b.email.toLowerCase() === payload.email.toLowerCase()
-                && bStartClean === payloadStartIso
+                && bStartTime === payloadStartTime
                 && b.room === requestedRoom;
         });
         if (existingDuplicate) {
@@ -214,12 +232,12 @@ function handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoo
             continue;
         }
 
-        // Duplicate detection per iteration
-        const iterStartIso = Utilities.formatDate(iterStart, SCRIPT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss");
+        // Duplicate detection per iteration (timestamp-based)
+        const iterStartTime = iterStart.getTime();
         const isDuplicate = allBookings.some(b => {
-            const bStartClean = String(b.start_iso).replace(/Z$/i, '');
+            const bStartTime = parseIsoToTimestamp(b.start_iso);
             return b.email && b.email.toLowerCase() === payload.email.toLowerCase()
-                && bStartClean === iterStartIso
+                && bStartTime === iterStartTime
                 && b.room === payload.room;
         });
         if (isDuplicate) {

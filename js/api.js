@@ -41,7 +41,8 @@ export function setRenderCalendarButtonsCallback(cb) { onRenderCalendarButtons =
  * @param {Object} payload - The request payload to JSON-encode.
  */
 export function submitRequest(action, payload) {
-    const TIMEOUT_MS = 30000;
+    // Use a longer timeout for booking creation (lock wait + name validation + email can exceed 30s)
+    const TIMEOUT_MS = action === 'create' ? 60000 : 30000;
     const callbackName = `jsonp_callback_${Date.now()}`;
     const script = document.createElement('script');
     let timeoutId = null;
@@ -60,11 +61,22 @@ export function submitRequest(action, payload) {
 
     timeoutId = setTimeout(() => {
         cleanup();
-        showToastWithRetry(
-            'Request timed out. Please check your connection and try again.',
-            'error',
-            retryFn
-        );
+        if (action === 'create') {
+            // For booking creation, the backend may still be processing successfully.
+            // Do NOT offer a blind retry — it could create a duplicate.
+            // Instead, refresh the calendar and warn the user.
+            showToast(
+                'The request is taking longer than expected. Your booking may have been created — please check "My Reservations" before trying again.',
+                'error'
+            );
+            onRenderCallback(); // Refresh calendar to show if the booking was actually created
+        } else {
+            showToastWithRetry(
+                'Request timed out. Please check your connection and try again.',
+                'error',
+                retryFn
+            );
+        }
     }, TIMEOUT_MS);
 
     window[callbackName] = (data) => {
