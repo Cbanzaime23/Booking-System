@@ -165,7 +165,7 @@ export function submitRequest(action, payload) {
 
             onRenderCallback();
         } else {
-            if (action === 'create' && data.message && (data.message.includes('CCF Manila Dleaders List') || data.message.includes('System error'))) {
+            if (action === 'create' && data.message && (data.message.includes('denied') || data.message.includes('System error'))) {
                 // Close all form-related modals to take the user back to the calendar
                 if (elements.bookingModal) elements.bookingModal.close();
                 if (elements.choiceModal) elements.choiceModal.close();

@@ -88,10 +88,12 @@ function getActiveValidationSheetInfo() {
 
 /**
  * Fetches the Dleaders List from the external Google Sheet and caches it.
- * Uses CacheService for 1 hour to prevent hitting the external spreadsheet
+ * Uses CacheService for 5 minutes to prevent hitting the external spreadsheet
  * API quotas on every booking submission.
  *
- * @returns {Object[]} Array of relevant leader names objects {firstName, lastName, nickName}.
+ * @returns {Object[]} Array of leader objects {firstName, lastName, nickName, updated}.
+ *   When the 'Updated' column exists, `updated` reflects its Yes/No value.
+ *   When the column is missing (older month tabs), `updated` defaults to true.
  */
 function fetchAndCacheDleadersList() {
     const cache = CacheService.getScriptCache();
@@ -111,6 +113,7 @@ function fetchAndCacheDleadersList() {
         const firstNameIdx = headers.indexOf('first_name');
         const lastNameIdx = headers.indexOf('last_name');
         const nickNameIdx = headers.indexOf('nick_name');
+        const updatedIdx = headers.indexOf('updated');
 
         if (firstNameIdx === -1 || lastNameIdx === -1) {
             throw new Error("Could not find 'First Name' or 'Last Name' columns in the external Dleaders List.");
@@ -124,11 +127,14 @@ function fetchAndCacheDleadersList() {
             if (!firstName || !lastName) continue;
 
             const nickName = nickNameIdx !== -1 ? String(row[nickNameIdx] || "").trim().toLowerCase() : "";
+            // When 'Updated' column exists, parse its value; when missing (old tabs), default to true
+            const updated = updatedIdx !== -1 ? String(row[updatedIdx] || "").trim().toLowerCase() === "yes" : true;
 
             parsedData.push({
                 firstName: firstName,
                 lastName: lastName,
-                nickName: nickName
+                nickName: nickName,
+                updated: updated
             });
         }
 
@@ -149,10 +155,12 @@ function fetchAndCacheDleadersList() {
  * @param {Object[]} listData - The cached array of valid leaders.
  * @param {string} inputFirst - The user-submitted first name.
  * @param {string} inputLast - The user-submitted last name.
- * @returns {boolean} True if the name passes the 95% threshold check against the list.
+ * @returns {Object} { matched: boolean, updated: boolean }
+ *   - matched: true if the name passes the 95% threshold check.
+ *   - updated: true if the matched leader's 'Updated' column is 'Yes' (or column is absent).
  */
 function isNameInDleadersList(listData, inputFirst, inputLast) {
-    if (!inputFirst || !inputLast) return false;
+    if (!inputFirst || !inputLast) return { matched: false, updated: false };
 
     // Normalize user input
     const submittedFirstLast = (inputFirst + " " + inputLast).toLowerCase().trim().replace(/\s+/g, ' ');
@@ -162,35 +170,45 @@ function isNameInDleadersList(listData, inputFirst, inputLast) {
         const correctNickLast = leader.nickName ? (leader.nickName + " " + leader.lastName) : null;
 
         const simFirst = calculateSimilarity(submittedFirstLast, correctFirstLast);
-        if (simFirst >= 0.95) return true;
+        if (simFirst >= 0.95) return { matched: true, updated: leader.updated };
 
         if (correctNickLast) {
             const simNick = calculateSimilarity(submittedFirstLast, correctNickLast);
-            if (simNick >= 0.95) return true;
+            if (simNick >= 0.95) return { matched: true, updated: leader.updated };
         }
     }
 
-    return false;
+    return { matched: false, updated: false };
 }
 
 /**
  * High-level orchestration function called prior to booking creation.
  * Validates the Reserver's name against the external DLeaders list.
+ * Two-stage check: (1) name must match, (2) Updated column must be 'Yes'.
  *
  * @param {string} reserverFirst - The user's first name.
  * @param {string} reserverLast - The user's last name.
- * @returns {Object} { passed: boolean, reason?: string }
+ * @returns {Object} { passed: boolean, notUpdated?: boolean, reason?: string }
  */
 function validateNamesAgainstList(reserverFirst, reserverLast) {
     try {
         const listData = fetchAndCacheDleadersList();
 
         // Check standard user (reserver)
-        const reserverPasses = isNameInDleadersList(listData, reserverFirst, reserverLast);
-        if (!reserverPasses) {
+        const matchResult = isNameInDleadersList(listData, reserverFirst, reserverLast);
+        if (!matchResult.matched) {
             return {
                 passed: false,
                 reason: `Reserver '${reserverFirst} ${reserverLast}' does not match the CCF Manila Dleaders List.`
+            };
+        }
+
+        // Name matched — now check if their data is updated
+        if (!matchResult.updated) {
+            return {
+                passed: false,
+                notUpdated: true,
+                reason: `Reserver '${reserverFirst} ${reserverLast}' is in the DLeaders list but their data is not yet updated.`
             };
         }
 
@@ -200,4 +218,17 @@ function validateNamesAgainstList(reserverFirst, reserverLast) {
         Logger.log("Validation framework encountered an error: " + err.message);
         return { passed: false, reason: "System error: " + err.message };
     }
+}
+
+/**
+ * Returns counts of Updated vs Pending leaders from the active validation sheet.
+ * Used by the admin dashboard to display stats on the Validation Sheet card.
+ *
+ * @returns {Object} { updated: number, pending: number }
+ */
+function getValidationSheetStats() {
+    const listData = fetchAndCacheDleadersList();
+    const updatedCount = listData.filter(l => l.updated).length;
+    const pendingCount = listData.filter(l => !l.updated).length;
+    return { updated: updatedCount, pending: pendingCount };
 }

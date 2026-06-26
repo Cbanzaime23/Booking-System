@@ -77,7 +77,10 @@ function handleCreateBooking(payload) {
             );
             
             if (!dleaderValidation.passed) {
-                logActivity('Validation Failed', 'N/A', payload.adminPin, {
+                const logAction = dleaderValidation.notUpdated
+                    ? 'Validation Failed - Data Not Updated'
+                    : 'Validation Failed';
+                logActivity(logAction, 'N/A', payload.adminPin, {
                     reason: dleaderValidation.reason,
                     user: `${payload.first_name} ${payload.last_name}`
                 });
@@ -85,18 +88,27 @@ function handleCreateBooking(payload) {
                 // Check if the validation failed due to a system crash (e.g. Google Sheets API down) vs an actual name mismatch
                 const isSystemError = dleaderValidation.reason.includes("System error");
                 
-                // Send email only for actual name mismatches
+                // Send email only for actual name mismatches or data-not-updated (not system errors)
                 if (!isSystemError) {
                     try {
-                        sendDeniedEmail(payload);
+                        sendDeniedEmail(payload, dleaderValidation.notUpdated);
                     } catch (emailErr) {
                         console.error("Failed to send denied email:", emailErr);
                     }
                 }
                 
+                let userMessage;
+                if (isSystemError) {
+                    userMessage = dleaderValidation.reason;
+                } else if (dleaderValidation.notUpdated) {
+                    userMessage = "Your reservation was denied because your Discipleship Group Management data at CCF Manila is not yet updated. Please reach out to Tiffany Cabana to update your data.";
+                } else {
+                    userMessage = "Your reservation was denied as the user and/or leader do not exist in the current CCF Manila Dleaders List.";
+                }
+
                 return {
                     success: false,
-                    message: isSystemError ? dleaderValidation.reason : "Your reservation was denied as the user and/or leader do not exist in the current CCF Manila Dleaders List."
+                    message: userMessage
                 };
             }
         }
@@ -490,12 +502,15 @@ function handleFetchAllBookings() {
         Logger.log('Reservation window error (non-fatal): ' + rwError.toString());
     }
 
-    let validationSheetData = { name: "Unknown", url: "#" };
+    let validationSheetData = { name: "Unknown", url: "#", updatedCount: 0, pendingCount: 0 };
     try {
         const activeInfo = getActiveValidationSheetInfo();
+        const stats = getValidationSheetStats();
         validationSheetData = {
             name: activeInfo.name,
-            url: `https://docs.google.com/spreadsheets/d/${DLEADERS_SPREADSHEET_ID}/edit#gid=${activeInfo.id}`
+            url: `https://docs.google.com/spreadsheets/d/${DLEADERS_SPREADSHEET_ID}/edit#gid=${activeInfo.id}`,
+            updatedCount: stats.updated,
+            pendingCount: stats.pending
         };
     } catch (valErr) {
         Logger.log('Validation sheet info error: ' + valErr.toString());

@@ -471,6 +471,10 @@
                         <h3 class="text-xs md:text-xl font-bold font-heading text-gray-800 truncate">
                             <a id="validation-sheet-link" href="#" target="_blank" class="hover:text-ccf-blue-dark transition-colors underline decoration-blue-200">--</a>
                         </h3>
+                        <p class="text-[9px] md:text-xs text-gray-400 mt-0.5">
+                            <span id="validation-updated-count" class="text-emerald-600 font-semibold">--</span> Updated ·
+                            <span id="validation-pending-count" class="text-amber-600 font-semibold">--</span> Pending
+                        </p>
                     </div>
                 </div>
             </div>
@@ -1276,6 +1280,14 @@
                         if (valLink) {
                             valLink.textContent = response.latest_validation_sheet.name || 'Unknown';
                             valLink.href = response.latest_validation_sheet.url || '#';
+                        }
+                        const updatedEl = document.getElementById('validation-updated-count');
+                        const pendingEl = document.getElementById('validation-pending-count');
+                        if (updatedEl && response.latest_validation_sheet.updatedCount !== undefined) {
+                            updatedEl.textContent = response.latest_validation_sheet.updatedCount;
+                        }
+                        if (pendingEl && response.latest_validation_sheet.pendingCount !== undefined) {
+                            pendingEl.textContent = response.latest_validation_sheet.pendingCount;
                         }
                     }
 
