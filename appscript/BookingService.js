@@ -185,54 +185,81 @@ function handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoo
     let failCount = 0;
     let firstId = null;
     let firstStart, firstEnd;
-    let loopCount, loopType, dayOfWeek;
-
-    switch (payload.recurrence) {
-        case 'weekly': loopCount = 12; loopType = 'weekly'; break;
-        case 'monthly': loopCount = 6; loopType = 'monthly'; break;
-        case 'quarterly': loopCount = 4; loopType = 'quarterly'; break;
-        case 'first_wednesday': loopCount = 6; loopType = 'first_day'; dayOfWeek = 3; break;
-        case 'last_saturday': loopCount = 6; loopType = 'last_day'; dayOfWeek = 6; break;
-        default: throw new Error("Invalid recurrence type.");
-    }
 
     const originalStart = new Date(payload.start_iso);
     const originalEnd = new Date(payload.end_iso);
     const durationMs = originalEnd.getTime() - originalStart.getTime();
 
-    for (let i = 0; i < loopCount; i++) {
-        let iterStart, iterEnd;
-        let currentMonthIter = new Date(originalStart);
-        currentMonthIter.setDate(1);
-        currentMonthIter.setMonth(originalStart.getMonth() + i);
+    const targetStarts = [];
 
-        switch (loopType) {
-            case 'weekly':
-                iterStart = new Date(originalStart);
-                iterStart.setDate(iterStart.getDate() + (i * 7));
-                break;
-            case 'monthly':
-                iterStart = new Date(originalStart);
-                const targetMonth = iterStart.getMonth() + i;
-                iterStart.setMonth(targetMonth);
-                if (iterStart.getMonth() !== targetMonth % 12) {
-                    iterStart.setDate(0);
+    switch (payload.recurrence) {
+        case 'weekly':
+            for (let i = 0; i < 12; i++) {
+                let d = new Date(originalStart);
+                d.setDate(d.getDate() + (i * 7));
+                targetStarts.push(d);
+            }
+            break;
+        case 'monthly':
+            for (let i = 0; i < 6; i++) {
+                let d = new Date(originalStart);
+                const targetMonth = d.getMonth() + i;
+                d.setMonth(targetMonth);
+                if (d.getMonth() !== targetMonth % 12) {
+                    d.setDate(0);
                 }
-                break;
-            case 'quarterly':
-                iterStart = new Date(originalStart);
-                iterStart.setMonth(iterStart.getMonth() + (i * 3));
-                break;
-            case 'first_day':
-                iterStart = findFirstDayOfWeekOfMonth(currentMonthIter, dayOfWeek);
-                iterStart.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
-                break;
-            case 'last_day':
-                iterStart = findLastDayOfWeekOfMonth(currentMonthIter, dayOfWeek);
-                iterStart.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
-                break;
-        }
-        iterEnd = new Date(iterStart.getTime() + durationMs);
+                targetStarts.push(d);
+            }
+            break;
+        case 'quarterly':
+            for (let i = 0; i < 4; i++) {
+                let d = new Date(originalStart);
+                d.setMonth(d.getMonth() + (i * 3));
+                targetStarts.push(d);
+            }
+            break;
+        case 'first_wednesday':
+            for (let i = 0; i < 6; i++) {
+                let currentMonthIter = new Date(originalStart);
+                currentMonthIter.setDate(1);
+                currentMonthIter.setMonth(originalStart.getMonth() + i);
+                let d = findFirstDayOfWeekOfMonth(currentMonthIter, 3);
+                d.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+                targetStarts.push(d);
+            }
+            break;
+        case 'last_saturday':
+            for (let i = 0; i < 6; i++) {
+                let currentMonthIter = new Date(originalStart);
+                currentMonthIter.setDate(1);
+                currentMonthIter.setMonth(originalStart.getMonth() + i);
+                let d = findLastDayOfWeekOfMonth(currentMonthIter, 6);
+                d.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+                targetStarts.push(d);
+            }
+            break;
+        case 'first_third_tuesday':
+            for (let i = 0; i < 6; i++) {
+                let currentMonthIter = new Date(originalStart);
+                currentMonthIter.setDate(1);
+                currentMonthIter.setMonth(originalStart.getMonth() + i);
+
+                let firstTues = findFirstDayOfWeekOfMonth(currentMonthIter, 2);
+                firstTues.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+
+                let thirdTues = new Date(firstTues);
+                thirdTues.setDate(thirdTues.getDate() + 14);
+
+                targetStarts.push(firstTues, thirdTues);
+            }
+            break;
+        default:
+            throw new Error("Invalid recurrence type.");
+    }
+
+    for (let i = 0; i < targetStarts.length; i++) {
+        const iterStart = targetStarts[i];
+        const iterEnd = new Date(iterStart.getTime() + durationMs);
 
         const today = new Date();
         if (iterStart < today) {

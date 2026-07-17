@@ -95,6 +95,10 @@ export function renderEventDropdown(isAdmin) {
                 opt.name === "Ministry Event - Women 2 Women" ||
                 opt.name === "Ministry Event - MOVEMENT"
             );
+        } else if (recurrenceValue === 'first_third_tuesday') {
+            adminOptions = adminOptions.filter(opt =>
+                opt.name === "Ministry Event - Sports"
+            );
         }
 
         allOptions.push(...adminOptions);

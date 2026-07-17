@@ -144,7 +144,7 @@ Creates a new single or recurrent booking with full validation pipeline.
 | `original_room` | string | No | Original room before auto-upgrade |
 | `app_url` | string | No | Public app URL for email deep-links |
 | `adminPin` | string | No | Admin PIN for privileged booking |
-| `recurrence` | string | No | `none`, `weekly`, `monthly`, `quarterly`, `first_wednesday`, `last_saturday` |
+| `recurrence` | string | No | `none`, `weekly`, `monthly`, `quarterly`, `first_wednesday`, `last_saturday`, `first_third_tuesday` |
 
 **Validation Pipeline (in order):**
 1. Admin PIN verification (if provided)
