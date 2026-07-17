@@ -43,7 +43,8 @@ export const state = {
     blockedDates: [],
     reservationWindow: null,
     isAdmin: false,
-    isAutoUpgradeTableSelect: false
+    isAutoUpgradeTableSelect: false,
+    prefillData: null
 };
 
 /**

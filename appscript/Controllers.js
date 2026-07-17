@@ -64,6 +64,9 @@ function doGet(e) {
                 case 'extract_logs':
                     result = handleExtractLogs(payload);
                     break;
+                case 'fetch_expiring_series':
+                    result = handleFetchExpiringSeries(payload);
+                    break;
                 default:
                     throw new Error("Invalid action specified.");
             }
@@ -92,3 +95,12 @@ function handleExtractLogs(payload) {
     const data = getRawLogsData(ss);
     return { success: true, data: data };
 }
+
+function handleFetchExpiringSeries(payload) {
+    if (payload && payload.adminPin && payload.adminPin !== ADMIN_PIN) {
+        throw new Error("Unauthorized: Invalid Admin PIN");
+    }
+    const series = getExpiringSeries(SERIES_ALERT_THRESHOLD);
+    return { success: true, data: series };
+}
+

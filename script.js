@@ -682,11 +682,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Store admin PIN for later use in booking requests
             state.adminPin = roleResult.adminPin;
             applyAdminMode();
+
+            // Pre-fill parameters for Admin Rebooking flow
+            const prefillRoom = urlParams.get('prefill_room');
+            const prefillEvent = urlParams.get('prefill_event');
+            const prefillRecurrence = urlParams.get('prefill_recurrence');
+
+            if (prefillRoom || prefillEvent || prefillRecurrence) {
+                state.prefillData = {
+                    room: prefillRoom,
+                    event: prefillEvent,
+                    recurrence: prefillRecurrence ? (prefillRecurrence === 'true' ? 'weekly' : prefillRecurrence) : null
+                };
+                if (prefillRoom && window.APP_CONFIG && window.APP_CONFIG.ROOM_CONFIG && window.APP_CONFIG.ROOM_CONFIG[prefillRoom]) {
+                    state.selectedRoom = prefillRoom;
+                }
+                showToast(`Rebooking mode: ${prefillEvent || ''} (${prefillRoom || ''}). Select a time slot to proceed.`, 'info');
+            }
         }
 
         initializeRoomSelector();
         setupEventListeners();
         await render(); // Changed to await to ensure state is fully populated before deep link handles
+
 
         if (isCancelLink) {
             const id = urlParams.get('id');

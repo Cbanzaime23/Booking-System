@@ -34,6 +34,12 @@ const ADMIN_PIN = "CCFManila@2025";
 /** @const {number} Number of days after which personal booking data is auto-anonymized (5 years). */
 const RETENTION_DAYS = 1825;
 
+/** @const {number} Future occurrences at or below which a series triggers an expiry alert. */
+const SERIES_ALERT_THRESHOLD = 2;
+
+/** @const {string} Settings sheet key for the report recipient email addresses. */
+const ADMIN_ALERT_EMAIL_SETTING = 'Report Recipients';
+
 /**
  * Room-level rules for capacity, concurrency, and group size.
  * Each key is a room name; values define the constraints

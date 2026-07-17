@@ -217,6 +217,23 @@ export function openBookingModalForSelectedSlot(customStartTime = null, customEn
 
     renderEventDropdown(isAdmin);
 
+    if (state.prefillData) {
+        if (state.prefillData.recurrence) {
+            const recurrenceSelect = document.getElementById('recurrence');
+            if (recurrenceSelect) {
+                recurrenceSelect.value = state.prefillData.recurrence;
+                renderEventDropdown(isAdmin);
+            }
+        }
+        if (state.prefillData.event) {
+            const eventSelect = document.getElementById('event');
+            if (eventSelect) {
+                eventSelect.value = state.prefillData.event;
+                eventSelect.dispatchEvent(new Event('change'));
+            }
+        }
+    }
+
     const dateInfoElement = document.getElementById('modal-date-info');
     if (dateInfoElement) {
         dateInfoElement.innerHTML = renderScheduleInfoHTML(finalStart, finalEnd);
@@ -251,6 +268,10 @@ export function openBookingModalForSelectedSlot(customStartTime = null, customEn
     }
 
     elements.bookingModal.showModal();
+
+    if (state.prefillData && state.prefillData.event) {
+        appendFormAlert('booking-form-alert', `Pre-filled for <strong>${state.prefillData.event}</strong> series rebooking. Select participants and submit.`, 'info');
+    }
 
     if (state.pendingWarning) {
         showFormAlert('booking-form-alert', state.pendingWarning, 'warning');
