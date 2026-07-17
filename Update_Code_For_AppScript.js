@@ -165,14 +165,31 @@ function handleCreateBooking(payload) {
         // --- Race Condition Guard (Optimistic Locking) ---
         // Re-read bookings from the sheet RIGHT BEFORE writing to catch any
         // concurrent writes that may have occurred between our initial read and now.
-        const freshBookings = getActiveBookings(sheet);
-        const freshConcurrent = findConcurrentBookings(newStart, newEnd, freshBookings, finalRoom);
-        const freshPax = freshConcurrent.reduce((sum, b) => sum + b.participantCount, 0);
-        if (freshConcurrent.length + 1 > rules.MAX_CONCURRENT_GROUPS) {
-            throw new Error('Sorry, this slot was just filled by another user. Please choose a different time.');
+        let maxGroups = rules.MAX_CONCURRENT_GROUPS;
+        let maxPax = rules.MAX_TOTAL_PARTICIPANTS;
+        const isWedDGX = (finalRoom === 'Main Hall' && newStart.getDay() === 3 && newStart.getHours() >= 18 && newStart.getHours() < 22);
+        if (isWedDGX) {
+            maxGroups = 10;
+            maxPax = 60;
         }
-        if (freshPax + payload.participants > rules.MAX_TOTAL_PARTICIPANTS) {
-            throw new Error('Sorry, this slot was just filled by another user. Please choose a different time.');
+
+        const hasMaxCapacityEvent = freshConcurrent.some(b => {
+             return b.participantCount >= maxPax || 
+                    (b.event && (b.event === 'Sunday Service' || (b.event.startsWith('Ministry Event') && b.event !== 'Ministry Event - Meeting' && b.event !== 'Ministry Event - DGroup Experience (DGX)')));
+        });
+
+        let occupiedGroups = 0;
+        freshConcurrent.forEach(b => {
+            if (b.event === 'Ministry Event - DGroup Experience (DGX)' || b.table_id === 'DGX' || b.table_id === 'A-H') {
+                occupiedGroups += 8;
+            } else {
+                occupiedGroups += 1;
+            }
+        });
+        const requestedGroups = (payload.event === 'Ministry Event - DGroup Experience (DGX)') ? 8 : 1;
+
+        if (hasMaxCapacityEvent || (occupiedGroups + requestedGroups > maxGroups) || (freshPax + payload.participants > maxPax)) {
+            throw new Error('Sorry, this slot is fully reserved or does not have enough available tables. Please choose a different time.');
         }
 
         const newId = generateUUID();
@@ -685,7 +702,31 @@ function handleRecurrentBooking(payload, rules, allBookings, sheet, requestedRoo
 
         const concurrent = findConcurrentBookings(iterStart, iterEnd, allBookings, payload.room);
         const currentPax = concurrent.reduce((sum, b) => sum + b.participantCount, 0);
-        const hasCapacity = (concurrent.length + 1) <= rules.MAX_CONCURRENT_GROUPS && (currentPax + payload.participants) <= rules.MAX_TOTAL_PARTICIPANTS;
+
+        let maxGroups = rules.MAX_CONCURRENT_GROUPS;
+        let maxPax = rules.MAX_TOTAL_PARTICIPANTS;
+        const isWedDGX = (payload.room === 'Main Hall' && iterStart.getDay() === 3 && iterStart.getHours() >= 18 && iterStart.getHours() < 22);
+        if (isWedDGX) {
+            maxGroups = 10;
+            maxPax = 60;
+        }
+
+        const hasMaxCapacityEvent = concurrent.some(b => {
+             return b.participantCount >= maxPax || 
+                    (b.event && (b.event === 'Sunday Service' || (b.event.startsWith('Ministry Event') && b.event !== 'Ministry Event - Meeting' && b.event !== 'Ministry Event - DGroup Experience (DGX)')));
+        });
+
+        let occupiedGroups = 0;
+        concurrent.forEach(b => {
+            if (b.event === 'Ministry Event - DGroup Experience (DGX)' || b.table_id === 'DGX' || b.table_id === 'A-H') {
+                occupiedGroups += 8;
+            } else {
+                occupiedGroups += 1;
+            }
+        });
+        const requestedGroups = (payload.event === 'Ministry Event - DGroup Experience (DGX)') ? 8 : 1;
+
+        const hasCapacity = !hasMaxCapacityEvent && (occupiedGroups + requestedGroups <= maxGroups) && (currentPax + payload.participants <= maxPax);
 
         if (hasCapacity) {
             successCount++;

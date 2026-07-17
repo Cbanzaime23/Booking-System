@@ -218,9 +218,22 @@ export function renderBookingsForSelectedRoom() {
             return bStart < slotEnd && bEnd > slotStart;
         });
 
+        let currentMaxGroups = roomRules.MAX_CONCURRENT_GROUPS;
+        let currentMaxPax = roomRules.MAX_TOTAL_PARTICIPANTS;
+        
+        const isWedDGX = (state.selectedRoom === 'Main Hall' && slotStart.weekday === 3 && slotStart.hour >= 18 && slotStart.hour < 22);
+        if (isWedDGX) {
+            currentMaxGroups = 10;
+            currentMaxPax = 60;
+        }
+
         overlappingBookings.forEach(b => {
             totalParticipants += parseInt(b.participants, 10);
-            totalGroups++;
+            if (b.event === 'Ministry Event - DGroup Experience (DGX)' || b.table_id === 'DGX' || b.table_id === 'A-H') {
+                totalGroups += 8;
+            } else {
+                totalGroups += 1;
+            }
         });
         slotEl.dataset.totalParticipants = totalParticipants;
         slotEl.dataset.totalGroups = totalGroups;
@@ -246,11 +259,16 @@ export function renderBookingsForSelectedRoom() {
         const timeLabelHTML = `<div class="time-label">${slotStart.toFormat('h:mm')}</div>`;
         let statusLabelHTML = '';
 
-        if (totalParticipants >= roomRules.MAX_TOTAL_PARTICIPANTS || totalGroups >= roomRules.MAX_CONCURRENT_GROUPS) {
+        const hasMaxCapacityEvent = overlappingBookings.some(b => {
+            return parseInt(b.participants, 10) >= currentMaxPax || 
+                   (b.event && (b.event === 'Sunday Service' || (b.event.startsWith('Ministry Event') && b.event !== 'Ministry Event - Meeting' && b.event !== 'Ministry Event - DGroup Experience (DGX)')));
+        });
+
+        if (hasMaxCapacityEvent || totalParticipants >= currentMaxPax || totalGroups >= currentMaxGroups) {
             slotEl.classList.add('full');
             statusLabelHTML = `<div class="status-label">Full</div>`;
         } else if (totalParticipants > 0) {
-            const remainingPax = roomRules.MAX_TOTAL_PARTICIPANTS - totalParticipants;
+            const remainingPax = currentMaxPax - totalParticipants;
             slotEl.classList.add('partial');
             const isMobile = window.innerWidth < 768;
             const spotsText = isMobile ? `${remainingPax} left` : `${remainingPax} spots left`;

@@ -620,6 +620,18 @@ export function openFloorplanModal(customPayload = null) {
         endTime = startTime.set({ hour: endHour, minute: endMinute });
     }
 
+    const selectedEvent = elements.bookingForm ? elements.bookingForm.querySelector('#event').value : '';
+    const isDGX = (selectedEvent === "Ministry Event - DGroup Experience (DGX)") ||
+                  (startTime && startTime.weekday === 3 && startTime.hour >= 18 && startTime.hour < 22);
+
+    const stdGrid = elements.floorplanModal.querySelector('#floorplan-grid-standard');
+    const dgxGrid = elements.floorplanModal.querySelector('#floorplan-grid-dgx');
+
+    if (stdGrid && dgxGrid) {
+        stdGrid.classList.toggle('hidden', isDGX);
+        dgxGrid.classList.toggle('hidden', !isDGX);
+    }
+
     const instructionEl = document.getElementById('floorplan-instruction');
     if (instructionEl) {
         if (customPayload) {
@@ -627,7 +639,9 @@ export function openFloorplanModal(customPayload = null) {
             instructionEl.innerHTML = "To optimize room usage, the room reservation system will move your reservation to the Main Hall. Please select an available table now.";
         } else {
             instructionEl.className = "mb-6 text-sm text-gray-600";
-            instructionEl.textContent = "Please choose an available table for your group. Tables shaded in gray are already booked for this time slot.";
+            instructionEl.textContent = isDGX
+                ? "DGX Wednesday 10-Table Layout: Tables A-H are reserved for DGX. Tables I & J are available."
+                : "Please choose an available table for your group. Tables shaded in gray are already booked for this time slot.";
         }
     }
 
@@ -642,13 +656,24 @@ export function openFloorplanModal(customPayload = null) {
 
     const bookedTables = {};
     overlapping.forEach(b => {
-        if (b.table_id) {
+        if (b.event === "Ministry Event - DGroup Experience (DGX)" || (b.table_id && (b.table_id === 'DGX' || b.table_id === 'Full Hall'))) {
+            ['A','B','C','D','E','F','G','H'].forEach(t => {
+                bookedTables[t] = b;
+            });
+        } else if (b.table_id) {
             bookedTables[b.table_id] = b;
         }
     });
 
+    if (selectedEvent === "Ministry Event - DGroup Experience (DGX)") {
+        ['A','B','C','D','E','F','G','H'].forEach(t => {
+            if (!bookedTables[t]) bookedTables[t] = { id: 'dgx-event', first_name: 'DGX', last_name: 'Event' };
+        });
+    }
+
     const isAdmin = state.isAdmin;
-    const tableBtns = elements.floorplanModal.querySelectorAll('.table-btn');
+    const activeGrid = isDGX ? dgxGrid : stdGrid;
+    const tableBtns = activeGrid ? activeGrid.querySelectorAll('.table-btn') : elements.floorplanModal.querySelectorAll('.table-btn');
 
     tableBtns.forEach(btn => {
         const tId = btn.dataset.tableId;
@@ -661,10 +686,9 @@ export function openFloorplanModal(customPayload = null) {
 
         if (booking) {
             btn.classList.add('bg-gray-200', 'text-gray-400', 'border-gray-400');
-            // If admin, we allow clicking it to prompt for Move flow
-            if (isAdmin) {
+            if (isAdmin && booking.id && booking.id !== 'dgx-event') {
                 btn.dataset.bookingId = booking.id;
-                btn.dataset.bookingName = booking.first_name + ' ' + booking.last_name;
+                btn.dataset.bookingName = (booking.first_name || '') + ' ' + (booking.last_name || '');
             } else {
                 btn.classList.add('cursor-not-allowed');
                 btn.disabled = true;

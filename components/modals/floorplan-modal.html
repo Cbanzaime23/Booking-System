@@ -14,9 +14,8 @@
             group. Tables shaded in gray are
             already booked for this time slot.</p>
 
-        <!-- Floorplan Grid -->
-        <div <div
-            class="floorplan-container bg-white border-[3px] border-gray-800 rounded relative mx-auto w-full max-w-[340px] h-[580px] mt-4 shadow-inner overflow-hidden rounded-lg">
+        <!-- Floorplan Grid Container -->
+        <div class="floorplan-container bg-white border-[3px] border-gray-800 rounded relative mx-auto w-full max-w-[340px] h-[580px] mt-4 shadow-inner overflow-hidden rounded-lg">
 
             <div class="absolute top-4 left-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Front</div>
 
@@ -32,167 +31,111 @@
                 <div class="border-2 border-gray-800 h-3 bg-white" style="width: 100px;"></div>
             </div>
 
-            <!-- Table A -->
-            <button type="button"
-                class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm"
-                data-table-id="A" style="top: 90px; left: 30px;">
-                <span>A</span>
-                <div class="absolute -top-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -bottom-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -left-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -right-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-            </button>
+            <!-- STANDARD 6-TABLE LAYOUT (A-F) -->
+            <div id="floorplan-grid-standard">
+                <!-- Table A -->
+                <button type="button"
+                    class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="A" style="top: 90px; left: 30px;">
+                    <span>A</span>
+                </button>
 
-            <!-- Table B -->
-            <button type="button"
-                class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm"
-                data-table-id="B" style="top: 156px; right: 30px;">
-                <span>B</span>
-                <div class="absolute -top-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -bottom-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -left-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -right-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-            </button>
+                <!-- Table B -->
+                <button type="button"
+                    class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="B" style="top: 156px; right: 30px;">
+                    <span>B</span>
+                </button>
 
-            <!-- Table C -->
-            <button type="button"
-                class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm"
-                data-table-id="C" style="top: 222px; left: 30px;">
-                <span>C</span>
-                <div class="absolute -top-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -bottom-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -left-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -right-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-            </button>
+                <!-- Table C -->
+                <button type="button"
+                    class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="C" style="top: 222px; left: 30px;">
+                    <span>C</span>
+                </button>
 
-            <!-- Table D -->
-            <button type="button"
-                class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm"
-                data-table-id="D" style="top: 288px; right: 30px;">
-                <span>D</span>
-                <div class="absolute -top-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -bottom-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -left-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -right-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-            </button>
+                <!-- Table D -->
+                <button type="button"
+                    class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="D" style="top: 288px; right: 30px;">
+                    <span>D</span>
+                </button>
 
-            <!-- Table E -->
-            <button type="button"
-                class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm"
-                data-table-id="E" style="top: 354px; left: 30px;">
-                <span>E</span>
-                <div class="absolute -top-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -bottom-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -left-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -right-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-            </button>
+                <!-- Table E -->
+                <button type="button"
+                    class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="E" style="top: 354px; left: 30px;">
+                    <span>E</span>
+                </button>
 
-            <!-- Table F -->
-            <button type="button"
-                class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm"
-                data-table-id="F" style="top: 420px; right: 30px;">
-                <span>F</span>
-                <div class="absolute -top-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -bottom-[12px] left-1/2 -translate-x-1/2 flex gap-[4px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -left-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-                <div class="absolute -right-[12px] top-1/2 -translate-y-1/2 flex flex-col gap-[3px]">
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                    <div class="w-3 h-3 rounded-full bg-inherit border-2 border-current"></div>
-                </div>
-            </button>
+                <!-- Table F -->
+                <button type="button"
+                    class="table-btn absolute w-20 h-14 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-2xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="F" style="top: 420px; right: 30px;">
+                    <span>F</span>
+                </button>
+            </div>
+
+            <!-- DGX 10-TABLE LAYOUT (A-J) -->
+            <div id="floorplan-grid-dgx" class="hidden">
+                <!-- Row 1: A, B, C -->
+                <button type="button"
+                    class="table-btn absolute w-[70px] h-11 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="A" style="top: 90px; left: 20px;">
+                    <span>A</span>
+                </button>
+                <button type="button"
+                    class="table-btn absolute w-[70px] h-11 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="B" style="top: 90px; left: 135px;">
+                    <span>B</span>
+                </button>
+                <button type="button"
+                    class="table-btn absolute w-[70px] h-11 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="C" style="top: 90px; right: 20px;">
+                    <span>C</span>
+                </button>
+
+                <!-- Row 2: D, E, F -->
+                <button type="button"
+                    class="table-btn absolute w-[70px] h-11 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="D" style="top: 175px; left: 20px;">
+                    <span>D</span>
+                </button>
+                <button type="button"
+                    class="table-btn absolute w-[70px] h-11 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="E" style="top: 175px; left: 135px;">
+                    <span>E</span>
+                </button>
+                <button type="button"
+                    class="table-btn absolute w-[70px] h-11 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="F" style="top: 175px; right: 20px;">
+                    <span>F</span>
+                </button>
+
+                <!-- Row 3: G, H -->
+                <button type="button"
+                    class="table-btn absolute w-[70px] h-11 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="G" style="top: 260px; left: 75px;">
+                    <span>G</span>
+                </button>
+                <button type="button"
+                    class="table-btn absolute w-[70px] h-11 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="H" style="top: 260px; right: 75px;">
+                    <span>H</span>
+                </button>
+
+                <!-- Row 4: I, J -->
+                <button type="button"
+                    class="table-btn absolute w-[70px] h-11 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="I" style="top: 345px; left: 75px;">
+                    <span>I</span>
+                </button>
+                <button type="button"
+                    class="table-btn absolute w-[70px] h-11 bg-white text-gray-800 border-2 border-gray-800 flex items-center justify-center font-bold text-xl group hover:bg-blue-50 focus:ring-2 focus:ring-ccf-blue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-400 disabled:cursor-not-allowed z-10 shadow-sm rounded-lg"
+                    data-table-id="J" style="top: 345px; right: 75px;">
+                    <span>J</span>
+                </button>
+            </div>
         </div>
 
         <div class="flex justify-end mt-6">

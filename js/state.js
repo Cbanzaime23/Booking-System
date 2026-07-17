@@ -86,6 +86,7 @@ export const EVENT_OPTIONS = {
         { name: "Ministry Event - NXTGEN", setsMaxCapacity: true },
         { name: "Ministry Event - Ad Hoc Event", setsMaxCapacity: true },
         { name: "Ministry Event - Sports", setsMaxCapacity: true },
+        { name: "Ministry Event - DGroup Experience (DGX)", setsMaxCapacity: false },
         { name: "Sunday Service", setsMaxCapacity: true }
     ]
 };

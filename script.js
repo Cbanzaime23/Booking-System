@@ -355,10 +355,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const participantsInput = elements.bookingForm.querySelector('#participants');
         if (eventSelector && participantsInput) {
             eventSelector.addEventListener('change', (e) => {
+                const selectedVal = e.target.value;
                 const selectedOption = e.target.options[e.target.selectedIndex];
                 const setsMax = selectedOption && selectedOption.dataset.setsMaxCapacity === 'true';
-                
-                if (setsMax) {
+                const isDGX = (selectedVal === 'Ministry Event - DGroup Experience (DGX)');
+
+                if (isDGX) {
+                    participantsInput.value = 48; // 6 pax x 8 tables
+                } else if (setsMax) {
                     const roomRules = window.APP_CONFIG.ROOM_CONFIG[state.selectedRoom];
                     const maxCapacity = ROOM_CAPACITIES[state.selectedRoom] || roomRules.MAX_TOTAL_PARTICIPANTS;
                     participantsInput.value = maxCapacity;
@@ -371,7 +375,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const tableDisplay = document.getElementById('display-selected-table');
                     
                     if (floorplanBtn && tableInput && tableDisplay) {
-                        if (setsMax) {
+                        if (isDGX) {
+                            floorplanBtn.disabled = true;
+                            floorplanBtn.className = 'px-2 py-1 bg-gray-400 text-white rounded-xl text-[10px] sm:text-xs cursor-not-allowed whitespace-nowrap self-start sm:self-auto transition-colors';
+                            tableInput.value = 'A-H';
+                            tableDisplay.textContent = 'Tables A - H';
+                            tableDisplay.className = 'text-xs sm:text-sm font-bold text-ccf-blue truncate';
+                        } else if (setsMax) {
                             floorplanBtn.disabled = true;
                             floorplanBtn.className = 'px-2 py-1 bg-gray-400 text-white rounded-xl text-[10px] sm:text-xs cursor-not-allowed whitespace-nowrap self-start sm:self-auto transition-colors';
                             tableInput.value = 'Full Hall';
@@ -380,7 +390,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         } else {
                             floorplanBtn.disabled = false;
                             floorplanBtn.className = 'px-2 py-1 bg-ccf-blue text-white rounded-xl text-[10px] sm:text-xs hover:bg-ccf-blue-dark whitespace-nowrap self-start sm:self-auto transition-colors';
-                            if (tableInput.value === 'Full Hall') {
+                            if (tableInput.value === 'Full Hall' || tableInput.value === 'A-H') {
                                 tableInput.value = '';
                                 tableDisplay.textContent = 'None';
                                 tableDisplay.className = 'text-xs sm:text-sm font-bold text-gray-500 truncate';
