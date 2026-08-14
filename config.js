@@ -48,7 +48,7 @@ window.APP_CONFIG = {
     3: { start: '10:00', end: '22:00' }, // Wednesday
     4: { start: '10:00', end: '22:00' }, // Thursday
     5: { start: '10:00', end: '22:00' }, // Friday
-    6: { start: '10:00', end: '22:00' }, // Saturday
+    6: { start: '10:00', end: '21:00' }, // Saturday - 9pm cut-off
   },
   /**
  * NEW: Configuration for all available rooms.
