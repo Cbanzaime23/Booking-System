@@ -301,7 +301,34 @@ export function handleBookingFormSubmit(e) {
             return true; // All day block
         });
 
-        if (canFitGroup && canFitPax && meetsSizeRules && !isMainHallBlocked) {
+        // Check if at least one individual table in Main Hall is available for this time slot
+        const selectedEvent = elements.bookingForm ? elements.bookingForm.querySelector('#event').value : '';
+        const isDGX = (selectedEvent === "Ministry Event - DGroup Experience (DGX)") ||
+                      (startLux && startLux.weekday === 3 && startLux.hour >= 18 && startLux.hour < 22);
+        const allTableIds = isDGX 
+            ? ['A','B','C','D','E','F','G','H','I','J'] 
+            : ['A','B','C','D','E','F'];
+
+        const bookedTables = {};
+        mainHallConcurrent.forEach(b => {
+            if (b.event === "Ministry Event - DGroup Experience (DGX)" || (b.table_id && (b.table_id === 'DGX' || b.table_id === 'Full Hall'))) {
+                ['A','B','C','D','E','F','G','H'].forEach(t => {
+                    bookedTables[t] = true;
+                });
+            } else if (b.table_id) {
+                bookedTables[b.table_id] = true;
+            }
+        });
+
+        if (selectedEvent === "Ministry Event - DGroup Experience (DGX)") {
+            ['A','B','C','D','E','F','G','H'].forEach(t => {
+                bookedTables[t] = true;
+            });
+        }
+
+        const hasAvailableTable = allTableIds.some(tId => !bookedTables[tId]);
+
+        if (canFitGroup && canFitPax && meetsSizeRules && !isMainHallBlocked && hasAvailableTable) {
             payload.original_room = payload.room;
             payload.room = "Main Hall";
             reassigned = true;
